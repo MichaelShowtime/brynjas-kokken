@@ -1,7 +1,8 @@
 import { useState, useRef, useMemo, useCallback } from 'react'
 import SwipeCard from '../components/SwipeCard'
 import { opskrifter } from '../data/opskrifter'
-import { lagerData } from '../data/lager'
+import { hentLager } from '../data/lager'
+import { gemLike } from '../data/likes'
 import { colors, shadow, radius, font } from '../data/theme'
 
 const SWIPE_THRESHOLD = 110
@@ -33,7 +34,7 @@ export default function MadMatch() {
   const [modalOpskrift, setModalOpskrift] = useState(null)
 
   const lagerNavne = useMemo(
-    () => new Set(lagerData.map((r) => r.navn.toLowerCase())),
+    () => new Set(hentLager().map((r) => r.navn.toLowerCase())),
     []
   )
 
@@ -85,7 +86,10 @@ export default function MadMatch() {
   const fuldførSwipe = useCallback(
     (retning) => {
       const aktuel = kort[index]
-      if (retning === 'right' && aktuel) setGemte((g) => [...g, aktuel])
+      if (retning === 'right' && aktuel) {
+        setGemte((g) => [...g, aktuel])
+        gemLike(aktuel)
+      }
       setAnimer(true)
       setDrag({ x: retning === 'right' ? 600 : -600, y: 40 })
       window.setTimeout(() => {
