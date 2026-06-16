@@ -77,7 +77,7 @@ export default function Onboarding() {
           <div style={s.afslutCirkel}>🎉</div>
           <h1 style={s.afslutTitel}>Alt er klar!</h1>
           <p style={s.afslutTekst}>
-            Vi har sat Simmer op efter dine præferencer.
+            Vi har sat Brynjas Køkken op efter dine præferencer.
             <br />Velkommen, {bruger?.navn}!
           </p>
           <div style={s.spinner} />

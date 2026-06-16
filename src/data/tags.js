@@ -87,7 +87,7 @@ export const ONBOARDING_TRIN = [
   },
   {
     id: 'mål',
-    spørgsmål: 'Hvad er dit mål med Simmer?',
+    spørgsmål: 'Hvad er dit mål med Brynjas Køkken?',
     ikon: '🎯',
     multi: true,
     svar: [

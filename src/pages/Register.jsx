@@ -47,7 +47,7 @@ export default function Register() {
         {/* Brand */}
         <div style={s.brand}>
           <span style={{ fontSize: 28 }}>🔥</span>
-          <span style={s.brandNavn}>simmer</span>
+          <span style={s.brandNavn}>Brynjas Køkken</span>
         </div>
 
         {/* Fremgang */}
@@ -60,7 +60,7 @@ export default function Register() {
         {trin === 1 && (
           <>
             <h1 style={s.overskrift}>Opret din konto</h1>
-            <p style={s.underoverskrift}>Fortæl os lidt om dig, så vi kan personalisere Simmer.</p>
+            <p style={s.underoverskrift}>Fortæl os lidt om dig, så vi kan personalisere Brynjas Køkken.</p>
 
             {fejl && <div style={s.fejlboks}>{fejl}</div>}
 

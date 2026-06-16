@@ -260,7 +260,7 @@ function Intro({ fejl, historik, onKamera, onUpload, onÅbn }) {
       <header style={styles.header}>
         <h1 style={styles.title}>Opret med AI ✨</h1>
         <p style={styles.subtitle}>
-          Tag et billede af dine råvarer eller en ret — så finder Simmer en opskrift til dig.
+          Tag et billede af dine råvarer eller en ret — så finder Brynjas Køkken en opskrift til dig.
         </p>
       </header>
 
@@ -332,7 +332,7 @@ function Analyserer({ foto }) {
       <img src={foto} alt="" style={{ ...styles.preview, opacity: 0.5 }} />
       <div style={styles.spinner} />
       <h2 style={{ ...styles.title, fontSize: 22, marginTop: 18 }}>Analyserer billede…</h2>
-      <p style={styles.subtitle}>Simmer kigger efter råvarer 🔍</p>
+      <p style={styles.subtitle}>Brynjas Køkken kigger efter råvarer 🔍</p>
     </div>
   )
 }

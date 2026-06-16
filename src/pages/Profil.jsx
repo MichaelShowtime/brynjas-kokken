@@ -76,7 +76,7 @@ export default function Profil() {
 
   function håndterShare() {
     if (navigator.share) {
-      navigator.share({ title: 'Simmer', text: `Tjek ${bruger.navn} på Simmer!`, url: window.location.href })
+      navigator.share({ title: 'Brynjas Køkken', text: `Tjek ${bruger.navn} på Brynjas Køkken!`, url: window.location.href })
     } else {
       navigator.clipboard?.writeText(window.location.href)
       alert('Link kopieret!')
@@ -393,7 +393,7 @@ function NotifikationerSide({ onTilbage }) {
     <div style={s.subSide}>
       <SubHeader titel="Notifikationer" onTilbage={onTilbage} />
       <div style={s.subIndhold}>
-        <p style={s.subBeskrivelse}>Vælg hvornår Simmer må sende dig beskeder.</p>
+        <p style={s.subBeskrivelse}>Vælg hvornår Brynjas Køkken må sende dig beskeder.</p>
         {[
           { key: 'daglige', label: 'Daglige madforslag', sub: 'Kl. 17:00 hver dag' },
           { key: 'venner',  label: 'Venners aktivitet',  sub: 'Når nogen i dit netværk laver noget' },
@@ -497,7 +497,7 @@ function HjælpSide({ onTilbage }) {
             </>
         }
         <div style={{ ...s.infoBox, marginTop: 20, textAlign: 'center' }}>
-          <p style={{ margin: 0, fontWeight: 700, color: colors.text }}>Simmer · Version 0.1.0</p>
+          <p style={{ margin: 0, fontWeight: 700, color: colors.text }}>Brynjas Køkken · Version 0.1.0</p>
         </div>
       </div>
     </div>

@@ -56,7 +56,7 @@ export default function Login() {
         {/* Brand */}
         <div style={s.brand}>
           <span style={s.brandEmoji}>🔥</span>
-          <span style={s.brandNavn}>simmer</span>
+          <span style={s.brandNavn}>Brynjas Køkken</span>
         </div>
 
         {/* Login */}
