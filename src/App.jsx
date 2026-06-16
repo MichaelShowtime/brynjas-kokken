@@ -1,27 +1,66 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { hentAktivBruger } from './data/auth'
 import BottomNav from './components/BottomNav'
 import Hjem from './pages/Hjem'
 import MadMatch from './pages/MadMatch'
 import Opret from './pages/Opret'
 import Lager from './pages/Lager'
 import Profil from './pages/Profil'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import Onboarding from './pages/Onboarding'
+
+const INGEN_NAV = ['/login', '/register', '/onboarding']
+
+function ProtectedRoute({ children }) {
+  const bruger = hentAktivBruger()
+  if (!bruger) return <Navigate to="/login" replace />
+  if (!bruger.onboardingFærdig) return <Navigate to="/onboarding" replace />
+  return children
+}
+
+function GæsteRoute({ children }) {
+  const bruger = hentAktivBruger()
+  if (bruger) {
+    return <Navigate to={bruger.onboardingFærdig ? '/hjem' : '/onboarding'} replace />
+  }
+  return children
+}
+
+function OnboardingRoute({ children }) {
+  const bruger = hentAktivBruger()
+  if (!bruger) return <Navigate to="/login" replace />
+  if (bruger.onboardingFærdig) return <Navigate to="/hjem" replace />
+  return children
+}
 
 export default function App() {
+  const { pathname } = useLocation()
+  const visNav = !INGEN_NAV.some((p) => pathname.startsWith(p))
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <Routes>
-        {/* Lager er standardskærmen */}
-        <Route path="/" element={<Navigate to="/lager" replace />} />
-        <Route path="/hjem" element={<Hjem />} />
-        <Route path="/madmatch" element={<MadMatch />} />
-        <Route path="/opret" element={<Opret />} />
-        <Route path="/lager" element={<Lager />} />
-        <Route path="/profil" element={<Profil />} />
+        {/* Gæste-ruter */}
+        <Route path="/login" element={<GæsteRoute><Login /></GæsteRoute>} />
+        <Route path="/register" element={<GæsteRoute><Register /></GæsteRoute>} />
+
+        {/* Onboarding — kræver login, men onboarding ikke færdig */}
+        <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
+
+        {/* Beskyttede ruter */}
+        <Route path="/"         element={<ProtectedRoute><Navigate to="/hjem" replace /></ProtectedRoute>} />
+        <Route path="/hjem"     element={<ProtectedRoute><Hjem /></ProtectedRoute>} />
+        <Route path="/madmatch" element={<ProtectedRoute><MadMatch /></ProtectedRoute>} />
+        <Route path="/opret"    element={<ProtectedRoute><Opret /></ProtectedRoute>} />
+        <Route path="/lager"    element={<ProtectedRoute><Lager /></ProtectedRoute>} />
+        <Route path="/profil"   element={<ProtectedRoute><Profil /></ProtectedRoute>} />
+
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/lager" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      <BottomNav />
+      {visNav && hentAktivBruger()?.onboardingFærdig && <BottomNav />}
     </div>
   )
 }
