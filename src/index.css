@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+
+/*
+ * Simmer — globalt design system
+ * Tailwind er installeret, men layout laves med inline styles / CSS for præcise værdier.
+ */
+
+:root {
+  /* Farver */
+  --bg: #faf7f2;          /* varm off-white baggrund */
+  --card: #ffffff;        /* hvide kort */
+  --green: #2f6b4f;       /* primær grøn */
+  --terracotta: #e08a5b;  /* accent */
+  --red: #c25b4a;         /* negativ / swipe-nej */
+  --text: #1f2421;        /* mørk tekst */
+  --muted: #7a7a72;       /* dæmpet tekst */
+  --muted-light: #a7a399; /* endnu mere dæmpet */
+  --border: #f2eee7;      /* sarte kanter */
+
+  /* Skygger */
+  --shadow-card: 0 8px 24px rgba(31, 36, 33, 0.07);
+
+  /* Skrifttyper */
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'Hanken Grotesk', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+input {
+  font-family: var(--font-body);
+}
+
+/* Spinner til "Opret"-analysen */
+@keyframes simmer-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Skjul scrollbar på vandrette rækker (Hjem) */
+::-webkit-scrollbar {
+  height: 0;
+}
