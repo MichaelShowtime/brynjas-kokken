@@ -151,3 +151,51 @@ export const INGREDIENS_KATALOG = [
 ]
 
 export const ENHEDER = ['g', 'kg', 'stk', 'dl', 'l', 'ml', 'spsk', 'tsk', 'fed', 'knold', 'pose', 'potte', 'dåse', 'dåser', 'rest']
+
+// ── Mængde-sammenligning ──────────────────────────────────────────────────────
+
+function _tilBase(mængde, enhed) {
+  // Udtræk første tal fra streng (håndterer "~1", "ca. 2", osv.)
+  const m = String(mængde ?? '').replace(',', '.').match(/[\d.]+/)
+  if (!m) return null
+  const tal = parseFloat(m[0])
+  if (isNaN(tal) || tal <= 0) return null
+  const e = (enhed ?? '').toLowerCase().trim()
+  // Vægt → gram
+  if (e === 'g')     return { val: tal,        type: 'weight' }
+  if (e === 'kg')    return { val: tal * 1000,  type: 'weight' }
+  // Volumen → ml
+  if (e === 'ml')    return { val: tal,         type: 'volume' }
+  if (e === 'cl')    return { val: tal * 10,    type: 'volume' }
+  if (e === 'dl')    return { val: tal * 100,   type: 'volume' }
+  if (e === 'l')     return { val: tal * 1000,  type: 'volume' }
+  if (e === 'tsk')   return { val: tal * 5,     type: 'volume' }
+  if (e === 'spsk')  return { val: tal * 15,    type: 'volume' }
+  // Antal
+  if (['stk', 'fed', 'knold', 'dåse', 'dåser', 'pose', 'potte', 'stykker'].includes(e))
+    return { val: tal, type: 'count' }
+  return null
+}
+
+// Byg et opslags-objekt fra lager-array (kald én gang, brug mange gange)
+export function byggLagerOpslag(lager) {
+  const map = new Map(lager.map((v) => [v.navn.toLowerCase(), v]))
+  return {
+    harNok(ingNavn, ingMængde, ingEnhed) {
+      const vare = map.get((ingNavn ?? '').toLowerCase())
+      if (!vare) return { fundet: false, nok: false }
+
+      // Ingen mængde registreret i lageret → vi antager der er nok
+      if (!vare.mængde || !String(vare.mængde).trim()) return { fundet: true, nok: true }
+
+      const lagerBase = _tilBase(vare.mængde, vare.enhed)
+      const behovBase = _tilBase(ingMængde, ingEnhed)
+
+      // Kan ikke sammenligne (inkompatible enheder el. ukendt format) → antag nok
+      if (!lagerBase || !behovBase || lagerBase.type !== behovBase.type)
+        return { fundet: true, nok: true }
+
+      return { fundet: true, nok: lagerBase.val >= behovBase.val }
+    },
+  }
+}

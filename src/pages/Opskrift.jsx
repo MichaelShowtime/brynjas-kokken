@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { hentLager } from '../data/lager'
+import { hentLager, byggLagerOpslag } from '../data/lager'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
 
@@ -142,10 +142,7 @@ export default function Opskrift() {
     return () => { cancelled = true }
   }, [id])
 
-  const lagerNavne = useMemo(
-    () => new Set(hentLager().map((v) => v.navn.toLowerCase())),
-    []
-  )
+  const lagerOpslag = useMemo(() => byggLagerOpslag(hentLager()), [])
 
   if (loading) {
     return (
@@ -176,8 +173,16 @@ export default function Opskrift() {
   const portionEnhed = originalPortioner > 8 ? 'stk' : 'pers.'
 
   const ingredienser = opskrift.ingredients ?? []
-  const har = ingredienser.filter((i) => lagerNavne.has((i.name ?? '').toLowerCase()))
-  const mangler = ingredienser.filter((i) => !lagerNavne.has((i.name ?? '').toLowerCase()))
+
+  // Skalér råmængde til decimal (til sammenligning med lager — ingen formattering)
+  const skalértDecimal = (amount) => {
+    const tal = parseMængde(amount)
+    return tal === null ? amount : String(tal * faktor)
+  }
+
+  const tjek = (i) => lagerOpslag.harNok(i.name, skalértDecimal(i.amount), i.unit)
+  const har = ingredienser.filter((i) => { const r = tjek(i); return r.fundet && r.nok })
+  const mangler = ingredienser.filter((i) => { const r = tjek(i); return !r.fundet || !r.nok })
 
   return (
     <div style={s.page}>

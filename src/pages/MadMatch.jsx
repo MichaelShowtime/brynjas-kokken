@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import SwipeCard from '../components/SwipeCard'
 import { supabase } from '../lib/supabase'
 import { tidMinutter } from '../lib/recipeUtils'
-import { hentLager } from '../data/lager'
+import { hentLager, byggLagerOpslag } from '../data/lager'
 import { gemLike } from '../data/likes'
 import { colors, shadow, radius, font } from '../data/theme'
 
@@ -47,10 +47,7 @@ export default function MadMatch() {
       })
   }, [])
 
-  const lagerNavne = useMemo(
-    () => new Set(hentLager().map((v) => v.navn.toLowerCase())),
-    []
-  )
+  const lagerOpslag = useMemo(() => byggLagerOpslag(hentLager()), [])
 
   const analyser = useCallback(
     (opskrift) => {
@@ -58,11 +55,12 @@ export default function MadMatch() {
       const har = []
       const mangler = []
       for (const i of ingredienser) {
-        ;(lagerNavne.has((i.name ?? '').toLowerCase()) ? har : mangler).push(i)
+        const { fundet, nok } = lagerOpslag.harNok(i.name, i.amount, i.unit)
+        ;(fundet && nok ? har : mangler).push(i)
       }
       return { har, mangler, kanLaves: mangler.length === 0 }
     },
-    [lagerNavne]
+    [lagerOpslag]
   )
 
   const kort = useMemo(() => {
