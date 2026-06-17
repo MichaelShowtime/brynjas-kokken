@@ -1,10 +1,38 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { opskrifter } from '../data/opskrifter'
+import { supabase } from '../lib/supabase'
 import { hentKreationer, gemKreation, genererNavn } from '../data/kreationer'
 import { colors, shadow, radius, font } from '../data/theme'
 
-const MOCK_FUNDET = ['Tomater', 'Hvidløg', 'Basilikum', 'Pasta', 'Parmesan']
+async function analyserMedAI(base64Billede) {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_KEY
+  if (!apiKey) return null
+  const mediaType = base64Billede.match(/^data:(image\/[a-z]+);base64,/)?.[1] ?? 'image/jpeg'
+  const data = base64Billede.replace(/^data:image\/[a-z]+;base64,/, '')
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
+          { type: 'text', text: 'Identificér råvarer eller retten på billedet. Svar KUN med gyldig JSON (ingen markdown):\n{"råvarer":["ingrediens1","ingrediens2"],"ret":"Navn på retten eller forslag på dansk"}\nMax 8 råvarer, alt på dansk.' }
+        ]
+      }]
+    })
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const json = await res.json()
+  return JSON.parse(json.content[0].text.trim())
+}
 
 export default function Opret() {
   // view: 'intro' | 'kamera' | 'review' | 'analyserer' | 'resultat' | 'gemt' | 'detalje'
@@ -15,8 +43,10 @@ export default function Opret() {
 
   // Resultat-felter
   const [navn, setNavn] = useState('')
+  const [fundet, setFundet] = useState([])
   const [referencer, setReferencer] = useState([])
   const [mention, setMention] = useState('')
+  const [forslagListe, setForslagListe] = useState([])
 
   // Historik
   const [historik, setHistorik] = useState([])
@@ -110,14 +140,25 @@ export default function Opret() {
     e.target.value = ''
   }
 
-  function brugBillede() {
+  async function brugBillede() {
     setView('analyserer')
-    window.setTimeout(() => {
+    try {
+      const resultat = await analyserMedAI(foto)
+      if (resultat) {
+        setNavn(resultat.ret ?? genererNavn())
+        setFundet(resultat.råvarer ?? [])
+      } else {
+        setNavn(genererNavn())
+        setFundet([])
+      }
+    } catch (e) {
+      console.error('AI analyse fejlede:', e)
       setNavn(genererNavn())
-      setReferencer([])
-      setMention('')
-      setView('resultat')
-    }, 1700)
+      setFundet([])
+    }
+    setReferencer([])
+    setMention('')
+    setView('resultat')
   }
 
   function gem() {
@@ -126,7 +167,7 @@ export default function Opret() {
       navn: navn.trim() || 'Uden navn',
       foto,
       referencer,
-      fundet: MOCK_FUNDET,
+      fundet,
       dato: new Date().toISOString(),
     }
     setHistorik(gemKreation(kreation))
@@ -137,15 +178,18 @@ export default function Opret() {
     setFoto(null)
     setFejl(null)
     setNavn('')
+    setFundet([])
     setReferencer([])
     setMention('')
+    setForslagListe([])
     setView('intro')
   }
 
   // --- @-mention logik ---
   function tilføjRef(o) {
-    setReferencer((r) => (r.some((x) => x.id === o.id) ? r : [...r, { id: o.id, titel: o.titel, emoji: o.emoji }]))
+    setReferencer((r) => (r.some((x) => x.id === o.id) ? r : [...r, { id: o.id, titel: o.title ?? o.titel, emoji: '🍳' }]))
     setMention('')
+    setForslagListe([])
   }
   function fjernRef(id) {
     setReferencer((r) => r.filter((x) => x.id !== id))
@@ -153,11 +197,15 @@ export default function Opret() {
 
   const visForslag = mention.includes('@')
   const query = mention.slice(mention.lastIndexOf('@') + 1).toLowerCase()
-  const forslag = visForslag
-    ? opskrifter.filter(
-        (o) => !referencer.some((r) => r.id === o.id) && o.titel.toLowerCase().includes(query)
-      )
-    : []
+
+  useEffect(() => {
+    if (!visForslag || !query) { setForslagListe([]); return }
+    supabase.from('recipes').select('id, title, prep_time')
+      .ilike('title', `%${query}%`)
+      .not('id', 'in', `(${referencer.map(r => r.id).join(',') || '00000000-0000-0000-0000-000000000000'})`)
+      .limit(8)
+      .then(({ data }) => setForslagListe(data ?? []))
+  }, [visForslag, query])
 
   return (
     <div style={styles.page}>
@@ -193,8 +241,20 @@ export default function Opret() {
           <div style={styles.resultatKort}>
             <img src={foto} alt="" style={styles.resultatFoto} />
             <div style={{ padding: '16px' }}>
+              {/* Genkendte råvarer */}
+              {fundet.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <label style={styles.feltLabel}>Genkendte råvarer</label>
+                  <div style={styles.refChips}>
+                    {fundet.map((r) => (
+                      <span key={r} style={styles.chip}>✓ {r}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Redigerbart, genereret navn */}
-              <label style={styles.feltLabel}>Navn (genereret — kan rettes)</label>
+              <label style={styles.feltLabel}>Navn (kan rettes)</label>
               <div style={styles.navnRow}>
                 <input value={navn} onChange={(e) => setNavn(e.target.value)}
                   style={styles.navnInput} placeholder="Giv retten et navn" />
@@ -219,12 +279,12 @@ export default function Opret() {
 
               {visForslag && (
                 <div style={styles.dropdown}>
-                  {forslag.length === 0 && <div style={styles.dropTom}>Ingen match</div>}
-                  {forslag.map((o) => (
+                  {forslagListe.length === 0 && <div style={styles.dropTom}>{query ? 'Ingen match' : 'Søg efter opskrift…'}</div>}
+                  {forslagListe.map((o) => (
                     <button key={o.id} style={styles.dropItem} onClick={() => tilføjRef(o)}>
-                      <span style={{ fontSize: 18 }}>{o.emoji}</span>
-                      <span style={styles.dropTitel}>{o.titel}</span>
-                      <span style={styles.dropMeta}>⏱ {o.tid}m</span>
+                      <span style={{ fontSize: 18 }}>🍳</span>
+                      <span style={styles.dropTitel}>{o.title}</span>
+                      {o.prep_time && <span style={styles.dropMeta}>⏱ {o.prep_time}m</span>}
                     </button>
                   ))}
                 </div>

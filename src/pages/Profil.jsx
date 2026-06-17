@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
 import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
 import { hentKreationer } from '../data/kreationer'
@@ -180,7 +181,11 @@ export default function Profil() {
       {/* Hero */}
       <div style={s.hero}>
         <div style={s.avatarWrap}>
-          <div style={s.avatar}>{bruger.avatar}</div>
+          <div style={s.avatar}>
+            {bruger.avatarUrl
+              ? <img src={bruger.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 999 }} />
+              : bruger.avatar}
+          </div>
           {streak > 0 && <div style={s.streakBadge}>🔥 {streak}</div>}
         </div>
         <h1 style={s.navn}>{bruger.navn} {bruger.efternavn}</h1>
@@ -412,6 +417,35 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
   const [efternavn, setEfternavn] = useState(bruger.efternavn || '')
   const [bio, setBio] = useState(bruger.bio || '')
   const [telefon, setTelefon] = useState(bruger.telefon || '')
+  const [avatarFil, setAvatarFil] = useState(null)
+  const [avatarFotoUrl, setAvatarFotoUrl] = useState(bruger.avatarUrl || null)
+  const [gemmer, setGemmer] = useState(false)
+  const fotoInputRef = useRef(null)
+
+  function vælgFoto(e) {
+    const fil = e.target.files?.[0]
+    if (!fil) return
+    setAvatarFil(fil)
+    setAvatarFotoUrl(URL.createObjectURL(fil))
+  }
+
+  async function gem() {
+    setGemmer(true)
+    let nyAvatarUrl = bruger.avatarUrl || null
+    if (avatarFil) {
+      try {
+        const ext = avatarFil.name.split('.').pop() || 'jpg'
+        const sti = `avatarer/${bruger.email.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.${ext}`
+        const { data, error } = await supabase.storage.from('recipes').upload(sti, avatarFil, { upsert: true })
+        if (!error && data?.path) {
+          const { data: urlData } = supabase.storage.from('recipes').getPublicUrl(data.path)
+          nyAvatarUrl = urlData.publicUrl
+        }
+      } catch {}
+    }
+    setGemmer(false)
+    onGem({ avatar, navn, efternavn, bio, telefon, avatarUrl: nyAvatarUrl })
+  }
 
   return (
     <div style={s.subSide}>
@@ -440,18 +474,39 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
           placeholder="Fortæl lidt om din madstil…"
           style={{ ...s.input, height: 80, resize: 'none' }} />
 
-        <label style={s.feltLabel}>Vælg avatar</label>
+        <label style={s.feltLabel}>Profilbillede</label>
+        <input ref={fotoInputRef} type="file" accept="image/*" onChange={vælgFoto} style={{ display: 'none' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+          <div style={{ width: 72, height: 72, borderRadius: 999, overflow: 'hidden', background: s.avatar.background, border: `2px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, flexShrink: 0 }}>
+            {avatarFotoUrl
+              ? <img src={avatarFotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : avatar}
+          </div>
+          <button style={{ ...s.sekundærBtn, width: 'auto', marginTop: 0, padding: '10px 16px' }}
+            onClick={() => fotoInputRef.current?.click()}>
+            📷 Upload foto
+          </button>
+          {avatarFotoUrl && bruger.avatarUrl !== avatarFotoUrl && (
+            <button style={{ background: 'none', border: 'none', color: colors.muted, fontSize: 13, padding: 0, cursor: 'pointer' }}
+              onClick={() => { setAvatarFil(null); setAvatarFotoUrl(bruger.avatarUrl || null) }}>
+              Fortryd
+            </button>
+          )}
+        </div>
+
+        <label style={s.feltLabel}>Eller vælg emoji-avatar</label>
         <div style={s.avatarGrid}>
           {AVATARER.map((a) => (
-            <button key={a} onClick={() => setAvatar(a)}
-              style={{ ...s.avatarValg, ...(avatar === a ? s.avatarAktiv : {}) }}>
+            <button key={a} onClick={() => { setAvatar(a); setAvatarFil(null); setAvatarFotoUrl(null) }}
+              style={{ ...s.avatarValg, ...(avatar === a && !avatarFotoUrl ? s.avatarAktiv : {}) }}>
               {a}
             </button>
           ))}
         </div>
-        <div style={{ fontSize: 56, textAlign: 'center', margin: '0 auto 8px' }}>{avatar}</div>
 
-        <button style={s.primærBtn} onClick={() => onGem({ avatar, navn, efternavn, bio, telefon })}>Gem ændringer</button>
+        <button style={{ ...s.primærBtn, opacity: gemmer ? 0.7 : 1 }} onClick={gem} disabled={gemmer}>
+          {gemmer ? 'Gemmer…' : 'Gem ændringer'}
+        </button>
         <button style={s.sekundærBtn} onClick={onTilbage}>Annullér</button>
       </div>
     </div>

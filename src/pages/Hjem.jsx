@@ -55,6 +55,7 @@ export default function Hjem() {
   const [kreationer] = useState(() => hentKreationer())
   const [likes] = useState(() => hentLikes())
   const [dbPosts, setDbPosts] = useState([])
+  const [postLikes, setPostLikes] = useState({})
   const [toast, setToast] = useState(null)
   const toastTimer = useRef(null)
   const [søgeTekst, setSøgeTekst] = useState('')
@@ -155,6 +156,33 @@ export default function Hjem() {
   }
 
   function rydSøg() { setSøgeTekst(''); setSøgeResultater([]); setSøgerAktivt(false) }
+
+  // Hent likes når posts loader
+  useEffect(() => {
+    if (!dbPosts.length || !bruger?.email) return
+    const ids = dbPosts.map((p) => p.id)
+    supabase.from('post_likes').select('post_id, bruger_email').in('post_id', ids).then(({ data }) => {
+      const map = {}
+      for (const like of data ?? []) {
+        if (!map[like.post_id]) map[like.post_id] = { count: 0, likedByMe: false }
+        map[like.post_id].count++
+        if (like.bruger_email === bruger.email) map[like.post_id].likedByMe = true
+      }
+      setPostLikes(map)
+    })
+  }, [dbPosts, bruger?.email])
+
+  async function toggleLike(postId) {
+    if (!bruger?.email) return
+    const cur = postLikes[postId] ?? { count: 0, likedByMe: false }
+    if (cur.likedByMe) {
+      setPostLikes((prev) => ({ ...prev, [postId]: { count: Math.max(0, cur.count - 1), likedByMe: false } }))
+      await supabase.from('post_likes').delete().eq('post_id', postId).eq('bruger_email', bruger.email)
+    } else {
+      setPostLikes((prev) => ({ ...prev, [postId]: { count: cur.count + 1, likedByMe: true } }))
+      await supabase.from('post_likes').insert({ post_id: postId, bruger_email: bruger.email })
+    }
+  }
 
   // Venner der postede indenfor 24 timer — bruges til live-ring
   const recentPostEmails = useMemo(() => {
@@ -302,7 +330,12 @@ export default function Hjem() {
               )}
               {p.citat && <p style={styles.postCitat}>"{p.citat}"</p>}
               <div style={styles.postFooter}>
-                <span style={styles.postStat}>🍽️ {p.opskrift_titel}</span>
+                <button
+                  style={{ ...styles.postStat, background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: postLikes[p.id]?.likedByMe ? colors.red : colors.muted }}
+                  onClick={() => toggleLike(p.id)}
+                >
+                  {postLikes[p.id]?.likedByMe ? '❤️' : '🤍'} {postLikes[p.id]?.count ?? 0}
+                </button>
                 {p.opskrift_id ? (
                   <button
                     style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}

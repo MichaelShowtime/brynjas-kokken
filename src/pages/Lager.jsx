@@ -269,6 +269,54 @@ export default function Lager() {
 
 // ── Tilføj-sheet ─────────────────────────────────────────────────────────────
 
+function BarcodeScanner({ onDetected, onLuk }) {
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
+  const rafRef = useRef(null)
+  const [fejl, setFejl] = useState(null)
+
+  useEffect(() => {
+    if (!('BarcodeDetector' in window)) {
+      setFejl('Stregkodescanner understøttes ikke i denne browser (kræver Chrome/Edge/Safari 17+).')
+      return
+    }
+    const detector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code'] })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      .then((stream) => {
+        streamRef.current = stream
+        if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
+        async function scan() {
+          if (!videoRef.current || videoRef.current.readyState < 2) { rafRef.current = requestAnimationFrame(scan); return }
+          try {
+            const koder = await detector.detect(videoRef.current)
+            if (koder.length > 0) { stream.getTracks().forEach((t) => t.stop()); onDetected(koder[0].rawValue); return }
+          } catch {}
+          rafRef.current = requestAnimationFrame(scan)
+        }
+        rafRef.current = requestAnimationFrame(scan)
+      })
+      .catch(() => setFejl('Kunne ikke åbne kamera — tjek kameratilladelse.'))
+    return () => { streamRef.current?.getTracks().forEach((t) => t.stop()); cancelAnimationFrame(rafRef.current) }
+  }, [onDetected])
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      {fejl ? (
+        <div style={{ fontFamily: font.body, fontSize: 13.5, color: colors.red, padding: '12px 0' }}>{fejl}</div>
+      ) : (
+        <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: '#000', height: 200 }}>
+          <video ref={videoRef} playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', inset: 8, border: `2px solid ${colors.green}`, borderRadius: 10, pointerEvents: 'none' }} />
+          <p style={{ position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center', color: '#fff', fontFamily: font.body, fontSize: 12.5, fontWeight: 700, margin: 0 }}>
+            Hold stregkoden inden for rammen
+          </p>
+        </div>
+      )}
+      <button style={{ ...s.ghostBtn, marginTop: 8 }} onClick={onLuk}>Annullér scanner</button>
+    </div>
+  )
+}
+
 function TilføjSheet({ onTilføj, onLuk }) {
   const [søgning, setSøgning]     = useState('')
   const [valgt, setValgt]         = useState(null)
@@ -277,6 +325,8 @@ function TilføjSheet({ onTilføj, onLuk }) {
   const [udløb, setUdløb]         = useState('')
   const [katalog, setKatalog]     = useState(_katalogCache ?? INGREDIENS_KATALOG)
   const [indlæser, setIndlæser]   = useState(!_katalogCache)
+  const [scanMode, setScanMode]   = useState(false)
+  const [lytter, setLytter]       = useState(false)
   const søgeRef = useRef(null)
 
   useEffect(() => { søgeRef.current?.focus() }, [])
@@ -324,6 +374,47 @@ function TilføjSheet({ onTilføj, onLuk }) {
     setSøgning(item.navn)
   }
 
+  async function skanBarcode(kode) {
+    setScanMode(false)
+    setSøgning('Søger produkt…')
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${kode}.json`)
+      const data = await res.json()
+      if (data.status === 1 && data.product) {
+        const navn = data.product.product_name_da || data.product.product_name || kode
+        const matchFraKatalog = katalog.find((k) => k.navn.toLowerCase() === navn.toLowerCase())
+        if (matchFraKatalog) {
+          vælgIngrediens(matchFraKatalog)
+        } else {
+          const nyVare = { navn, emoji: gætEmoji(navn), kategori: gætKategori(navn), standardEnhed: gætEnhed(navn) }
+          vælgIngrediens(nyVare)
+        }
+      } else {
+        setSøgning('')
+        alert(`Produkt med kode ${kode} ikke fundet. Prøv manuelt.`)
+      }
+    } catch {
+      setSøgning('')
+    }
+  }
+
+  function startStemme() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) { alert('Taleindtastning understøttes ikke i denne browser.'); return }
+    const rec = new SR()
+    rec.lang = 'da-DK'
+    rec.onstart = () => setLytter(true)
+    rec.onresult = (e) => {
+      const tekst = e.results[0][0].transcript
+      setLytter(false)
+      setSøgning(tekst)
+      setValgt(null)
+    }
+    rec.onerror = () => setLytter(false)
+    rec.onend = () => setLytter(false)
+    rec.start()
+  }
+
   function håndterTilføj() {
     if (!valgt) return
     onTilføj({
@@ -344,33 +435,47 @@ function TilføjSheet({ onTilføj, onLuk }) {
         {/* Greb */}
         <div style={s.greb} />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <h2 style={s.sheetTitel}>Tilføj råvare</h2>
           <button style={s.lukBtn} onClick={onLuk}>✕</button>
         </div>
 
-        {/* Søgefelt */}
-        <div style={s.søgeWrap}>
-          <span style={s.søgeIkon}>🔍</span>
-          <input
-            ref={søgeRef}
-            value={søgning}
-            onChange={(e) => { setSøgning(e.target.value); setValgt(null) }}
-            placeholder="Søg ingrediens, fx. Løg…"
-            style={s.søgeInput}
-          />
-          {søgning && (
-            <button style={s.søgeRyd} onClick={() => { setSøgning(''); setValgt(null) }}>✕</button>
-          )}
-        </div>
-
-        {/* Ingrediens-tæller */}
-        {!valgt && !indlæser && (
-          <p style={s.katalogTæller}>{katalog.length} ingredienser · fra alle opskrifter</p>
+        {/* Scanner + stemme-knapper */}
+        {!valgt && !scanMode && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <button style={s.scanKnap} onClick={() => setScanMode(true)}>📸 Scan stregkode</button>
+            <button style={{ ...s.scanKnap, opacity: lytter ? 0.7 : 1 }} onClick={startStemme}>
+              {lytter ? '🎙️ Lytter…' : '🎤 Stemme'}
+            </button>
+          </div>
         )}
 
-        {/* Søgeresultater — kun hvis ikke valgt */}
-        {!valgt && (
+        {/* Stregkodescanner */}
+        {scanMode && <BarcodeScanner onDetected={skanBarcode} onLuk={() => setScanMode(false)} />}
+
+        {/* Søgefelt + resultater — skjult under scanner */}
+        {!scanMode && (<>
+          <div style={s.søgeWrap}>
+            <span style={s.søgeIkon}>🔍</span>
+            <input
+              ref={søgeRef}
+              value={søgning}
+              onChange={(e) => { setSøgning(e.target.value); setValgt(null) }}
+              placeholder="Søg ingrediens, fx. Løg…"
+              style={s.søgeInput}
+            />
+            {søgning && (
+              <button style={s.søgeRyd} onClick={() => { setSøgning(''); setValgt(null) }}>✕</button>
+            )}
+          </div>
+
+          {/* Ingrediens-tæller */}
+          {!valgt && !indlæser && (
+            <p style={s.katalogTæller}>{katalog.length} ingredienser · fra alle opskrifter</p>
+          )}
+
+          {/* Søgeresultater — kun hvis ikke valgt */}
+          {!valgt && (
           <div style={s.resultaterListe}>
             {indlæser ? (
               <div style={s.ingenResultater}>Henter ingredienser fra opskrifter…</div>
@@ -400,7 +505,8 @@ function TilføjSheet({ onTilføj, onLuk }) {
               ))
             )}
           </div>
-        )}
+          )}
+        </>)}
 
         {/* Detalje-formular — når ingrediens er valgt */}
         {valgt && (
@@ -670,4 +776,5 @@ const s = {
   enhedSelect: { padding: '12px 10px', fontFamily: font.body, fontSize: 15, color: colors.text, background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12, outline: 'none', flexShrink: 0, marginBottom: 14 },
   primærBtn: { width: '100%', padding: '14px', fontFamily: font.body, fontWeight: 700, fontSize: 15, color: '#fff', background: colors.green, border: 'none', borderRadius: radius.button, marginTop: 4 },
   ghostBtn: { width: '100%', padding: '13px', fontFamily: font.body, fontWeight: 700, fontSize: 15, color: colors.muted, background: 'transparent', border: 'none', borderRadius: radius.button, marginTop: 8 },
+  scanKnap: { flex: 1, padding: '10px 8px', fontFamily: font.body, fontWeight: 700, fontSize: 13, color: colors.green, background: 'rgba(47,107,79,0.10)', border: 'none', borderRadius: 12, cursor: 'pointer' },
 }
