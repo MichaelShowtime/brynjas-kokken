@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { tidMinutter } from '../lib/recipeUtils'
 import { hentLager, byggLagerOpslag } from '../data/lager'
 import { gemLike } from '../data/likes'
+import { gemAfvist, rydOgHent } from '../data/afviste'
 import { colors, shadow, radius, font } from '../data/theme'
 
 const SWIPE_THRESHOLD = 110
@@ -34,6 +35,9 @@ export default function MadMatch() {
   // Filtre
   const [tagFilter, setTagFilter] = useState(null)
   const [under30, setUnder30] = useState(false)
+
+  // Afviste retter (nej-swipes huskes i 7 dage)
+  const [afviste, setAfviste] = useState(() => rydOgHent())
 
   useEffect(() => {
     supabase
@@ -68,11 +72,16 @@ export default function MadMatch() {
       ? [...alleOpskrifter].sort((a, b) => analyser(a).mangler.length - analyser(b).mangler.length)
       : shuffled
 
+    // Fjern ikke-retter (0 ingredienser) og afviste (nej inden for 7 dage)
+    liste = liste.filter((o) =>
+      (o.ingredients?.length ?? 0) > 0 && !afviste.has(o.id)
+    )
+
     if (tagFilter) liste = liste.filter((o) => o.tags?.includes(tagFilter))
     if (under30)   liste = liste.filter((o) => tidMinutter(o.prep_time, o.cook_time) > 0 && tidMinutter(o.prep_time, o.cook_time) <= 30)
 
     return liste
-  }, [brugLager, shuffled, alleOpskrifter, tagFilter, under30, analyser])
+  }, [brugLager, shuffled, alleOpskrifter, tagFilter, under30, analyser, afviste])
 
   function nulstilStak() {
     setIndex(0)
@@ -94,6 +103,10 @@ export default function MadMatch() {
       if (retning === 'right' && aktuel) {
         setGemte((g) => [...g, aktuel])
         gemLike(aktuel)
+      }
+      if (retning === 'left' && aktuel) {
+        gemAfvist(aktuel.id)
+        setAfviste((prev) => new Set([...prev, aktuel.id]))
       }
       setAnimer(true)
       setDrag({ x: retning === 'right' ? 600 : -600, y: 40 })
