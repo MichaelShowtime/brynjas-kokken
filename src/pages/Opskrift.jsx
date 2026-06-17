@@ -5,11 +5,125 @@ import { hentLager } from '../data/lager'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
 
+// ── Mængde-skalering ──────────────────────────────────────────────────────────
+
+// Kendte brøk-tegn → decimalværdi
+const BRØK = { '½': 0.5, '¼': 0.25, '¾': 0.75, '⅓': 1/3, '⅔': 2/3, '⅛': 0.125, '⅜': 0.375 }
+const BRØK_INV = Object.entries(BRØK).sort((a, b) => a[1] - b[1])
+
+function parseMængde(str) {
+  if (!str) return null
+  const s = String(str).trim()
+  if (BRØK[s] !== undefined) return BRØK[s]
+  // "1½", "2¼" osv.
+  const blandet = s.match(/^(\d+)(½|¼|¾|⅓|⅔|⅛|⅜)$/)
+  if (blandet) return parseInt(blandet[1]) + BRØK[blandet[2]]
+  const tal = parseFloat(s.replace(',', '.'))
+  return isNaN(tal) ? null : tal
+}
+
+function formatMængde(num) {
+  if (num === null || num <= 0) return null
+  const hel = Math.floor(num)
+  const rest = num - hel
+  // Find nærmeste brøk inden for ±0.09
+  let bedsteBrøk = null, bedsteAfstand = 0.09
+  for (const [tegn, val] of BRØK_INV) {
+    const afstand = Math.abs(rest - val)
+    if (afstand < bedsteAfstand) { bedsteAfstand = afstand; bedsteBrøk = tegn }
+  }
+  if (bedsteBrøk) return hel > 0 ? `${hel}${bedsteBrøk}` : bedsteBrøk
+  // Afrund fornuftigt efter størrelse
+  if (num >= 200) return String(Math.round(num / 5) * 5)
+  if (num >= 50)  return String(Math.round(num))
+  if (num >= 10)  return String(Math.round(num * 2) / 2)  // 0,5-skridt
+  if (num >= 1)   return String(Math.round(num * 4) / 4 % 1 === 0
+                    ? Math.round(num * 4) / 4
+                    : parseFloat((Math.round(num * 4) / 4).toFixed(2)))
+  return String(parseFloat(num.toFixed(2)))
+}
+
+function skalér(mængde, faktor) {
+  if (faktor === 1 || !mængde) return mængde
+  const tal = parseMængde(mængde)
+  if (tal === null) return mængde   // tekst som "lidt" / "efter smag" — uændret
+  return formatMængde(tal * faktor) ?? mængde
+}
+
+// ── Portionsvælger ────────────────────────────────────────────────────────────
+
+function PortionVælger({ portioner, original, onChange }) {
+  // Brug "stk" for store batches (kager, cookies, kugler), ellers "pers."
+  const enhed = original > 8 ? 'stk' : 'pers.'
+
+  return (
+    <div style={pv.wrap}>
+      <span style={pv.label}>Tilpas mængde</span>
+      <div style={pv.kontrol}>
+        <button
+          style={{ ...pv.btn, opacity: portioner <= 1 ? 0.35 : 1 }}
+          onClick={() => onChange(Math.max(1, portioner - 1))}
+          disabled={portioner <= 1}
+        >−</button>
+        <span style={pv.tal}>
+          {portioner}
+          <span style={pv.enhed}> {enhed}</span>
+        </span>
+        <button
+          style={{ ...pv.btn, opacity: portioner >= 100 ? 0.35 : 1 }}
+          onClick={() => onChange(Math.min(100, portioner + 1))}
+          disabled={portioner >= 100}
+        >+</button>
+      </div>
+      {portioner !== original && (
+        <button style={pv.nulstil} onClick={() => onChange(original)}>
+          Nulstil til {original}
+        </button>
+      )}
+    </div>
+  )
+}
+
+const pv = {
+  wrap: {
+    display: 'flex', alignItems: 'center', gap: 12,
+    background: colors.card, borderRadius: 16, boxShadow: shadow.card,
+    padding: '12px 16px', marginBottom: 20,
+  },
+  label: {
+    fontFamily: font.body, fontSize: 13.5, fontWeight: 600, color: colors.muted, flex: 1,
+  },
+  kontrol: {
+    display: 'flex', alignItems: 'center', gap: 4,
+  },
+  btn: {
+    width: 36, height: 36, borderRadius: 999, border: 'none',
+    background: colors.bg, fontFamily: font.display, fontSize: 20, fontWeight: 700,
+    color: colors.text, cursor: 'pointer', flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  tal: {
+    fontFamily: font.display, fontWeight: 800, fontSize: 20, color: colors.text,
+    minWidth: 52, textAlign: 'center',
+  },
+  enhed: {
+    fontFamily: font.body, fontSize: 13, fontWeight: 600, color: colors.muted,
+  },
+  nulstil: {
+    fontFamily: font.body, fontSize: 12, fontWeight: 700, color: colors.green,
+    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+}
+
+// ── Hoved-komponent ───────────────────────────────────────────────────────────
+
 export default function Opskrift() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [opskrift, setOpskrift] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [portioner, setPortioner] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -19,7 +133,11 @@ export default function Opskrift() {
       .eq('id', id)
       .single()
       .then(({ data }) => {
-        if (!cancelled) { setOpskrift(data); setLoading(false) }
+        if (!cancelled) {
+          setOpskrift(data)
+          setPortioner(data?.servings ?? 4)
+          setLoading(false)
+        }
       })
     return () => { cancelled = true }
   }, [id])
@@ -51,6 +169,12 @@ export default function Opskrift() {
   const farve = opskriftFarve(opskrift.tags)
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const sværhed = sværhedLabel(opskrift.difficulty)
+  const originalPortioner = opskrift.servings ?? portioner
+  const faktor = portioner / originalPortioner
+
+  // Brug "stk" for store batches
+  const portionEnhed = originalPortioner > 8 ? 'stk' : 'pers.'
+
   const ingredienser = opskrift.ingredients ?? []
   const har = ingredienser.filter((i) => lagerNavne.has((i.name ?? '').toLowerCase()))
   const mangler = ingredienser.filter((i) => !lagerNavne.has((i.name ?? '').toLowerCase()))
@@ -80,15 +204,13 @@ export default function Opskrift() {
         <div style={s.metaRække}>
           {tid && <span style={s.metaChip}>⏱ {tid}</span>}
           {sværhed && <span style={s.metaChip}>{sværhed}</span>}
-          {opskrift.servings && <span style={s.metaChip}>🍽 {opskrift.servings} pers.</span>}
+          {opskrift.servings && (
+            <span style={s.metaChip}>🍽 {portioner} {portionEnhed}</span>
+          )}
         </div>
 
-        {/* Kilde */}
-        {opskrift.source && (
-          <p style={s.kilde}>fra {opskrift.source}</p>
-        )}
+        {opskrift.source && <p style={s.kilde}>fra {opskrift.source}</p>}
 
-        {/* Beskrivelse */}
         {opskrift.description && (
           <p style={s.beskrivelse}>{opskrift.description}</p>
         )}
@@ -103,13 +225,23 @@ export default function Opskrift() {
                 : <span style={s.manglerBadge}>{mangler.length} mangler</span>
               }
             </div>
+
+            {/* Portionsvælger */}
+            {opskrift.servings && (
+              <PortionVælger
+                portioner={portioner}
+                original={originalPortioner}
+                onChange={setPortioner}
+              />
+            )}
+
             <div style={s.ingrediensListe}>
               {har.map((i, idx) => (
                 <div key={idx} style={s.ingrediensItem}>
                   <span style={s.harIkon}>✓</span>
                   <span style={s.ingrediensNavn}>{i.name}</span>
                   <span style={s.ingrediensMeta}>
-                    {[i.amount, i.unit].filter(Boolean).join(' ')}
+                    {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
                   </span>
                 </div>
               ))}
@@ -118,7 +250,7 @@ export default function Opskrift() {
                   <span style={s.manglerIkon}>+</span>
                   <span style={s.ingrediensNavn}>{i.name}</span>
                   <span style={s.ingrediensMeta}>
-                    {[i.amount, i.unit].filter(Boolean).join(' ')}
+                    {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
                   </span>
                 </div>
               ))}
@@ -160,22 +292,19 @@ const s = {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
     justifyContent: 'center', gap: 12, padding: 24,
   },
-  loadSpinner: { fontSize: 48, animation: 'spin 1.2s linear infinite' },
+  loadSpinner: { fontSize: 48 },
   loadTekst: { fontFamily: font.body, fontSize: 16, color: colors.muted, margin: 0 },
   backBtnInline: {
     fontFamily: font.body, fontWeight: 700, fontSize: 15, color: colors.green,
     background: 'none', border: 'none', padding: 0, marginTop: 8,
   },
 
-  hero: {
-    width: '100%', height: 280, position: 'relative', overflow: 'hidden',
-  },
+  hero: { width: '100%', height: 280, position: 'relative', overflow: 'hidden' },
   heroImg: {
     position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
   },
   backBtn: {
-    position: 'absolute', top: 16, left: 16,
-    width: 40, height: 40, borderRadius: 999,
+    position: 'absolute', top: 16, left: 16, width: 40, height: 40, borderRadius: 999,
     background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(8px)',
     border: 'none', color: '#fff', fontSize: 20, fontWeight: 700,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -204,20 +333,17 @@ const s = {
   },
 
   kilde: {
-    fontFamily: font.body, fontSize: 12.5, color: colors.mutedLight,
-    margin: '8px 0 14px',
+    fontFamily: font.body, fontSize: 12.5, color: colors.mutedLight, margin: '8px 0 14px',
   },
 
   beskrivelse: {
-    fontFamily: font.body, fontSize: 15, lineHeight: 1.55,
-    color: colors.muted, margin: '0 0 24px',
+    fontFamily: font.body, fontSize: 15, lineHeight: 1.55, color: colors.muted, margin: '0 0 24px',
   },
 
   sektion: { marginBottom: 28 },
 
   sektionHeader: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 14,
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14,
   },
   sektionTitel: {
     fontFamily: font.display, fontWeight: 800, fontSize: 20,
@@ -225,46 +351,38 @@ const s = {
   },
   harAltBadge: {
     fontFamily: font.body, fontSize: 12.5, fontWeight: 700,
-    color: colors.green, background: 'rgba(47,107,79,0.10)',
-    padding: '5px 12px', borderRadius: 999,
+    color: colors.green, background: 'rgba(47,107,79,0.10)', padding: '5px 12px', borderRadius: 999,
   },
   manglerBadge: {
     fontFamily: font.body, fontSize: 12.5, fontWeight: 700,
-    color: colors.terracotta, background: 'rgba(224,138,91,0.12)',
-    padding: '5px 12px', borderRadius: 999,
+    color: colors.terracotta, background: 'rgba(224,138,91,0.12)', padding: '5px 12px', borderRadius: 999,
   },
 
   ingrediensListe: {
-    background: colors.card, borderRadius: radius.card,
-    boxShadow: shadow.card, overflow: 'hidden',
+    background: colors.card, borderRadius: radius.card, boxShadow: shadow.card, overflow: 'hidden',
   },
   ingrediensItem: {
-    display: 'flex', alignItems: 'center', gap: 12,
-    padding: '13px 16px',
+    display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px',
     borderBottom: `1px solid ${colors.border}`,
   },
-  ingrediensMangler: { opacity: 0.75 },
+  ingrediensMangler: { opacity: 0.72 },
   harIkon: {
-    fontFamily: font.body, fontSize: 16, fontWeight: 700,
-    color: colors.green, width: 22, flexShrink: 0, textAlign: 'center',
+    fontFamily: font.body, fontSize: 16, fontWeight: 700, color: colors.green,
+    width: 22, flexShrink: 0, textAlign: 'center',
   },
   manglerIkon: {
-    fontFamily: font.body, fontSize: 18, fontWeight: 700,
-    color: colors.terracotta, width: 22, flexShrink: 0, textAlign: 'center',
+    fontFamily: font.body, fontSize: 18, fontWeight: 700, color: colors.terracotta,
+    width: 22, flexShrink: 0, textAlign: 'center',
   },
   ingrediensNavn: {
-    fontFamily: font.body, fontSize: 15, fontWeight: 600,
-    color: colors.text, flex: 1,
+    fontFamily: font.body, fontSize: 15, fontWeight: 600, color: colors.text, flex: 1,
   },
   ingrediensMeta: {
-    fontFamily: font.body, fontSize: 13, color: colors.muted,
-    flexShrink: 0,
+    fontFamily: font.body, fontSize: 13, color: colors.muted, flexShrink: 0,
   },
 
   stepsListe: { display: 'flex', flexDirection: 'column', gap: 14 },
-  trin: {
-    display: 'flex', gap: 14, alignItems: 'flex-start',
-  },
+  trin: { display: 'flex', gap: 14, alignItems: 'flex-start' },
   trinNr: {
     width: 32, height: 32, borderRadius: 999, flexShrink: 0,
     background: colors.green, color: '#fff',
@@ -272,14 +390,12 @@ const s = {
     fontFamily: font.display, fontWeight: 800, fontSize: 14,
   },
   trinTekst: {
-    fontFamily: font.body, fontSize: 15, lineHeight: 1.55,
-    color: colors.text, margin: '4px 0 0', flex: 1,
+    fontFamily: font.body, fontSize: 15, lineHeight: 1.55, color: colors.text, margin: '4px 0 0', flex: 1,
   },
 
   kildeLink: {
     display: 'block', fontFamily: font.body, fontSize: 14, fontWeight: 700,
     color: colors.green, textDecoration: 'none',
-    padding: '14px 0', borderTop: `1px solid ${colors.border}`,
-    marginTop: 8,
+    padding: '14px 0', borderTop: `1px solid ${colors.border}`, marginTop: 8,
   },
 }
