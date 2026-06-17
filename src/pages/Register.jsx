@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { registrerBruger } from '../data/auth'
+import { supabase } from '../lib/supabase'
 import { colors, shadow, radius, font } from '../data/theme'
 
 export default function Register() {
@@ -26,18 +27,27 @@ export default function Register() {
     setTrin(2)
   }
 
-  function håndterOpret(e) {
+  async function håndterOpret(e) {
     e.preventDefault()
     setFejl('')
     if (password !== password2)
       return setFejl('Adgangskoderne matcher ikke.')
     setLoading(true)
-    setTimeout(() => {
-      const res = registrerBruger({ email, navn, efternavn, telefon, password })
+    const res = registrerBruger({ email, navn, efternavn, telefon, password })
+    if (!res.ok) {
       setLoading(false)
-      if (!res.ok) return setFejl(res.fejl)
-      navigate('/onboarding', { replace: true })
-    }, 400)
+      return setFejl(res.fejl)
+    }
+    // Gem i Supabase customers tabel (fire-and-forget — fejl blokerer ikke bruger)
+    await supabase.from('customers').insert({
+      email: email.trim().toLowerCase(),
+      first_name: navn.trim(),
+      last_name: efternavn.trim(),
+      phone: telefon.trim() || null,
+      created_at: new Date().toISOString(),
+    })
+    setLoading(false)
+    navigate('/onboarding', { replace: true })
   }
 
   return (

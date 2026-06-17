@@ -284,6 +284,11 @@ export default function Opskrift() {
             Se original opskrift på {opskrift.source} →
           </a>
         )}
+
+        {/* Start cook mode */}
+        <button style={s.startKnap} onClick={() => navigate(`/kok/${opskrift.id}`)}>
+          🍳 Start tilberedning
+        </button>
       </div>
     </div>
   )
@@ -402,5 +407,13 @@ const s = {
     display: 'block', fontFamily: font.body, fontSize: 14, fontWeight: 700,
     color: colors.green, textDecoration: 'none',
     padding: '14px 0', borderTop: `1px solid ${colors.border}`, marginTop: 8,
+  },
+
+  startKnap: {
+    display: 'block', width: '100%', padding: '16px 0', marginTop: 16, marginBottom: 8,
+    fontFamily: font.body, fontSize: 16, fontWeight: 800,
+    color: '#fff', background: colors.green,
+    border: 'none', borderRadius: radius.button, cursor: 'pointer',
+    boxShadow: shadow.fab,
   },
 }

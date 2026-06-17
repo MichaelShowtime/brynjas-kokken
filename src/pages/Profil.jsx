@@ -4,7 +4,8 @@ import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
 import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
 import { hentKreationer } from '../data/kreationer'
 import { hentLikes, fjernLike } from '../data/likes'
-import { venner } from '../data/feed'
+import { billedeUrl, opskriftFarve, grad, tidLabel } from '../lib/recipeUtils'
+import { hentVenner, tilføjVen, fjernVen } from '../data/venner'
 import { colors, shadow, radius, font } from '../data/theme'
 
 const AVATARER = ['🧑‍🍳','👩‍🍳','👨‍🍳','🧑🏽‍🍳','👩🏽‍🍳','👨🏾‍🍳','🧑🏻‍🍳','👩🏿‍🍳','🐻','🦊','🐸','🌻']
@@ -18,6 +19,8 @@ const ACHIEVEMENTS = [
   { emoji: '🏆', titel: 'Mesterkok',         beskrivelse: 'Lavet 100 retter',       opnået: false },
 ]
 
+const TILFØJ_VEN_KEY = 'profil_tilfoej_ven'
+
 const NOTIF_KEY    = 'simmer_notif'
 const PRIVATLIV_KEY = 'simmer_privatliv'
 const DEFAULT_NOTIF = { daglige: true, venner: true, ugentlig: false }
@@ -26,18 +29,44 @@ const DEFAULT_PRIV  = { offentlig: true, aktivitet: true, streak: true }
 function hentNotif()    { try { return { ...DEFAULT_NOTIF, ...JSON.parse(localStorage.getItem(NOTIF_KEY)) } } catch { return DEFAULT_NOTIF } }
 function hentPrivatliv(){ try { return { ...DEFAULT_PRIV,  ...JSON.parse(localStorage.getItem(PRIVATLIV_KEY)) } } catch { return DEFAULT_PRIV } }
 
+// ── Tilføj ven-dialog ────────────────────────────────────────────────────────
+function TilføjVenDialog({ onLuk, onTilføjet }) {
+  const [input, setInput] = useState('')
+  const [fejl, setFejl] = useState('')
+
+  function håndter() {
+    const resultat = tilføjVen(input)
+    if (!resultat) { setFejl('Brugernavn ikke fundet eller allerede tilføjet'); return }
+    onTilføjet(resultat)
+    onLuk()
+  }
+
+  return (
+    <div style={s.overlay} onClick={onLuk}>
+      <div style={s.dialog} onClick={e => e.stopPropagation()}>
+        <p style={s.dialogTitel}>Tilføj ven</p>
+        <p style={s.dialogTekst}>Indtast en vens unikke brugernavn for at tilføje dem.</p>
+        <input
+          value={input}
+          onChange={e => { setInput(e.target.value); setFejl('') }}
+          placeholder="fx. sofie_foodie"
+          style={{ ...s.input, marginBottom: fejl ? 6 : 14 }}
+          autoFocus
+        />
+        {fejl && <p style={{ fontFamily: font.body, fontSize: 12.5, color: colors.red, margin: '0 0 12px' }}>{fejl}</p>}
+        <button style={s.dialogBekræft} onClick={håndter}>Tilføj</button>
+        <button style={s.dialogAnnuller} onClick={onLuk}>Annullér</button>
+      </div>
+    </div>
+  )
+}
+
 const FAQ = [
   { q: 'Hvordan tilføjer jeg råvarer til mit lager?', a: 'Gå til "Lager" og tryk "+ Tilføj".' },
   { q: 'Hvordan virker Mad-match?', a: 'Swipe til højre for at gemme, til venstre for at springe over. Aktiver "Matcher mit lager" for retter du kan lave nu.' },
   { q: 'Hvad gør Opret-funktionen?', a: 'Tag et billede af dine råvarer og lad AI finde en opskrift til dig.' },
   { q: 'Kan jeg bruge appen offline?', a: 'Ja, dine data gemmes lokalt på enheden.' },
 ]
-
-function grad(c) {
-  const n = parseInt(c.slice(1), 16)
-  const f = 0.82
-  return `linear-gradient(135deg, ${c}, rgb(${Math.round(((n>>16)&255)*f)},${Math.round(((n>>8)&255)*f)},${Math.round((n&255)*f)}))`
-}
 
 // ─── Hoved-komponent ────────────────────────────────────────────────────────
 
@@ -48,7 +77,9 @@ export default function Profil() {
   const [aktivTab, setAktivTab] = useState('likes')
   const [kreationer, setKreationer] = useState([])
   const [likes, setLikes] = useState([])
+  const [venner, setVenner] = useState(hentVenner)
   const [logUdDialog, setLogUdDialog] = useState(false)
+  const [tilføjVenÅben, setTilføjVenÅben] = useState(false)
 
   useEffect(() => {
     setKreationer(hentKreationer())
@@ -151,8 +182,8 @@ export default function Profil() {
       {/* Venner */}
       <div style={s.kort}>
         <div style={s.kortHeader}>
-          <p style={s.kortTitel}>Dine madvenner</p>
-          <button style={s.seeAll}>Se alle</button>
+          <p style={s.kortTitel}>Dine madvenner ({venner.length})</p>
+          <button style={s.seeAll} onClick={() => setTilføjVenÅben(true)}>+ Tilføj</button>
         </div>
         <div style={s.vennerRække}>
           {venner.map((v) => (
@@ -163,6 +194,12 @@ export default function Profil() {
               <span style={s.vennerNavn}>{v.navn}</span>
             </div>
           ))}
+          <div style={s.vennerItem} onClick={() => setTilføjVenÅben(true)}>
+            <div style={{ ...s.vennerRing, background: colors.border }}>
+              <div style={{ ...s.vennerAvatar, fontSize: 22, color: colors.green }}>+</div>
+            </div>
+            <span style={s.vennerNavn}>Tilføj</span>
+          </div>
         </div>
       </div>
 
@@ -187,18 +224,23 @@ export default function Profil() {
             ? <TomTab emoji="❤️" tekst="Swipe højre i Mad-match for at gemme retter her." knap="Åbn Mad-match" onKnap={() => navigate('/madmatch')} />
             : (
               <div style={s.grid2}>
-                {likes.map((o) => (
-                  <div key={o.id} style={s.opskriftKort}>
-                    <div style={{ ...s.opskriftHero, background: grad(o.farve) }}>
-                      <span style={s.opskriftEmoji}>{o.emoji}</span>
-                      <button style={s.fjernBtn} onClick={() => setLikes(fjernLike(o.id))}>✕</button>
+                {likes.map((o) => {
+                  const farve = opskriftFarve(o.tags ?? [])
+                  const imgUrl = billedeUrl(o.storage_image)
+                  const tid = tidLabel(o.prep_time, o.cook_time)
+                  return (
+                    <div key={o.id} style={s.opskriftKort} onClick={() => navigate(`/opskrift/${o.id}`)}>
+                      <div style={{ ...s.opskriftHero, background: grad(farve), position: 'relative', overflow: 'hidden' }}>
+                        {imgUrl && <img src={imgUrl} alt={o.title} style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover' }} />}
+                        <button style={s.fjernBtn} onClick={(e) => { e.stopPropagation(); setLikes(fjernLike(o.id)) }}>✕</button>
+                      </div>
+                      <div style={s.opskriftBody}>
+                        <p style={s.opskriftTitel}>{o.title}</p>
+                        {tid && <p style={s.opskriftMeta}>⏱ {tid}</p>}
+                      </div>
                     </div>
-                    <div style={s.opskriftBody}>
-                      <p style={s.opskriftTitel}>{o.titel}</p>
-                      <p style={s.opskriftMeta}>⏱ {o.tid} min · ⭐ {o.rating}</p>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )
           }
@@ -274,6 +316,13 @@ export default function Profil() {
             <button style={s.dialogAnnuller} onClick={() => setLogUdDialog(false)}>Annullér</button>
           </div>
         </div>
+      )}
+
+      {tilføjVenÅben && (
+        <TilføjVenDialog
+          onLuk={() => setTilføjVenÅben(false)}
+          onTilføjet={(nyListe) => setVenner(nyListe)}
+        />
       )}
     </div>
   )

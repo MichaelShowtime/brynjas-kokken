@@ -4,7 +4,7 @@ import SwipeCard from '../components/SwipeCard'
 import { supabase } from '../lib/supabase'
 import { tidMinutter } from '../lib/recipeUtils'
 import { hentLager, byggLagerOpslag } from '../data/lager'
-import { gemLike } from '../data/likes'
+import { gemLike, fjernLike } from '../data/likes'
 import { gemAfvist, rydOgHent } from '../data/afviste'
 import { colors, shadow, radius, font } from '../data/theme'
 
@@ -31,10 +31,13 @@ export default function MadMatch() {
   const [drag, setDrag] = useState({ x: 0, y: 0 })
   const [animer, setAnimer] = useState(false)
   const startRef = useRef(null)
+  // historik: [{opskrift, retning}] — bruges til fortryd
+  const [historik, setHistorik] = useState([])
 
   // Filtre
   const [tagFilter, setTagFilter] = useState(null)
   const [under30, setUnder30] = useState(false)
+  const [mealFilter, setMealFilter] = useState(null) // morgenmad | frokost | aftensmad
 
   // Afviste retter (nej-swipes huskes i 7 dage)
   const [afviste, setAfviste] = useState(() => rydOgHent())
@@ -68,26 +71,35 @@ export default function MadMatch() {
   )
 
   const kort = useMemo(() => {
-    let liste = brugLager
-      ? [...alleOpskrifter].sort((a, b) => analyser(a).mangler.length - analyser(b).mangler.length)
-      : shuffled
+    // Start med shuffled liste som base — det sikrer tilfældig rækkefølge også med filtre
+    let liste = [...shuffled]
 
     // Fjern ikke-retter (0 ingredienser) og afviste (nej inden for 7 dage)
-    liste = liste.filter((o) =>
-      (o.ingredients?.length ?? 0) > 0 && !afviste.has(o.id)
-    )
+    liste = liste.filter((o) => (o.ingredients?.length ?? 0) > 0 && !afviste.has(o.id))
 
+    // Anvend filtre
     if (tagFilter) liste = liste.filter((o) => o.tags?.includes(tagFilter))
-    if (under30)   liste = liste.filter((o) => tidMinutter(o.prep_time, o.cook_time) > 0 && tidMinutter(o.prep_time, o.cook_time) <= 30)
+    if (mealFilter) liste = liste.filter((o) => o.tags?.includes(mealFilter))
+    if (under30) liste = liste.filter((o) => {
+      const min = tidMinutter(o.prep_time, o.cook_time)
+      return min > 0 && min <= 30
+    })
+
+    // Lager-tilstand: sortér inden for mangler-grupper (0 mangler øverst),
+    // men bevar den tilfældige rækkefølge inden for samme group
+    if (brugLager) {
+      liste.sort((a, b) => analyser(a).mangler.length - analyser(b).mangler.length)
+    }
 
     return liste
-  }, [brugLager, shuffled, alleOpskrifter, tagFilter, under30, analyser, afviste])
+  }, [brugLager, shuffled, tagFilter, mealFilter, under30, analyser, afviste])
 
   function nulstilStak() {
     setIndex(0)
     setGemte([])
     setDrag({ x: 0, y: 0 })
     setAnimer(false)
+    setHistorik([])
   }
 
   function skiftTilstand() {
@@ -100,14 +112,16 @@ export default function MadMatch() {
   const fuldførSwipe = useCallback(
     (retning) => {
       const aktuel = kort[index]
-      if (retning === 'right' && aktuel) {
+      if (!aktuel) return
+      if (retning === 'right') {
         setGemte((g) => [...g, aktuel])
         gemLike(aktuel)
       }
-      if (retning === 'left' && aktuel) {
+      if (retning === 'left') {
         gemAfvist(aktuel.id)
         setAfviste((prev) => new Set([...prev, aktuel.id]))
       }
+      setHistorik((h) => [...h, { opskrift: aktuel, retning }])
       setAnimer(true)
       setDrag({ x: retning === 'right' ? 600 : -600, y: 40 })
       window.setTimeout(() => {
@@ -118,6 +132,29 @@ export default function MadMatch() {
     },
     [kort, index]
   )
+
+  function fortryd() {
+    if (historik.length === 0) return
+    const sidst = historik[historik.length - 1]
+    // Fortryd effekter
+    if (sidst.retning === 'right') {
+      setGemte((g) => g.filter((o) => o.id !== sidst.opskrift.id))
+      fjernLike(sidst.opskrift.id)
+    }
+    if (sidst.retning === 'left') {
+      // Fjern fra afviste
+      const råAfviste = JSON.parse(localStorage.getItem('brynjas_afviste') ?? '{}')
+      delete råAfviste[String(sidst.opskrift.id)]
+      localStorage.setItem('brynjas_afviste', JSON.stringify(råAfviste))
+      setAfviste((prev) => {
+        const næste = new Set(prev)
+        næste.delete(sidst.opskrift.id)
+        return næste
+      })
+    }
+    setHistorik((h) => h.slice(0, -1))
+    setIndex((i) => Math.max(0, i - 1))
+  }
 
   function onPointerDown(e) {
     if (animer) return
@@ -149,6 +186,17 @@ export default function MadMatch() {
     nulstilStak()
   }
 
+  const toggleMeal = (meal) => {
+    setMealFilter((m) => (m === meal ? null : meal))
+    nulstilStak()
+  }
+
+  const MEAL_FILTERS = [
+    { key: 'morgenmad', label: '🌅 Morgen' },
+    { key: 'frokost',   label: '🥗 Frokost' },
+    { key: 'aftensmad', label: '🍽️ Aftensmad' },
+  ]
+
   return (
     <div style={styles.page}>
       <header style={styles.header}>
@@ -156,13 +204,13 @@ export default function MadMatch() {
         <p style={styles.subtitle}>Swipe dig til aftensmaden</p>
       </header>
 
-      {/* Filter-chips */}
+      {/* Filter-chips — række 1 */}
       <div style={styles.filterRow}>
         <button
           style={{ ...styles.filterChip, ...(brugLager ? styles.filterChipAktiv : null) }}
           onClick={skiftTilstand}
         >
-          🧺 Matcher mit lager
+          🧺 Mit lager
         </button>
         {['vegetar', 'kød', 'fisk'].map((tag) => (
           <button
@@ -177,8 +225,21 @@ export default function MadMatch() {
           style={{ ...styles.filterChip, ...(under30 ? styles.filterChipAktiv : null) }}
           onClick={() => { setUnder30((v) => !v); nulstilStak() }}
         >
-          Under 30 min
+          ⏱ Under 30 min
         </button>
+      </div>
+
+      {/* Filter-chips — række 2: måltidstype */}
+      <div style={{ ...styles.filterRow, marginTop: 6 }}>
+        {MEAL_FILTERS.map(({ key, label }) => (
+          <button
+            key={key}
+            style={{ ...styles.filterChip, ...(mealFilter === key ? styles.filterChipAktiv : null) }}
+            onClick={() => toggleMeal(key)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Kortstak */}
@@ -186,7 +247,7 @@ export default function MadMatch() {
         {loading ? (
           <div style={styles.loadCard}>
             <span style={{ fontSize: 48 }}>🍳</span>
-            <p style={styles.loadTekst}>Henter {' '}opskrifter…</p>
+            <p style={styles.loadTekst}>Henter opskrifter…</p>
           </div>
         ) : slut ? (
           <TomStak brugLager={brugLager} antalGemte={gemte.length} onForfra={nulstilStak} />
@@ -234,6 +295,21 @@ export default function MadMatch() {
           >
             <CrossIcon />
           </button>
+
+          {/* Fortryd — kun synlig hvis der er historik */}
+          <button
+            onClick={fortryd}
+            disabled={historik.length === 0}
+            style={{
+              ...styles.actionBtn,
+              opacity: historik.length === 0 ? 0.3 : 1,
+              width: 48, height: 48,
+            }}
+            aria-label="Fortryd"
+          >
+            <UndoIcon />
+          </button>
+
           <button
             onClick={() => fuldførSwipe('right')}
             style={{ ...styles.actionBtn, ...styles.likeBtn }}
@@ -275,6 +351,16 @@ function HeartIcon() {
   )
 }
 
+function UndoIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.muted}
+      strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7v6h6" />
+      <path d="M3 13C5.5 7.5 11 5 16 6.5c3.5 1 6 4 6 7.5a8 8 0 0 1-8 8c-3 0-5.7-1.5-7.3-4" />
+    </svg>
+  )
+}
+
 const styles = {
   page: { maxWidth: 480, margin: '0 auto', padding: '20px 20px 120px', minHeight: '100%' },
 
@@ -286,19 +372,20 @@ const styles = {
   subtitle: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: '6px 0 0' },
 
   filterRow: {
-    display: 'flex', gap: 8, overflowX: 'auto', padding: '0 0 8px',
+    display: 'flex', gap: 8, overflowX: 'auto', padding: '0 0 4px',
     margin: '0 -20px', paddingLeft: 20, paddingRight: 20, scrollbarWidth: 'none',
   },
   filterChip: {
     flexShrink: 0, fontFamily: font.body, fontSize: 13, fontWeight: 700,
     color: colors.muted, background: colors.card, border: `1px solid ${colors.border}`,
     padding: '8px 14px', borderRadius: radius.pill, boxShadow: shadow.card,
+    cursor: 'pointer',
   },
   filterChipAktiv: {
     color: '#fff', background: colors.green, border: `1px solid ${colors.green}`,
   },
 
-  deck: { position: 'relative', height: 520, margin: '16px 0' },
+  deck: { position: 'relative', height: 520, margin: '14px 0' },
 
   loadCard: {
     position: 'absolute', inset: 0, background: colors.card, borderRadius: radius.card,
@@ -307,12 +394,15 @@ const styles = {
   },
   loadTekst: { fontFamily: font.body, fontSize: 16, color: colors.muted, margin: 0 },
 
-  actions: { display: 'flex', justifyContent: 'center', gap: 28, marginTop: 22 },
+  actions: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 18 },
   actionBtn: {
     width: 64, height: 64, borderRadius: 999, background: colors.card,
     border: `1px solid ${colors.border}`, boxShadow: shadow.card,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer',
   },
+  nopeBtn: {},
+  likeBtn: {},
 
   tom: {
     position: 'absolute', inset: 0, background: colors.card, borderRadius: radius.card,
@@ -330,5 +420,6 @@ const styles = {
   forfraBtn: {
     padding: '13px 26px', fontFamily: font.body, fontSize: 15, fontWeight: 700,
     color: '#fff', background: colors.green, border: 'none', borderRadius: radius.button,
+    cursor: 'pointer',
   },
 }

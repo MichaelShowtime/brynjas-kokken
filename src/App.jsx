@@ -10,8 +10,9 @@ import Profil from './pages/Profil'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Onboarding from './pages/Onboarding'
+import Kok from './pages/Kok'
 
-const INGEN_NAV = ['/login', '/register', '/onboarding']
+const INGEN_NAV = ['/login', '/register', '/onboarding', '/kok/']
 
 function ProtectedRoute({ children }) {
   const bruger = hentAktivBruger()
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/"         element={<ProtectedRoute><Navigate to="/hjem" replace /></ProtectedRoute>} />
         <Route path="/hjem"           element={<ProtectedRoute><Hjem /></ProtectedRoute>} />
         <Route path="/opskrift/:id"   element={<ProtectedRoute><Opskrift /></ProtectedRoute>} />
+        <Route path="/kok/:id"        element={<ProtectedRoute><Kok /></ProtectedRoute>} />
         <Route path="/madmatch"       element={<ProtectedRoute><MadMatch /></ProtectedRoute>} />
         <Route path="/opret"    element={<ProtectedRoute><Opret /></ProtectedRoute>} />
         <Route path="/lager"    element={<ProtectedRoute><Lager /></ProtectedRoute>} />
