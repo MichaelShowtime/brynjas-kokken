@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   hentLager, gemLager, sletFraLager, opdaterUdløb, opdaterVare,
   KATEGORIER, INGREDIENS_KATALOG, ENHEDER,
@@ -96,6 +97,7 @@ const KATEGORI_LABELS = {
 }
 
 export default function Lager() {
+  const navigate = useNavigate()
   const [lager, setLager]           = useState(hentLager)
   const [aktiv, setAktiv]           = useState('råvarer')
   const [tilføjOpen, setTilføjOpen] = useState(false)
@@ -158,7 +160,7 @@ export default function Lager() {
               <span style={{ fontSize: 16 }}>⚠️</span>
               <span style={s.advarselTekst}>
                 {udløberSnart} {udløberSnart === 1 ? 'vare udløber' : 'varer udløber'} snart.{' '}
-                <span style={s.advarselLink}>Se retter der bruger dem →</span>
+                <span style={s.advarselLink} onClick={() => navigate('/madmatch')}>Se retter der bruger dem →</span>
               </span>
             </div>
           )}

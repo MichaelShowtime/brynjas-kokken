@@ -5,7 +5,7 @@ import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
 import { hentKreationer } from '../data/kreationer'
 import { hentLikes, fjernLike } from '../data/likes'
 import { billedeUrl, opskriftFarve, grad, tidLabel } from '../lib/recipeUtils'
-import { hentVenner, tilføjVen, fjernVen } from '../data/venner'
+import { hentVenner, hentVennerFraDB, tilføjVenDB, fjernVenDB, hentAntalFølgere } from '../data/venner'
 import { colors, shadow, radius, font } from '../data/theme'
 
 const AVATARER = ['🧑‍🍳','👩‍🍳','👨‍🍳','🧑🏽‍🍳','👩🏽‍🍳','👨🏾‍🍳','🧑🏻‍🍳','👩🏿‍🍳','🐻','🦊','🐸','🌻']
@@ -30,14 +30,19 @@ function hentNotif()    { try { return { ...DEFAULT_NOTIF, ...JSON.parse(localSt
 function hentPrivatliv(){ try { return { ...DEFAULT_PRIV,  ...JSON.parse(localStorage.getItem(PRIVATLIV_KEY)) } } catch { return DEFAULT_PRIV } }
 
 // ── Tilføj ven-dialog ────────────────────────────────────────────────────────
-function TilføjVenDialog({ onLuk, onTilføjet }) {
+function TilføjVenDialog({ brugerEmail, onLuk, onTilføjet }) {
   const [input, setInput] = useState('')
   const [fejl, setFejl] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  function håndter() {
-    const resultat = tilføjVen(input)
-    if (!resultat) { setFejl('Brugernavn ikke fundet eller allerede tilføjet'); return }
-    onTilføjet(resultat)
+  async function håndter() {
+    if (!input.trim()) return
+    setLoading(true)
+    setFejl('')
+    const res = await tilføjVenDB(brugerEmail, input)
+    setLoading(false)
+    if (!res.ok) { setFejl(res.fejl); return }
+    onTilføjet(res.ven)
     onLuk()
   }
 
@@ -45,16 +50,21 @@ function TilføjVenDialog({ onLuk, onTilføjet }) {
     <div style={s.overlay} onClick={onLuk}>
       <div style={s.dialog} onClick={e => e.stopPropagation()}>
         <p style={s.dialogTitel}>Tilføj ven</p>
-        <p style={s.dialogTekst}>Indtast en vens unikke brugernavn for at tilføje dem.</p>
+        <p style={s.dialogTekst}>Indtast en vens e-mailadresse for at tilføje dem.</p>
         <input
+          type="email"
           value={input}
           onChange={e => { setInput(e.target.value); setFejl('') }}
-          placeholder="fx. sofie_foodie"
+          placeholder="fx. sofie@mail.dk"
           style={{ ...s.input, marginBottom: fejl ? 6 : 14 }}
           autoFocus
+          onKeyDown={e => e.key === 'Enter' && håndter()}
         />
         {fejl && <p style={{ fontFamily: font.body, fontSize: 12.5, color: colors.red, margin: '0 0 12px' }}>{fejl}</p>}
-        <button style={s.dialogBekræft} onClick={håndter}>Tilføj</button>
+        <button style={{ ...s.dialogBekræft, background: colors.green, opacity: loading ? 0.7 : 1 }}
+          onClick={håndter} disabled={loading}>
+          {loading ? 'Søger…' : 'Tilføj'}
+        </button>
         <button style={s.dialogAnnuller} onClick={onLuk}>Annullér</button>
       </div>
     </div>
@@ -77,7 +87,8 @@ export default function Profil() {
   const [aktivTab, setAktivTab] = useState('likes')
   const [kreationer, setKreationer] = useState([])
   const [likes, setLikes] = useState([])
-  const [venner, setVenner] = useState(hentVenner)
+  const [venner, setVenner] = useState(() => hentVenner())
+  const [antalFølgere, setAntalFølgere] = useState(0)
   const [logUdDialog, setLogUdDialog] = useState(false)
   const [tilføjVenÅben, setTilføjVenÅben] = useState(false)
 
@@ -86,10 +97,19 @@ export default function Profil() {
     setLikes(hentLikes())
   }, [])
 
+  // Hent rigtige venner + følgere fra Supabase
+  useEffect(() => {
+    if (bruger?.email) {
+      hentVennerFraDB(bruger.email).then((liste) => { if (liste.length) setVenner(liste) })
+      hentAntalFølgere(bruger.email).then(setAntalFølgere)
+    }
+  }, [bruger?.email])
+
   useEffect(() => {
     if (visning === 'hoved') {
       setBruger(hentAktivBruger())
       setLikes(hentLikes())
+      setKreationer(hentKreationer())
     }
   }, [visning])
 
@@ -145,9 +165,9 @@ export default function Profil() {
         {bruger.bio && <p style={s.bio}>{bruger.bio}</p>}
 
         <div style={s.statsRow}>
-          <Stat tal={48} label="retter" /><div style={s.statDiv} />
-          <Stat tal={134} label="følgere" /><div style={s.statDiv} />
-          <Stat tal={61} label="følger" />
+          <Stat tal={kreationer.length} label="retter" /><div style={s.statDiv} />
+          <Stat tal={antalFølgere} label="følgere" /><div style={s.statDiv} />
+          <Stat tal={venner.length} label="følger" />
         </div>
 
         <div style={s.btnRow}>
@@ -252,20 +272,25 @@ export default function Profil() {
         <div style={s.tabIndhold}>
           {kreationer.length === 0
             ? <TomTab emoji="📸" tekst="Tag et billede og skab din første kreation." knap="Gå til Opret" onKnap={() => navigate('/opret')} />
-            : kreationer.map((k) => (
-              <div key={k.id} style={s.kreationItem}>
-                {k.foto
-                  ? <img src={k.foto} alt="" style={s.kreationThumb} />
-                  : <div style={{ ...s.kreationThumb, ...s.kreationThumbTom }}>🍽️</div>}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={s.kreationNavn}>{k.navn}</p>
-                  <p style={s.kreationMeta}>
-                    {new Date(k.dato).toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })}
-                    {k.referencer?.length ? ` · 🔗 ${k.referencer.length}` : ''}
-                  </p>
+            : kreationer.map((k) => {
+              const fotoSrc = k.foto
+                ? (k.foto.startsWith('blob:') ? k.foto : billedeUrl(k.foto))
+                : null
+              const titel = k.titel ?? k.navn ?? 'Kreation'
+              const dato = k.dato ? new Date(k.dato).toLocaleDateString('da-DK', { day: 'numeric', month: 'short' }) : ''
+              const tidBrugt = k.tidBrugt ? ` · ⏱ ${k.tidBrugt}` : ''
+              return (
+                <div key={k.id} style={s.kreationItem}>
+                  {fotoSrc
+                    ? <img src={fotoSrc} alt="" style={s.kreationThumb} />
+                    : <div style={{ ...s.kreationThumb, ...s.kreationThumbTom }}>🍽️</div>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={s.kreationNavn}>{titel}</p>
+                    <p style={s.kreationMeta}>{dato}{tidBrugt}</p>
+                  </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           }
         </div>
       )}
@@ -320,8 +345,9 @@ export default function Profil() {
 
       {tilføjVenÅben && (
         <TilføjVenDialog
+          brugerEmail={bruger.email}
           onLuk={() => setTilføjVenÅben(false)}
-          onTilføjet={(nyListe) => setVenner(nyListe)}
+          onTilføjet={(nyVen) => setVenner((prev) => [...prev, nyVen])}
         />
       )}
     </div>

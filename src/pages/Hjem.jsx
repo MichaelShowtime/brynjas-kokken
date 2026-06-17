@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { opslag } from '../data/feed'
-import { hentVenner } from '../data/venner'
+import { hentVenner, hentVennerFraDB } from '../data/venner'
 import { hentAktivBruger } from '../data/auth'
+import { hentKreationer } from '../data/kreationer'
+import { hentLikes } from '../data/likes'
 import { colors, shadow, radius, font } from '../data/theme'
 import { supabase } from '../lib/supabase'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
@@ -21,13 +23,35 @@ function datoLinje() {
     .toUpperCase()
 }
 
+function beregnStreak(kreationer) {
+  if (!kreationer.length) return 0
+  const datoer = new Set(kreationer.map((k) => k.dato?.slice(0, 10)).filter(Boolean))
+  let streak = 0
+  const dag = new Date()
+  dag.setHours(0, 0, 0, 0)
+  while (datoer.has(dag.toISOString().slice(0, 10))) {
+    streak++
+    dag.setDate(dag.getDate() - 1)
+  }
+  return streak
+}
+
 export default function Hjem() {
   const navigate = useNavigate()
   const [opskrifter, setOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
+  const [vennerListe, setVennerListe] = useState(() => hentVenner())
+  const [kreationer] = useState(() => hentKreationer())
+  const [likes] = useState(() => hentLikes())
 
   const bruger = hentAktivBruger()
-  const vennerListe = hentVenner()
+  const streak = beregnStreak(kreationer)
+
+  useEffect(() => {
+    if (bruger?.email) {
+      hentVennerFraDB(bruger.email).then((liste) => { if (liste.length) setVennerListe(liste) })
+    }
+  }, [bruger?.email])
 
   useEffect(() => {
     let cancelled = false
@@ -59,9 +83,9 @@ export default function Hjem() {
 
       {/* Streak / stats */}
       <div style={styles.stats}>
-        <Stat tal="12" label="dages streak" ikon="🔥" fremhæv />
-        <Stat tal="48" label="retter lavet" ikon="🍳" />
-        <Stat tal="7" label="gemte" ikon="🔖" />
+        <Stat tal={streak > 0 ? streak : '—'} label="dages streak" ikon="🔥" fremhæv />
+        <Stat tal={kreationer.length || '—'} label="retter lavet" ikon="🍳" />
+        <Stat tal={likes.length || '—'} label="gemte" ikon="🔖" />
       </div>
 
       {/* Stories — aktive venner */}
