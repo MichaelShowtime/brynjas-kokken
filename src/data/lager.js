@@ -59,6 +59,12 @@ export function sletFraLager(id) {
   return liste
 }
 
+export function opdaterVare(id, opdatering) {
+  const liste = hentLager().map((v) => v.id === id ? { ...v, ...opdatering } : v)
+  gemLager(liste)
+  return liste
+}
+
 // ── Kategorier ────────────────────────────────────────────────────────────────
 export const KATEGORIER = [
   { id: 'køl',      label: 'Køl',                emoji: '❄️' },

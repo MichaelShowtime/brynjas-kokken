@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { venner, opslag } from '../data/feed'
+import { opslag } from '../data/feed'
+import { hentVenner } from '../data/venner'
+import { hentAktivBruger } from '../data/auth'
 import { colors, shadow, radius, font } from '../data/theme'
 import { supabase } from '../lib/supabase'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
-
-const BRUGER = 'Brynja'
 
 function hilsen() {
   const t = new Date().getHours()
@@ -25,6 +25,9 @@ export default function Hjem() {
   const navigate = useNavigate()
   const [opskrifter, setOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
+
+  const bruger = hentAktivBruger()
+  const vennerListe = hentVenner()
 
   useEffect(() => {
     let cancelled = false
@@ -48,10 +51,10 @@ export default function Hjem() {
         <div>
           <p style={styles.eyebrow}>{datoLinje()}</p>
           <h1 style={styles.title}>
-            {hilsen()},<br />{BRUGER} 👋
+            {hilsen()},<br />{bruger?.navn ?? 'Kok'} 👋
           </h1>
         </div>
-        <div style={styles.avatar}>🧑‍🍳</div>
+        <div style={styles.avatar}>{bruger?.avatar ?? '🧑‍🍳'}</div>
       </header>
 
       {/* Streak / stats */}
@@ -62,25 +65,37 @@ export default function Hjem() {
       </div>
 
       {/* Stories — aktive venner */}
-      <Section titel="Aktive lige nu" handling="Se alle" onHandling={() => {}} />
-      <div style={styles.scrollRow}>
-        {venner.map((v) => (
-          <div key={v.id} style={styles.story}>
-            <div
-              style={{
-                ...styles.storyRing,
-                background: v.live
-                  ? `linear-gradient(135deg, ${colors.terracotta}, ${colors.red})`
-                  : colors.border,
-              }}
-            >
-              <div style={styles.storyAvatar}>{v.emoji}</div>
+      <Section titel="Aktive lige nu" handling="Tilføj venner" onHandling={() => navigate('/profil')} />
+      {vennerListe.length === 0 ? (
+        <div style={styles.tomVenner}>
+          <span style={{ fontSize: 28 }}>👥</span>
+          <p style={styles.tomVennerTekst}>
+            Tilføj venner for at se, hvad de laver i køkkenet.
+          </p>
+          <button style={styles.tilføjVenBtn} onClick={() => navigate('/profil')}>
+            + Find venner
+          </button>
+        </div>
+      ) : (
+        <div style={styles.scrollRow}>
+          {vennerListe.map((v) => (
+            <div key={v.id} style={styles.story}>
+              <div
+                style={{
+                  ...styles.storyRing,
+                  background: v.live
+                    ? `linear-gradient(135deg, ${colors.terracotta}, ${colors.red})`
+                    : colors.border,
+                }}
+              >
+                <div style={styles.storyAvatar}>{v.emoji}</div>
+              </div>
+              <span style={styles.storyNavn}>{v.navn}</span>
+              {v.live && <span style={styles.liveDot}>LIVE</span>}
             </div>
-            <span style={styles.storyNavn}>{v.navn}</span>
-            {v.live && <span style={styles.liveDot}>LIVE</span>}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Ugens opskrift */}
       <Section titel="Ugens opskrift" />
@@ -91,7 +106,7 @@ export default function Hjem() {
       ) : null}
 
       {/* Socialt feed */}
-      <Section titel="I dit fællesskab" handling="Følg flere" onHandling={() => {}} />
+      <Section titel="I dit fællesskab" handling="Følg flere" onHandling={() => navigate('/profil')} />
       <div style={styles.feed}>
         {opslag.map((p) => (
           <article key={p.id} style={styles.post}>
@@ -104,7 +119,7 @@ export default function Hjem() {
                 </p>
                 <p style={styles.postTid}>{p.tid}</p>
               </div>
-              <button style={styles.followBtn}>+ Følg</button>
+              <button style={styles.followBtn} onClick={() => navigate('/profil')}>+ Følg</button>
             </div>
             <div style={{ ...styles.postImg, background: grad(p.farve) }}>
               <span style={styles.postImgEmoji}>{p.emoji}</span>
@@ -114,9 +129,21 @@ export default function Hjem() {
             <div style={styles.postFooter}>
               <span style={styles.postStat}>❤️ {p.likes}</span>
               <span style={styles.postStat}>💬 {p.kommentarer}</span>
-              <span style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green }}>
-                Lav også →
-              </span>
+              {p.opskriftId ? (
+                <button
+                  style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
+                  onClick={() => navigate(`/opskrift/${p.opskriftId}`)}
+                >
+                  Lav også →
+                </button>
+              ) : (
+                <button
+                  style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
+                  onClick={() => navigate('/madmatch')}
+                >
+                  Lav også →
+                </button>
+              )}
             </div>
           </article>
         ))}
@@ -250,6 +277,20 @@ const styles = {
   sectionLink: {
     fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green,
     background: 'none', border: 'none', padding: 0,
+  },
+
+  tomVenner: {
+    background: colors.card, borderRadius: 16, boxShadow: shadow.card,
+    padding: '20px 20px', display: 'flex', flexDirection: 'column',
+    alignItems: 'center', gap: 8, textAlign: 'center',
+  },
+  tomVennerTekst: {
+    fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0, lineHeight: 1.5,
+  },
+  tilføjVenBtn: {
+    fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green,
+    background: 'rgba(47,107,79,0.10)', border: 'none', borderRadius: 999,
+    padding: '9px 16px', cursor: 'pointer',
   },
 
   scrollRow: {

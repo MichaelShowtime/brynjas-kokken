@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import {
-  hentLager, gemLager, sletFraLager, opdaterUdløb,
+  hentLager, gemLager, sletFraLager, opdaterUdløb, opdaterVare,
   KATEGORIER, INGREDIENS_KATALOG, ENHEDER,
 } from '../data/lager'
 import { supabase } from '../lib/supabase'
@@ -99,13 +99,15 @@ export default function Lager() {
   const [lager, setLager]           = useState(hentLager)
   const [aktiv, setAktiv]           = useState('råvarer')
   const [tilføjOpen, setTilføjOpen] = useState(false)
-  const [udløbEdit, setUdløbEdit]   = useState(null) // { id }
+  const [udløbEdit, setUdløbEdit]   = useState(null)
+  const [redigerVare, setRedigerVare] = useState(null) // vare-objekt til edit
 
   // Opdatér state + localStorage
   function opdater(nyListe) { setLager(nyListe); gemLager(nyListe) }
 
-  function slet(id)           { opdater(sletFraLager(id)) }
+  function slet(id)           { opdater(sletFraLager(id)); setRedigerVare(null) }
   function sætUdløb(id, dato) { setUdløbEdit(null); opdater(opdaterUdløb(id, dato)) }
+  function gem(id, data)      { setRedigerVare(null); opdater(opdaterVare(id, data)) }
 
   function tilføj(vare) {
     const ny = [{ ...vare, id: Date.now() }, ...lager]
@@ -172,8 +174,7 @@ export default function Lager() {
                   const erSidst = i === g.varer.length - 1
                   return (
                     <div key={v.id}>
-                      <div style={s.vareRække}
-                        onContextMenu={(e) => { e.preventDefault(); slet(v.id) }}>
+                      <div style={s.vareRække}>
                         {/* Thumbnail */}
                         <div style={s.thumb}>{v.emoji}</div>
 
@@ -194,18 +195,21 @@ export default function Lager() {
                           )}
 
                           {/* Ingen udløbsdato */}
-                          {!harUdløb && !v.snartTom && (
+                          {!harUdløb && !v.snartTom && !info && (
                             <button style={s.udløbReminder}
                               onClick={() => setUdløbEdit(v.id)}>
-                              Udløbsdato ikke registreret · <span style={{ color: colors.green }}>Registrér</span>
+                              <span style={{ color: colors.green }}>+ Udløbsdato</span>
                             </button>
                           )}
                         </div>
 
-                        {/* Mængde */}
+                        {/* Mængde + rediger-knap */}
                         <span style={s.mængde}>
                           {v.mængde ? `${v.mængde} ${v.enhed}` : v.enhed}
                         </span>
+                        <button style={s.editBtn} onClick={() => setRedigerVare(v)} aria-label="Rediger">
+                          <PencilIcon />
+                        </button>
                       </div>
 
                       {/* Divider — ikke efter sidste */}
@@ -236,6 +240,16 @@ export default function Lager() {
       {/* Tilføj-sheet */}
       {tilføjOpen && (
         <TilføjSheet onTilføj={tilføj} onLuk={() => setTilføjOpen(false)} />
+      )}
+
+      {/* Rediger vare-sheet */}
+      {redigerVare && (
+        <RedigerSheet
+          vare={redigerVare}
+          onGem={(data) => gem(redigerVare.id, data)}
+          onSlet={() => slet(redigerVare.id)}
+          onLuk={() => setRedigerVare(null)}
+        />
       )}
 
       {/* Inline udløbsdato-editor */}
@@ -444,6 +458,88 @@ function TilføjSheet({ onTilføj, onLuk }) {
   )
 }
 
+// ── Rediger vare-sheet ────────────────────────────────────────────────────────
+
+function RedigerSheet({ vare, onGem, onSlet, onLuk }) {
+  const [mængde, setMængde] = useState(vare.mængde ?? '')
+  const [enhed, setEnhed]   = useState(vare.enhed ?? 'stk')
+  const [udløb, setUdløb]   = useState(vare.udløb ?? '')
+  const [bekræftSlet, setBekræftSlet] = useState(false)
+
+  function gem() {
+    onGem({ mængde: mængde.trim(), enhed, udløb: udløb || null })
+  }
+
+  return (
+    <div style={s.overlay} onClick={onLuk}>
+      <div style={s.sheet} onClick={(e) => e.stopPropagation()}>
+        <div style={s.greb} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 26 }}>{vare.emoji}</span>
+            <h2 style={s.sheetTitel}>{vare.navn}</h2>
+          </div>
+          <button style={s.lukBtn} onClick={onLuk}>✕</button>
+        </div>
+
+        {/* Mængde + enhed */}
+        <label style={s.feltLabel}>Mængde</label>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <input
+            type="number" inputMode="decimal"
+            value={mængde} onChange={(e) => setMængde(e.target.value)}
+            placeholder="fx. 400"
+            style={{ ...s.input, flex: 1 }}
+            autoFocus
+          />
+          <select value={enhed} onChange={(e) => setEnhed(e.target.value)} style={s.enhedSelect}>
+            {ENHEDER.map((e) => <option key={e} value={e}>{e}</option>)}
+          </select>
+        </div>
+
+        {/* Udløbsdato */}
+        <label style={s.feltLabel}>
+          Udløbsdato <span style={{ color: colors.mutedLight, fontWeight: 400 }}>(valgfrit)</span>
+        </label>
+        <input
+          type="date" value={udløb} onChange={(e) => setUdløb(e.target.value)}
+          min={new Date().toISOString().slice(0,10)}
+          style={s.input}
+        />
+
+        <button style={s.primærBtn} onClick={gem}>Gem ændringer</button>
+
+        {/* Slet */}
+        {bekræftSlet ? (
+          <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+            <button style={s.ghostBtn} onClick={() => setBekræftSlet(false)}>Annullér</button>
+            <button style={{ ...s.primærBtn, background: colors.red }} onClick={onSlet}>
+              Slet permanent
+            </button>
+          </div>
+        ) : (
+          <button style={{ ...s.ghostBtn, color: colors.red, marginTop: 6 }}
+            onClick={() => setBekræftSlet(true)}>
+            🗑 Fjern fra lager
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Pencil-ikon ───────────────────────────────────────────────────────────────
+
+function PencilIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+      stroke={colors.mutedLight} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
+
 // ── Udløbsdato-dialog ─────────────────────────────────────────────────────────
 
 function UdløbDialog({ id, navn, onGem, onLuk }) {
@@ -520,6 +616,11 @@ const s = {
   thumb: { width: 40, height: 40, borderRadius: 12, background: colors.bg, border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 },
   vareNavn: { fontFamily: font.body, fontWeight: 700, fontSize: 15, color: colors.text, lineHeight: 1.2 },
   mængde: { fontFamily: font.body, fontWeight: 600, fontSize: 14, color: colors.muted, flexShrink: 0 },
+  editBtn: {
+    width: 32, height: 32, borderRadius: 8, background: colors.bg, border: `1px solid ${colors.border}`,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    cursor: 'pointer', marginLeft: 4,
+  },
   divider: { height: 1, background: colors.border, margin: '0 16px' },
 
   // Badges
