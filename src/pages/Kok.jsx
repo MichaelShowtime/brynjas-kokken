@@ -12,20 +12,26 @@ function useTimer() {
   const [sekunder, setSekunder] = useState(0)
   const [kører, setKører] = useState(false)
   const intervalRef = useRef(null)
+  const kørerRef = useRef(false) // ref undgår stale-closure i start/pause
 
   const start = useCallback(() => {
-    if (kører) return
+    if (kørerRef.current) return
+    kørerRef.current = true
     setKører(true)
     intervalRef.current = setInterval(() => setSekunder((s) => s + 1), 1000)
-  }, [kører])
+  }, []) // stabil — ingen dependencies
 
   const pause = useCallback(() => {
     clearInterval(intervalRef.current)
+    intervalRef.current = null
+    kørerRef.current = false
     setKører(false)
   }, [])
 
   const stop = useCallback(() => {
     clearInterval(intervalRef.current)
+    intervalRef.current = null
+    kørerRef.current = false
     setKører(false)
     setSekunder(0)
   }, [])

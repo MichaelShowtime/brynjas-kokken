@@ -17,7 +17,7 @@ const INGEN_NAV = ['/login', '/register', '/onboarding', '/kok/']
 function ProtectedRoute({ children }) {
   const bruger = hentAktivBruger()
   if (!bruger) return <Navigate to="/login" replace />
-  if (!bruger.onboardingFærdig) return <Navigate to="/onboarding" replace />
+  if (!bruger.onboardingFærdig || !bruger.tags?.length) return <Navigate to="/onboarding" replace />
   return children
 }
 

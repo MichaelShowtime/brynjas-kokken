@@ -57,6 +57,10 @@ export default function Hjem() {
   const [dbPosts, setDbPosts] = useState([])
   const [toast, setToast] = useState(null)
   const toastTimer = useRef(null)
+  const [søgeTekst, setSøgeTekst] = useState('')
+  const [søgeResultater, setSøgeResultater] = useState([])
+  const [søgerAktivt, setSøgerAktivt] = useState(false)
+  const søgeTimer = useRef(null)
 
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
@@ -135,6 +139,23 @@ export default function Hjem() {
     }
   }, [bruger?.email])
 
+  function håndterSøg(tekst) {
+    setSøgeTekst(tekst)
+    if (søgeTimer.current) clearTimeout(søgeTimer.current)
+    if (!tekst.trim()) { setSøgeResultater([]); setSøgerAktivt(false); return }
+    setSøgerAktivt(true)
+    søgeTimer.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('recipes')
+        .select('id, title, prep_time, cook_time, tags, storage_image')
+        .ilike('title', `%${tekst.trim()}%`)
+        .limit(12)
+      setSøgeResultater(data ?? [])
+    }, 280)
+  }
+
+  function rydSøg() { setSøgeTekst(''); setSøgeResultater([]); setSøgerAktivt(false) }
+
   // Venner der postede indenfor 24 timer — bruges til live-ring
   const recentPostEmails = useMemo(() => {
     const cutoff = Date.now() - 24 * 60 * 60 * 1000
@@ -174,51 +195,86 @@ export default function Hjem() {
         <Stat tal={likes.length || '—'} label="gemte" ikon="🔖" />
       </div>
 
-      {/* Stories — aktive venner */}
-      <Section titel="Aktive lige nu" handling="Tilføj venner" onHandling={() => navigate('/profil')} />
-      {vennerListe.length === 0 ? (
-        <div style={styles.tomVenner}>
-          <span style={{ fontSize: 28 }}>👥</span>
-          <p style={styles.tomVennerTekst}>
-            Tilføj venner for at se, hvad de laver i køkkenet.
-          </p>
-          <button style={styles.tilføjVenBtn} onClick={() => navigate('/profil')}>
-            + Find venner
-          </button>
-        </div>
-      ) : (
-        <div style={styles.scrollRow}>
-          {vennerListe.map((v) => {
-            const erAktiv = recentPostEmails.has(v.email)
-            return (
-              <div key={v.id} style={styles.story}>
-                <div style={{
-                  ...styles.storyRing,
-                  background: erAktiv
-                    ? `linear-gradient(135deg, ${colors.terracotta}, ${colors.red})`
-                    : colors.border,
-                }}>
-                  <div style={styles.storyAvatar}>{v.emoji}</div>
-                </div>
-                <span style={styles.storyNavn}>{v.navn}</span>
-                {erAktiv && <span style={styles.liveDot}>NY</span>}
-              </div>
-            )
-          })}
+      {/* Søgefelt */}
+      <div style={styles.søgeWrap}>
+        <span style={styles.søgeIkon}>🔍</span>
+        <input
+          type="search"
+          value={søgeTekst}
+          onChange={(e) => håndterSøg(e.target.value)}
+          placeholder="Søg i opskrifter…"
+          style={styles.søgeInput}
+        />
+        {søgeTekst && (
+          <button style={styles.søgeRyd} onClick={rydSøg}>✕</button>
+        )}
+      </div>
+
+      {/* Søgeresultater */}
+      {søgerAktivt && (
+        <div style={styles.søgePanel}>
+          {søgeResultater.length === 0 ? (
+            <p style={styles.søgeTom}>Ingen opskrifter fundet for "{søgeTekst}"</p>
+          ) : (
+            søgeResultater.map((o) => {
+              const img = billedeUrl(o.storage_image)
+              const farve = opskriftFarve(o.tags)
+              const tid = tidLabel(o.prep_time, o.cook_time)
+              return (
+                <button key={o.id} style={styles.søgeResultat} onClick={() => { rydSøg(); navigate(`/opskrift/${o.id}`) }}>
+                  <div style={{ ...styles.søgeThumb, background: grad(farve) }}>
+                    {img && <img src={img} alt="" style={styles.søgeThumbImg} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                    <p style={styles.søgeNavn}>{o.title}</p>
+                    {tid && <p style={styles.søgeMeta}>⏱ {tid}</p>}
+                  </div>
+                  <span style={{ color: colors.mutedLight, fontSize: 20 }}>›</span>
+                </button>
+              )
+            })
+          )}
         </div>
       )}
 
+      {/* Stories — aktive venner */}
+      {!søgerAktivt && <Section titel="Aktive lige nu" handling="Tilføj venner" onHandling={() => navigate('/profil')} />}
+      {!søgerAktivt && (
+        vennerListe.length === 0 ? (
+          <div style={styles.tomVenner}>
+            <span style={{ fontSize: 28 }}>👥</span>
+            <p style={styles.tomVennerTekst}>Tilføj venner for at se, hvad de laver i køkkenet.</p>
+            <button style={styles.tilføjVenBtn} onClick={() => navigate('/profil')}>+ Find venner</button>
+          </div>
+        ) : (
+          <div style={styles.scrollRow}>
+            {vennerListe.map((v) => {
+              const erAktiv = recentPostEmails.has(v.email)
+              return (
+                <div key={v.id} style={styles.story}>
+                  <div style={{ ...styles.storyRing, background: erAktiv ? `linear-gradient(135deg, ${colors.terracotta}, ${colors.red})` : colors.border }}>
+                    <div style={styles.storyAvatar}>{v.emoji}</div>
+                  </div>
+                  <span style={styles.storyNavn}>{v.navn}</span>
+                  {erAktiv && <span style={styles.liveDot}>NY</span>}
+                </div>
+              )
+            })}
+          </div>
+        )
+      )}
+
       {/* Ugens opskrift */}
-      <Section titel="Ugens opskrift" />
-      {loading ? (
+      {!søgerAktivt && <Section titel="Ugens opskrift" />}
+      {!søgerAktivt && (loading ? (
         <div style={styles.featuredSkeleton} />
       ) : featured ? (
         <FeaturedCard opskrift={featured} onClick={() => navigate(`/opskrift/${featured.id}`)} />
-      ) : null}
+      ) : null)}
 
       {/* Socialt feed */}
-      <Section titel="I dit fællesskab" handling="Følg flere" onHandling={() => navigate('/profil')} />
-      <div style={styles.feed}>
+      {!søgerAktivt && <Section titel="I dit fællesskab" handling="Følg flere" onHandling={() => navigate('/profil')} />}
+      {!søgerAktivt && <div style={styles.feed}>
         {dbPosts.length > 0
           ? dbPosts.map((p) => (
             <article key={p.id} style={styles.post}>
@@ -305,11 +361,11 @@ export default function Hjem() {
             </article>
           ))
         }
-      </div>
+      </div>}
 
       {/* Mere til dig */}
-      <Section titel="Mere til dig" handling="Se alle" onHandling={() => navigate('/madmatch')} />
-      <div style={styles.scrollRow}>
+      {!søgerAktivt && <Section titel="Mere til dig" handling="Se alle" onHandling={() => navigate('/madmatch')} />}
+      {!søgerAktivt && <div style={styles.scrollRow}>
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} style={styles.recipeCardSkeleton} />
@@ -317,7 +373,7 @@ export default function Hjem() {
           : anbefalet.map((o) => (
               <RecipeCard key={o.id} opskrift={o} onClick={() => navigate(`/opskrift/${o.id}`)} />
             ))}
-      </div>
+      </div>}
     </div>
   )
 }
@@ -451,6 +507,47 @@ const styles = {
   sectionLink: {
     fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green,
     background: 'none', border: 'none', padding: 0,
+  },
+
+  søgeWrap: {
+    display: 'flex', alignItems: 'center', gap: 10,
+    background: colors.card, borderRadius: 16, boxShadow: shadow.card,
+    padding: '0 14px', margin: '16px 0 4px', height: 48,
+  },
+  søgeIkon: { fontSize: 17, flexShrink: 0, opacity: 0.5 },
+  søgeInput: {
+    flex: 1, fontFamily: font.body, fontSize: 15, color: colors.text,
+    background: 'transparent', border: 'none', outline: 'none',
+    padding: '0 4px',
+  },
+  søgeRyd: {
+    background: 'none', border: 'none', color: colors.mutedLight,
+    fontSize: 14, cursor: 'pointer', padding: '0 2px', flexShrink: 0,
+  },
+  søgePanel: {
+    background: colors.card, borderRadius: 16, boxShadow: shadow.card,
+    overflow: 'hidden', marginBottom: 8,
+  },
+  søgeTom: {
+    fontFamily: font.body, fontSize: 14, color: colors.muted,
+    textAlign: 'center', padding: '24px 16px', margin: 0,
+  },
+  søgeResultat: {
+    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+    padding: '10px 14px', background: 'transparent', border: 'none',
+    borderBottom: `1px solid ${colors.border}`, cursor: 'pointer',
+  },
+  søgeThumb: {
+    width: 48, height: 48, borderRadius: 10, flexShrink: 0,
+    overflow: 'hidden', position: 'relative',
+  },
+  søgeThumbImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  søgeNavn: {
+    fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text,
+    margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+  },
+  søgeMeta: {
+    fontFamily: font.body, fontSize: 12.5, color: colors.muted, margin: '2px 0 0',
   },
 
   tomVenner: {

@@ -116,6 +116,12 @@ const pv = {
   },
 }
 
+// ── Noter (lokalt pr. opskrift) ────────────────────────────────────────────────
+
+const NOTER_KEY = (id) => `brynjas_noter_${id}`
+function hentNoter(id) { try { return localStorage.getItem(NOTER_KEY(id)) ?? '' } catch { return '' } }
+function gemNoter(id, tekst) { try { localStorage.setItem(NOTER_KEY(id), tekst) } catch {} }
+
 // ── Hoved-komponent ───────────────────────────────────────────────────────────
 
 export default function Opskrift() {
@@ -124,6 +130,7 @@ export default function Opskrift() {
   const [opskrift, setOpskrift] = useState(null)
   const [loading, setLoading] = useState(true)
   const [portioner, setPortioner] = useState(null)
+  const [noter, setNoter] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -136,6 +143,7 @@ export default function Opskrift() {
         if (!cancelled) {
           setOpskrift(data)
           setPortioner(data?.servings ?? 4)
+          setNoter(hentNoter(id))
           setLoading(false)
         }
       })
@@ -278,6 +286,17 @@ export default function Opskrift() {
           </section>
         )}
 
+        {/* Noter */}
+        <section style={s.sektion}>
+          <h2 style={s.sektionTitel}>Mine noter</h2>
+          <textarea
+            value={noter}
+            onChange={(e) => { setNoter(e.target.value); gemNoter(id, e.target.value) }}
+            placeholder="Skriv dine egne noter, tilpasninger eller tip her…"
+            style={s.noterFelt}
+          />
+        </section>
+
         {/* Kildelink */}
         {opskrift.source_url && (
           <a href={opskrift.source_url} target="_blank" rel="noopener noreferrer" style={s.kildeLink}>
@@ -407,6 +426,14 @@ const s = {
     display: 'block', fontFamily: font.body, fontSize: 14, fontWeight: 700,
     color: colors.green, textDecoration: 'none',
     padding: '14px 0', borderTop: `1px solid ${colors.border}`, marginTop: 8,
+  },
+
+  noterFelt: {
+    width: '100%', minHeight: 100, padding: '13px 14px',
+    fontFamily: font.body, fontSize: 14.5, color: colors.text, lineHeight: 1.55,
+    background: colors.card, border: `1.5px solid ${colors.border}`,
+    borderRadius: 14, outline: 'none', resize: 'vertical', boxSizing: 'border-box',
+    boxShadow: shadow.card,
   },
 
   startKnap: {
