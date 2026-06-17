@@ -74,6 +74,8 @@ function useWakeLock() {
 function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
   const [foto, setFoto] = useState(null)
   const [fotoUrl, setFotoUrl] = useState(null)
+  const [citat, setCitat] = useState('')
+  const [del, setDel] = useState(false)
   const [uploader, setUploader] = useState(false)
   const filRef = useRef(null)
 
@@ -82,6 +84,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
     if (!fil) return
     setFoto(fil)
     setFotoUrl(URL.createObjectURL(fil))
+    setDel(true) // auto-aktivér deling når foto vælges
   }
 
   async function gem() {
@@ -104,6 +107,20 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
       foto: uploadUrl,
       bruger: bruger?.navn ?? 'Anonym',
     })
+
+    // Del med fællesskabet → insert i posts-tabel
+    if (del && bruger) {
+      await supabase.from('posts').insert({
+        bruger_email: bruger.email,
+        bruger_navn: bruger.navn,
+        bruger_avatar: bruger.avatar ?? '🧑‍🍳',
+        opskrift_id: String(opskrift.id),
+        opskrift_titel: opskrift.title,
+        foto_path: uploadUrl,
+        citat: citat.trim() || null,
+      })
+    }
+
     setUploader(false)
     onGem(fotoUrl)
   }
@@ -129,10 +146,32 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
           style={{ display: 'none' }} onChange={vælgFoto}
         />
 
+        {/* Del med fællesskabet */}
+        <div style={m.delRække}>
+          <span style={m.delLabel}>Del med fællesskabet 🌍</span>
+          <button
+            role="switch" aria-checked={del}
+            onClick={() => setDel((v) => !v)}
+            style={{ ...m.toggle, background: del ? colors.green : colors.mutedLight }}
+          >
+            <span style={{ ...m.toggleKnob, transform: del ? 'translateX(22px)' : 'translateX(0)' }} />
+          </button>
+        </div>
+
+        {del && (
+          <textarea
+            value={citat}
+            onChange={(e) => setCitat(e.target.value)}
+            placeholder="Tilføj en kommentar… (valgfrit)"
+            style={m.citatInput}
+            maxLength={200}
+          />
+        )}
+
         <div style={m.knapper}>
           <button style={m.sekundærKnap} onClick={onFortsæt}>Fortsæt</button>
           <button style={m.primærKnap} onClick={gem} disabled={uploader}>
-            {uploader ? 'Gemmer…' : 'Gem til arkiv'}
+            {uploader ? 'Gemmer…' : del ? 'Gem & Del' : 'Gem til arkiv'}
           </button>
         </div>
       </div>
@@ -486,6 +525,11 @@ const m = {
   },
   fotoPreview: { width: '100%', height: '100%', objectFit: 'cover' },
   fotoLabel: { fontFamily: font.body, fontSize: 14, fontWeight: 600, color: colors.muted },
+  delRække: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '6px 0' },
+  delLabel: { fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.text },
+  toggle: { position: 'relative', width: 48, height: 26, borderRadius: 999, border: 'none', padding: 0, flexShrink: 0, transition: 'background 0.2s', cursor: 'pointer' },
+  toggleKnob: { position: 'absolute', top: 3, left: 3, width: 20, height: 20, borderRadius: 999, background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.2)', transition: 'transform 0.2s', display: 'block' },
+  citatInput: { width: '100%', padding: '11px 13px', fontFamily: font.body, fontSize: 14, color: colors.text, background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12, outline: 'none', resize: 'none', boxSizing: 'border-box', height: 72 },
   knapper: { display: 'flex', gap: 10, width: '100%', marginTop: 6 },
   sekundærKnap: {
     flex: 1, padding: '14px 0', fontFamily: font.body, fontSize: 15, fontWeight: 700,

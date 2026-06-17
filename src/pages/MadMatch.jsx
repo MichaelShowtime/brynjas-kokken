@@ -7,6 +7,7 @@ import { hentLager, byggLagerOpslag } from '../data/lager'
 import { gemLike, fjernLike } from '../data/likes'
 import { gemAfvist, rydOgHent } from '../data/afviste'
 import { colors, shadow, radius, font } from '../data/theme'
+import { hentAktivBruger } from '../data/auth'
 
 const SWIPE_THRESHOLD = 110
 
@@ -55,6 +56,7 @@ export default function MadMatch() {
   }, [])
 
   const lagerOpslag = useMemo(() => byggLagerOpslag(hentLager()), [])
+  const brugerTags = useMemo(() => new Set(hentAktivBruger()?.tags ?? []), [])
 
   const analyser = useCallback(
     (opskrift) => {
@@ -85,14 +87,22 @@ export default function MadMatch() {
       return min > 0 && min <= 30
     })
 
-    // Lager-tilstand: sortér inden for mangler-grupper (0 mangler øverst),
-    // men bevar den tilfældige rækkefølge inden for samme group
+    // Præference-score: antal af brugerens tags der matcher opskriftens tags
+    const pScore = (o) => (o.tags ?? []).filter((t) => brugerTags.has(t)).length
+
     if (brugLager) {
-      liste.sort((a, b) => analyser(a).mangler.length - analyser(b).mangler.length)
+      // Primær: færreste manglende ingredienser. Sekundær: præference-match
+      liste.sort((a, b) => {
+        const mDiff = analyser(a).mangler.length - analyser(b).mangler.length
+        return mDiff !== 0 ? mDiff : pScore(b) - pScore(a)
+      })
+    } else if (brugerTags.size > 0) {
+      // Uden lager: præference-sort, tilfældig rækkefølge inden for samme score
+      liste.sort((a, b) => pScore(b) - pScore(a))
     }
 
     return liste
-  }, [brugLager, shuffled, tagFilter, mealFilter, under30, analyser, afviste])
+  }, [brugLager, shuffled, tagFilter, mealFilter, under30, analyser, afviste, brugerTags])
 
   function nulstilStak() {
     setIndex(0)

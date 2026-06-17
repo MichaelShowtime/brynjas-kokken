@@ -10,6 +10,27 @@ import { colors, shadow, radius, font } from '../data/theme'
 
 const AVATARER = ['🧑‍🍳','👩‍🍳','👨‍🍳','🧑🏽‍🍳','👩🏽‍🍳','👨🏾‍🍳','🧑🏻‍🍳','👩🏿‍🍳','🐻','🦊','🐸','🌻']
 
+function beregnStreak(kreationer) {
+  if (!kreationer.length) return 0
+  const datoer = new Set(kreationer.map((k) => k.dato?.slice(0, 10)).filter(Boolean))
+  let streak = 0
+  const dag = new Date()
+  dag.setHours(0, 0, 0, 0)
+  while (datoer.has(dag.toISOString().slice(0, 10))) {
+    streak++
+    dag.setDate(dag.getDate() - 1)
+  }
+  return streak
+}
+
+function beregnGnsTid(kreationer) {
+  const tider = kreationer
+    .map((k) => parseInt(k.tidBrugt))
+    .filter((n) => !isNaN(n) && n > 0)
+  if (!tider.length) return null
+  return Math.round(tider.reduce((a, b) => a + b, 0) / tider.length)
+}
+
 const ACHIEVEMENTS = [
   { emoji: '🔥', titel: '12 dages streak',  beskrivelse: 'Kogt 12 dage i træk',    opnået: true  },
   { emoji: '👨‍🍳', titel: 'Første ret',       beskrivelse: 'Lavede din første ret',  opnået: true  },
@@ -91,6 +112,8 @@ export default function Profil() {
   const [antalFølgere, setAntalFølgere] = useState(0)
   const [logUdDialog, setLogUdDialog] = useState(false)
   const [tilføjVenÅben, setTilføjVenÅben] = useState(false)
+  const streak = beregnStreak(kreationer)
+  const gnsTid = beregnGnsTid(kreationer)
 
   useEffect(() => {
     setKreationer(hentKreationer())
@@ -158,7 +181,7 @@ export default function Profil() {
       <div style={s.hero}>
         <div style={s.avatarWrap}>
           <div style={s.avatar}>{bruger.avatar}</div>
-          <div style={s.streakBadge}>🔥 12</div>
+          {streak > 0 && <div style={s.streakBadge}>🔥 {streak}</div>}
         </div>
         <h1 style={s.navn}>{bruger.navn} {bruger.efternavn}</h1>
         <p style={s.brugernavn}>{bruger.email}</p>
@@ -202,23 +225,50 @@ export default function Profil() {
       {/* Venner */}
       <div style={s.kort}>
         <div style={s.kortHeader}>
-          <p style={s.kortTitel}>Dine madvenner ({venner.length})</p>
-          <button style={s.seeAll} onClick={() => setTilføjVenÅben(true)}>+ Tilføj</button>
+          <p style={s.kortTitel}>Madvenner {venner.length > 0 ? `(${venner.length})` : ''}</p>
+          {venner.length > 0 && <button style={s.seeAll} onClick={() => setTilføjVenÅben(true)}>+ Tilføj</button>}
         </div>
-        <div style={s.vennerRække}>
-          {venner.map((v) => (
-            <div key={v.id} style={s.vennerItem}>
-              <div style={{ ...s.vennerRing, background: v.live ? `linear-gradient(135deg, ${colors.terracotta}, ${colors.red})` : colors.border }}>
-                <div style={s.vennerAvatar}>{v.emoji}</div>
+        {venner.length === 0 ? (
+          <div style={s.inviterBoks}>
+            <span style={{ fontSize: 32 }}>👥</span>
+            <p style={s.inviterTekst}>Invitér dine venner til Brynjas Køkken og del madoplevelser!</p>
+            <button style={s.inviterKnap} onClick={() => setTilføjVenÅben(true)}>+ Tilføj din første ven</button>
+          </div>
+        ) : (
+          <div style={s.vennerRække}>
+            {venner.map((v) => (
+              <div key={v.id} style={s.vennerItem}>
+                <div style={{ ...s.vennerRing, background: v.live ? `linear-gradient(135deg, ${colors.terracotta}, ${colors.red})` : colors.border }}>
+                  <div style={s.vennerAvatar}>{v.emoji}</div>
+                </div>
+                <span style={s.vennerNavn}>{v.navn}</span>
               </div>
-              <span style={s.vennerNavn}>{v.navn}</span>
+            ))}
+            <div style={s.vennerItem} onClick={() => setTilføjVenÅben(true)}>
+              <div style={{ ...s.vennerRing, background: colors.border }}>
+                <div style={{ ...s.vennerAvatar, fontSize: 22, color: colors.green }}>+</div>
+              </div>
+              <span style={s.vennerNavn}>Tilføj</span>
             </div>
-          ))}
-          <div style={s.vennerItem} onClick={() => setTilføjVenÅben(true)}>
-            <div style={{ ...s.vennerRing, background: colors.border }}>
-              <div style={{ ...s.vennerAvatar, fontSize: 22, color: colors.green }}>+</div>
-            </div>
-            <span style={s.vennerNavn}>Tilføj</span>
+          </div>
+        )}
+      </div>
+
+      {/* Statistik */}
+      <div style={s.kort}>
+        <p style={{ ...s.kortTitel, marginBottom: 14 }}>Din madstatistik</p>
+        <div style={s.statGrid}>
+          <div style={s.statBox}>
+            <span style={s.statBoxTal}>{streak}</span>
+            <span style={s.statBoxLabel}>🔥 Dages streak</span>
+          </div>
+          <div style={s.statBox}>
+            <span style={s.statBoxTal}>{kreationer.length}</span>
+            <span style={s.statBoxLabel}>🍽️ Retter lavet</span>
+          </div>
+          <div style={s.statBox}>
+            <span style={s.statBoxTal}>{gnsTid ? `${gnsTid}m` : '—'}</span>
+            <span style={s.statBoxLabel}>⏱ Gns. tid</span>
           </div>
         </div>
       </div>
@@ -358,6 +408,8 @@ export default function Profil() {
 
 function RedigerProfil({ bruger, onGem, onTilbage }) {
   const [avatar, setAvatar] = useState(bruger.avatar)
+  const [navn, setNavn] = useState(bruger.navn || '')
+  const [efternavn, setEfternavn] = useState(bruger.efternavn || '')
   const [bio, setBio] = useState(bruger.bio || '')
   const [telefon, setTelefon] = useState(bruger.telefon || '')
 
@@ -366,18 +418,18 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
       <SubHeader titel="Rediger profil" onTilbage={onTilbage} />
       <div style={s.subIndhold}>
 
-        {/* Kun-læs info fra registrering */}
-        <div style={s.infoBox}>
-          <p style={s.infoBoxTekst}>📝 Navn og e-mail er sat ved registrering og kan ikke ændres her.</p>
-        </div>
-        <div style={s.læsOnlyFelt}>
-          <span style={s.læsOnlyLabel}>Navn</span>
-          <span style={s.læsOnlyVærdi}>{bruger.navn} {bruger.efternavn}</span>
-        </div>
         <div style={s.læsOnlyFelt}>
           <span style={s.læsOnlyLabel}>E-mail</span>
           <span style={s.læsOnlyVærdi}>{bruger.email}</span>
         </div>
+
+        <label style={s.feltLabel}>Fornavn</label>
+        <input value={navn} onChange={(e) => setNavn(e.target.value)}
+          placeholder="Fornavn" style={s.input} />
+
+        <label style={s.feltLabel}>Efternavn</label>
+        <input value={efternavn} onChange={(e) => setEfternavn(e.target.value)}
+          placeholder="Efternavn" style={s.input} />
 
         <label style={s.feltLabel}>Telefonnummer</label>
         <input value={telefon} onChange={(e) => setTelefon(e.target.value)}
@@ -399,7 +451,7 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
         </div>
         <div style={{ fontSize: 56, textAlign: 'center', margin: '0 auto 8px' }}>{avatar}</div>
 
-        <button style={s.primærBtn} onClick={() => onGem({ avatar, bio, telefon })}>Gem ændringer</button>
+        <button style={s.primærBtn} onClick={() => onGem({ avatar, navn, efternavn, bio, telefon })}>Gem ændringer</button>
         <button style={s.sekundærBtn} onClick={onTilbage}>Annullér</button>
       </div>
     </div>
@@ -667,6 +719,13 @@ const s = {
   vennerRing: { width: 52, height: 52, borderRadius: 999, padding: 3, display: 'flex' },
   vennerAvatar: { flex: 1, borderRadius: 999, background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, border: `2px solid ${colors.card}` },
   vennerNavn: { fontFamily: font.body, fontSize: 11.5, fontWeight: 600, color: colors.text },
+  inviterBoks: { textAlign: 'center', padding: '12px 8px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 },
+  inviterTekst: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0, lineHeight: 1.5, maxWidth: 260 },
+  inviterKnap: { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: '#fff', background: colors.green, border: 'none', borderRadius: radius.pill, padding: '10px 20px', cursor: 'pointer' },
+  statGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 },
+  statBox: { background: colors.bg, borderRadius: 14, padding: '12px 8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
+  statBoxTal: { fontFamily: font.display, fontWeight: 800, fontSize: 22, color: colors.text },
+  statBoxLabel: { fontFamily: font.body, fontSize: 11.5, fontWeight: 600, color: colors.muted, lineHeight: 1.3 },
 
   tabs: { display: 'flex', borderBottom: `1px solid ${colors.border}`, margin: '0 16px', overflowX: 'auto', scrollbarWidth: 'none' },
   tab: { flexShrink: 0, fontFamily: font.body, fontWeight: 700, fontSize: 13, color: colors.mutedLight, background: 'none', border: 'none', borderBottom: '2.5px solid transparent', padding: '12px 12px', whiteSpace: 'nowrap' },

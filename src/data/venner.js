@@ -7,11 +7,7 @@ const KEY = 'brynjas_venner'
 
 // ── Lokale mock-venner (bruges kun hvis ingen DB-data) ────────────────────────
 
-const STANDARD = [
-  { id: 'mads',   email: 'mads@example.dk',   navn: 'Mads',   efternavn: 'Koekken', emoji: '👨‍🍳', live: true  },
-  { id: 'sofie',  email: 'sofie@example.dk',  navn: 'Sofie',  efternavn: 'Foodie',  emoji: '🧑‍🍳' },
-  { id: 'oliver', email: 'oliver@example.dk', navn: 'Oliver', efternavn: 'Eats',    emoji: '👨🏽‍🍳' },
-]
+const STANDARD = []
 
 // ── localStorage (sync — bruges til hurtig visning) ───────────────────────────
 

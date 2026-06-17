@@ -9,6 +9,17 @@ import { colors, shadow, radius, font } from '../data/theme'
 import { supabase } from '../lib/supabase'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
 
+function relativTid(isoString) {
+  const diff = Date.now() - new Date(isoString).getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return 'Lige nu'
+  if (min < 60) return `${min} min siden`
+  const timer = Math.floor(min / 60)
+  if (timer < 24) return `${timer} t siden`
+  const dage = Math.floor(timer / 24)
+  return `${dage} dag${dage > 1 ? 'e' : ''} siden`
+}
+
 function hilsen() {
   const t = new Date().getHours()
   if (t < 10) return 'Godmorgen'
@@ -43,6 +54,7 @@ export default function Hjem() {
   const [vennerListe, setVennerListe] = useState(() => hentVenner())
   const [kreationer] = useState(() => hentKreationer())
   const [likes] = useState(() => hentLikes())
+  const [dbPosts, setDbPosts] = useState([])
 
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
@@ -62,6 +74,12 @@ export default function Hjem() {
       .then(({ data }) => {
         if (!cancelled) { setOpskrifter(data ?? []); setLoading(false) }
       })
+    supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then(({ data }) => { if (!cancelled && data?.length) setDbPosts(data) })
     return () => { cancelled = true }
   }, [])
 
@@ -132,45 +150,92 @@ export default function Hjem() {
       {/* Socialt feed */}
       <Section titel="I dit fællesskab" handling="Følg flere" onHandling={() => navigate('/profil')} />
       <div style={styles.feed}>
-        {opslag.map((p) => (
-          <article key={p.id} style={styles.post}>
-            <div style={styles.postHead}>
-              <div style={styles.postAvatar}>{p.avatar}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={styles.postNavn}>
-                  {p.navn}{' '}
-                  <span style={styles.postHandling}>{p.handling}</span>
-                </p>
-                <p style={styles.postTid}>{p.tid}</p>
+        {dbPosts.length > 0
+          ? dbPosts.map((p) => (
+            <article key={p.id} style={styles.post}>
+              <div style={styles.postHead}>
+                <div style={styles.postAvatar}>{p.bruger_avatar ?? '🧑‍🍳'}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={styles.postNavn}>
+                    {p.bruger_navn}{' '}
+                    <span style={styles.postHandling}>lavede</span>
+                  </p>
+                  <p style={styles.postTid}>{relativTid(p.created_at)}</p>
+                </div>
+                <button style={styles.followBtn} onClick={() => navigate('/profil')}>+ Følg</button>
               </div>
-              <button style={styles.followBtn} onClick={() => navigate('/profil')}>+ Følg</button>
-            </div>
-            <div style={{ ...styles.postImg, background: grad(p.farve) }}>
-              <span style={styles.postImgEmoji}>{p.emoji}</span>
-              <span style={styles.postRet}>{p.ret}</span>
-            </div>
-            {p.citat && <p style={styles.postCitat}>"{p.citat}"</p>}
-            <div style={styles.postFooter}>
-              <span style={styles.postStat}>❤️ {p.likes}</span>
-              <span style={styles.postStat}>💬 {p.kommentarer}</span>
-              {p.opskriftId ? (
-                <button
-                  style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
-                  onClick={() => navigate(`/opskrift/${p.opskriftId}`)}
-                >
-                  Lav også →
-                </button>
+              {p.foto_path ? (
+                <img
+                  src={billedeUrl(p.foto_path)}
+                  alt={p.opskrift_titel}
+                  style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 14 }}
+                />
               ) : (
-                <button
-                  style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
-                  onClick={() => navigate('/madmatch')}
-                >
-                  Lav også →
-                </button>
+                <div style={{ ...styles.postImg, background: grad(opskriftFarve([])) }}>
+                  <span style={styles.postRet}>{p.opskrift_titel}</span>
+                </div>
               )}
-            </div>
-          </article>
-        ))}
+              {p.citat && <p style={styles.postCitat}>"{p.citat}"</p>}
+              <div style={styles.postFooter}>
+                <span style={styles.postStat}>🍽️ {p.opskrift_titel}</span>
+                {p.opskrift_id ? (
+                  <button
+                    style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
+                    onClick={() => navigate(`/opskrift/${p.opskrift_id}`)}
+                  >
+                    Lav også →
+                  </button>
+                ) : (
+                  <button
+                    style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
+                    onClick={() => navigate('/madmatch')}
+                  >
+                    Lav også →
+                  </button>
+                )}
+              </div>
+            </article>
+          ))
+          : opslag.map((p) => (
+            <article key={p.id} style={styles.post}>
+              <div style={styles.postHead}>
+                <div style={styles.postAvatar}>{p.avatar}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={styles.postNavn}>
+                    {p.navn}{' '}
+                    <span style={styles.postHandling}>{p.handling}</span>
+                  </p>
+                  <p style={styles.postTid}>{p.tid}</p>
+                </div>
+                <button style={styles.followBtn} onClick={() => navigate('/profil')}>+ Følg</button>
+              </div>
+              <div style={{ ...styles.postImg, background: grad(p.farve) }}>
+                <span style={styles.postImgEmoji}>{p.emoji}</span>
+                <span style={styles.postRet}>{p.ret}</span>
+              </div>
+              {p.citat && <p style={styles.postCitat}>"{p.citat}"</p>}
+              <div style={styles.postFooter}>
+                <span style={styles.postStat}>❤️ {p.likes}</span>
+                <span style={styles.postStat}>💬 {p.kommentarer}</span>
+                {p.opskriftId ? (
+                  <button
+                    style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
+                    onClick={() => navigate(`/opskrift/${p.opskriftId}`)}
+                  >
+                    Lav også →
+                  </button>
+                ) : (
+                  <button
+                    style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
+                    onClick={() => navigate('/madmatch')}
+                  >
+                    Lav også →
+                  </button>
+                )}
+              </div>
+            </article>
+          ))
+        }
       </div>
 
       {/* Mere til dig */}
