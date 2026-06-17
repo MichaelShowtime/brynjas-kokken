@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { opslag } from '../data/feed'
 import { hentVenner, hentVennerFraDB } from '../data/venner'
@@ -55,16 +55,13 @@ export default function Hjem() {
   const [kreationer] = useState(() => hentKreationer())
   const [likes] = useState(() => hentLikes())
   const [dbPosts, setDbPosts] = useState([])
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
 
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
 
-  useEffect(() => {
-    if (bruger?.email) {
-      hentVennerFraDB(bruger.email).then((liste) => { if (liste.length) setVennerListe(liste) })
-    }
-  }, [bruger?.email])
-
+  // Recipes
   useEffect(() => {
     let cancelled = false
     supabase
@@ -74,20 +71,91 @@ export default function Hjem() {
       .then(({ data }) => {
         if (!cancelled) { setOpskrifter(data ?? []); setLoading(false) }
       })
-    supabase
-      .from('posts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20)
-      .then(({ data }) => { if (!cancelled && data?.length) setDbPosts(data) })
     return () => { cancelled = true }
   }, [])
+
+  // Venner → filtreret feed → realtime
+  useEffect(() => {
+    if (!bruger?.email) return
+    let cancelled = false
+    let channel = null
+
+    async function init() {
+      // 1. Hent venner
+      const vennerData = await hentVennerFraDB(bruger.email)
+      if (cancelled) return
+      if (vennerData.length) setVennerListe(vennerData)
+
+      const emails = vennerData.map((v) => v.email).filter(Boolean)
+
+      // 2. Bed om notifikationstilladelse når man har venner
+      if (emails.length > 0 && 'Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission()
+      }
+
+      // 3. Hent posts — fra venner hvis man følger nogen, ellers alle (discovery)
+      const query = emails.length > 0
+        ? supabase.from('posts').select('*').in('bruger_email', emails)
+        : supabase.from('posts').select('*')
+      const { data: postsData } = await query.order('created_at', { ascending: false }).limit(20)
+      if (!cancelled && postsData?.length) setDbPosts(postsData)
+
+      // 4. Realtime — nye posts fra venner
+      channel = supabase.channel(`hjem-feed-${bruger.email}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+          const post = payload.new
+          const erFraVen = emails.length === 0 || emails.includes(post.bruger_email)
+          if (!erFraVen) return
+
+          // Opdater feed live
+          setDbPosts((prev) => [post, ...prev])
+
+          // In-app toast
+          setToast({ tekst: `${post.bruger_navn} lavede ${post.opskrift_titel}`, avatar: post.bruger_avatar ?? '🧑‍🍳' })
+          if (toastTimer.current) clearTimeout(toastTimer.current)
+          toastTimer.current = setTimeout(() => setToast(null), 4500)
+
+          // Browser-notifikation
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(`🍳 ${post.bruger_navn} lavede mad!`, {
+              body: post.opskrift_titel + (post.citat ? ` · "${post.citat}"` : ''),
+              icon: '/favicon.ico',
+            })
+          }
+        })
+        .subscribe()
+    }
+
+    init()
+
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
+      if (toastTimer.current) clearTimeout(toastTimer.current)
+    }
+  }, [bruger?.email])
+
+  // Venner der postede indenfor 24 timer — bruges til live-ring
+  const recentPostEmails = useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000
+    return new Set(dbPosts.filter((p) => new Date(p.created_at).getTime() > cutoff).map((p) => p.bruger_email))
+  }, [dbPosts])
 
   const featured = opskrifter[0] ?? null
   const anbefalet = opskrifter.slice(1, 6)
 
   return (
     <div style={styles.page}>
+
+      {/* In-app toast notifikation */}
+      {toast && (
+        <div style={styles.toast}>
+          <span style={{ fontSize: 26, flexShrink: 0 }}>{toast.avatar}</span>
+          <p style={styles.toastTekst}>{toast.tekst}</p>
+          <button style={styles.toastLuk} onClick={() => setToast(null)}>✕</button>
+        </div>
+      )}
+
       {/* Hilsen */}
       <header style={styles.topRow}>
         <div>
@@ -120,22 +188,23 @@ export default function Hjem() {
         </div>
       ) : (
         <div style={styles.scrollRow}>
-          {vennerListe.map((v) => (
-            <div key={v.id} style={styles.story}>
-              <div
-                style={{
+          {vennerListe.map((v) => {
+            const erAktiv = recentPostEmails.has(v.email)
+            return (
+              <div key={v.id} style={styles.story}>
+                <div style={{
                   ...styles.storyRing,
-                  background: v.live
+                  background: erAktiv
                     ? `linear-gradient(135deg, ${colors.terracotta}, ${colors.red})`
                     : colors.border,
-                }}
-              >
-                <div style={styles.storyAvatar}>{v.emoji}</div>
+                }}>
+                  <div style={styles.storyAvatar}>{v.emoji}</div>
+                </div>
+                <span style={styles.storyNavn}>{v.navn}</span>
+                {erAktiv && <span style={styles.liveDot}>NY</span>}
               </div>
-              <span style={styles.storyNavn}>{v.navn}</span>
-              {v.live && <span style={styles.liveDot}>LIVE</span>}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -330,7 +399,23 @@ function Section({ titel, handling, onHandling }) {
 }
 
 const styles = {
-  page: { maxWidth: 480, margin: '0 auto', padding: '20px 20px 120px', minHeight: '100%' },
+  page: { maxWidth: 480, margin: '0 auto', padding: '20px 20px 120px', minHeight: '100%', position: 'relative' },
+
+  toast: {
+    position: 'fixed', top: 14, left: '50%', transform: 'translateX(-50%)',
+    background: colors.card, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+    padding: '12px 14px 12px 16px', display: 'flex', alignItems: 'center', gap: 10,
+    maxWidth: 340, width: 'calc(100vw - 32px)', zIndex: 400,
+    border: `1.5px solid ${colors.border}`,
+  },
+  toastTekst: {
+    flex: 1, fontFamily: font.body, fontSize: 14, fontWeight: 600, color: colors.text,
+    margin: 0, lineHeight: 1.3,
+  },
+  toastLuk: {
+    background: 'none', border: 'none', color: colors.mutedLight,
+    fontSize: 14, padding: '0 0 0 4px', cursor: 'pointer', flexShrink: 0,
+  },
 
   topRow: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   eyebrow: {
