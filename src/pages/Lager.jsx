@@ -1,9 +1,78 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   hentLager, gemLager, sletFraLager, opdaterUdløb,
   KATEGORIER, INGREDIENS_KATALOG, ENHEDER,
 } from '../data/lager'
+import { supabase } from '../lib/supabase'
 import { colors, shadow, radius, font } from '../data/theme'
+
+// Module-level cache — survives re-renders, re-fetches only on hard reload
+let _katalogCache = null
+
+function gætKategori(navn) {
+  const n = navn.toLowerCase()
+  if (/oregano|timian|rosmarin|kanel|paprika|gurkemeje|spidskommen|karry|chiliflager|chilipulver|stødt peber|salt\b|stjerneanis|muskatnød|vaniljesukker|bagepulver|natron|laurbær|nelliker|allehånde|cayenne|hvidløgspulver|fennikelfrø|kardamom|sambal|ras el hanout|garam masala|sichuan|tørret|stødt|pulver|urter|krydderi/.test(n)) return 'krydderier'
+  if (/frosn|frossen/.test(n)) return 'frys'
+  if (/mælk|fløde|smør|æg|ost|yoghurt|skyr|ricotta|cream cheese|crème fraîche|creme fraiche|mascarpone|kefir|kvark|brie|gedeost|hytteost|flødeos|danbo|cheddar|mozzarella|parmesan|feta/.test(n)) return 'køl'
+  if (/kylling|oksekød|svinekød|hakket kød|laks|tun\b|rejer|flæsk\b|bacon|skinke|pølse|lever\b|and\b|lam\b|kalv|kotelet|nakkefilet|mørbrønd|bøf|torsk|sild\b|fisk\b/.test(n)) return 'køl'
+  if (/løg|gulerod|tomat|broccoli|blomkål|spinat|agurk|peberfrugt|kartoffel|søde kartofler|avocado|squash|svampe|champignon|aubergine|selleri|fennikel|asparges|porrer|purre|spidskål|grønkål|hvidkål|rødkål|ærter\b|majs|ingefær|citron|lime|appelsin|banan|æble|pære|mango|ananas|jordbær|hindbær|blåbær|tranebær|rabarber|koriander|basilikum|persille|dild|mynte|ramsløg|rucola|salat\b/.test(n)) return 'grønt'
+  return 'tørvarer'
+}
+
+function gætEmoji(navn) {
+  const n = navn.toLowerCase()
+  if (/kylling|høne/.test(n)) return '🍗'
+  if (/oksekød|hakket kød|bøf|tartar/.test(n)) return '🥩'
+  if (/laks|torsk|fisk|tun\b/.test(n)) return '🐟'
+  if (/rejer/.test(n)) return '🦐'
+  if (/æg/.test(n)) return '🥚'
+  if (/mælk|fløde|kefir/.test(n)) return '🥛'
+  if (/smør/.test(n)) return '🧈'
+  if (/ost|mozz|parmes|feta|cheddar|brie|gedeost|hytteost/.test(n)) return '🧀'
+  if (/tomat/.test(n)) return '🍅'
+  if (/løg|purløg|porrer|purre/.test(n)) return '🧅'
+  if (/hvidløg/.test(n)) return '🧄'
+  if (/gulerod/.test(n)) return '🥕'
+  if (/kartoffel/.test(n)) return '🥔'
+  if (/broccoli|blomkål|kål/.test(n)) return '🥦'
+  if (/spinat|salat\b|rucola/.test(n)) return '🥬'
+  if (/avocado/.test(n)) return '🥑'
+  if (/citron|lime/.test(n)) return '🍋'
+  if (/appelsin/.test(n)) return '🍊'
+  if (/banan/.test(n)) return '🍌'
+  if (/æble/.test(n)) return '🍎'
+  if (/jordbær|hindbær|blåbær|bær/.test(n)) return '🍓'
+  if (/mango|ananas/.test(n)) return '🍍'
+  if (/champignon|svamp/.test(n)) return '🍄'
+  if (/agurk|squash/.test(n)) return '🥒'
+  if (/peberfrugt/.test(n)) return '🫑'
+  if (/pasta|spaghetti|tagliatelle|penne|rigatoni|fusilli|orzo|lasagne/.test(n)) return '🍝'
+  if (/ris\b|quinoa|bulgur|couscous/.test(n)) return '🍚'
+  if (/mel\b|hvedemel|rugmel/.test(n)) return '🌾'
+  if (/sukker|honning|sirup|melis/.test(n)) return '🍬'
+  if (/chokolade/.test(n)) return '🍫'
+  if (/salt\b/.test(n)) return '🧂'
+  if (/chili|peber/.test(n)) return '🌶️'
+  if (/kanel/.test(n)) return '🪵'
+  if (/persille|basilikum|koriander|dild|mynte|timian|rosmarin|oregano|ingefær/.test(n)) return '🌿'
+  if (/olie/.test(n)) return '🫙'
+  if (/brød|rugbrød|baguette|bolle/.test(n)) return '🍞'
+  if (/bønner|linser|kikærter/.test(n)) return '🫘'
+  if (/kokosmælk|kokos/.test(n)) return '🥥'
+  if (/vin\b|hvidvin|rødvin/.test(n)) return '🍷'
+  if (/citron|lime/.test(n)) return '🍋'
+  return '🥄'
+}
+
+function gætEnhed(navn) {
+  const n = navn.toLowerCase()
+  if (/salt|peber|karry|gurkemeje|kanel|spidskommen|paprika|bagepulver|natron|chili|oregano|timian|rosmarin|stødt|tørret|pulver|fennikel|kardamom/.test(n)) return 'tsk'
+  if (/olie|sojasauce|eddike|sennep|worcestershire|tabasco|fiskesauce|østerssauce/.test(n)) return 'spsk'
+  if (/mælk|fløde|kefir|yoghurt|skyr/.test(n)) return 'dl'
+  if (/kød|fisk|laks|kylling|oksekød|smør|ost|mel|sukker|havregryn|bacon|skinke|pasta|ris|linser|kikærter/.test(n)) return 'g'
+  if (/løg|tomat|gulerod|kartoffel|æble|citron|banan|æg|peberfrugt|agurk|squash/.test(n)) return 'stk'
+  return 'stk'
+}
 
 // ── Udløbs-hjælper ────────────────────────────────────────────────────────────
 function udløbsInfo(udløbDato) {
@@ -186,20 +255,52 @@ export default function Lager() {
 
 function TilføjSheet({ onTilføj, onLuk }) {
   const [søgning, setSøgning]     = useState('')
-  const [valgt, setValgt]         = useState(null)   // { navn, emoji, kategori, standardEnhed }
+  const [valgt, setValgt]         = useState(null)
   const [mængde, setMængde]       = useState('')
   const [enhed, setEnhed]         = useState('stk')
   const [udløb, setUdløb]         = useState('')
+  const [katalog, setKatalog]     = useState(_katalogCache ?? INGREDIENS_KATALOG)
+  const [indlæser, setIndlæser]   = useState(!_katalogCache)
   const søgeRef = useRef(null)
 
   useEffect(() => { søgeRef.current?.focus() }, [])
 
-  // Filtrer katalog
-  const resultater = søgning.trim().length === 0
-    ? INGREDIENS_KATALOG.slice(0, 30)
-    : INGREDIENS_KATALOG.filter((v) =>
-        v.navn.toLowerCase().includes(søgning.toLowerCase())
-      ).slice(0, 20)
+  useEffect(() => {
+    if (_katalogCache) return
+    supabase.from('recipes').select('ingredients').then(({ data }) => {
+      const statiskeNavne = new Set(INGREDIENS_KATALOG.map((i) => i.navn.toLowerCase()))
+      const set = new Set(statiskeNavne)
+      const ekstra = []
+      for (const r of data ?? []) {
+        for (const ing of r.ingredients ?? []) {
+          const navn = (ing.name ?? '').trim()
+          if (!navn || set.has(navn.toLowerCase())) continue
+          set.add(navn.toLowerCase())
+          ekstra.push({ navn, kategori: gætKategori(navn), emoji: gætEmoji(navn), standardEnhed: gætEnhed(navn) })
+        }
+      }
+      ekstra.sort((a, b) => a.navn.localeCompare(b.navn, 'da'))
+      const kombineret = [...INGREDIENS_KATALOG, ...ekstra]
+      _katalogCache = kombineret
+      setKatalog(kombineret)
+      setIndlæser(false)
+    })
+  }, [])
+
+  const resultater = useMemo(() => {
+    const søg = søgning.trim().toLowerCase()
+    if (!søg) return katalog.slice(0, 30)
+    return katalog
+      .filter((v) => v.navn.toLowerCase().includes(søg))
+      .sort((a, b) => {
+        const aStart = a.navn.toLowerCase().startsWith(søg)
+        const bStart = b.navn.toLowerCase().startsWith(søg)
+        if (aStart && !bStart) return -1
+        if (!aStart && bStart) return 1
+        return a.navn.localeCompare(b.navn, 'da')
+      })
+      .slice(0, 25)
+  }, [katalog, søgning])
 
   function vælgIngrediens(item) {
     setValgt(item)
@@ -247,14 +348,26 @@ function TilføjSheet({ onTilføj, onLuk }) {
           )}
         </div>
 
+        {/* Ingrediens-tæller */}
+        {!valgt && !indlæser && (
+          <p style={s.katalogTæller}>{katalog.length} ingredienser · fra alle opskrifter</p>
+        )}
+
         {/* Søgeresultater — kun hvis ikke valgt */}
         {!valgt && (
           <div style={s.resultaterListe}>
-            {resultater.length === 0 ? (
+            {indlæser ? (
+              <div style={s.ingenResultater}>Henter ingredienser fra opskrifter…</div>
+            ) : resultater.length === 0 ? (
               <div style={s.ingenResultater}>
                 Ingen ingredienser fundet —{' '}
                 <button style={s.manueltLink}
-                  onClick={() => setValgt({ navn: søgning.trim(), emoji: '🥄', kategori: 'tørvarer', standardEnhed: 'stk' })}>
+                  onClick={() => setValgt({
+                    navn: søgning.trim(),
+                    emoji: gætEmoji(søgning.trim()),
+                    kategori: gætKategori(søgning.trim()),
+                    standardEnhed: gætEnhed(søgning.trim()),
+                  })}>
                   tilføj manuelt
                 </button>
               </div>
@@ -424,6 +537,8 @@ const s = {
   greb: { width: 40, height: 4, background: colors.border, borderRadius: 999, margin: '0 auto 20px' },
   sheetTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 22, color: colors.text, margin: 0 },
   lukBtn: { width: 32, height: 32, borderRadius: 999, background: colors.bg, border: 'none', fontSize: 14, color: colors.muted, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+
+  katalogTæller: { fontFamily: font.body, fontSize: 11.5, color: colors.mutedLight, margin: '-4px 0 10px', letterSpacing: 0.2 },
 
   // Søgefelt
   søgeWrap: { position: 'relative', marginBottom: 12 },
