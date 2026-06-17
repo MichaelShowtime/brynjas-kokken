@@ -1,11 +1,12 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { venner, ugensRet, opslag } from '../data/feed'
-import { opskrifter } from '../data/opskrifter'
+import { venner, opslag } from '../data/feed'
 import { colors, shadow, radius, font } from '../data/theme'
+import { supabase } from '../lib/supabase'
+import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
 
 const BRUGER = 'Brynja'
 
-// Tid-på-dagen hilsen
 function hilsen() {
   const t = new Date().getHours()
   if (t < 10) return 'Godmorgen'
@@ -20,19 +21,25 @@ function datoLinje() {
     .toUpperCase()
 }
 
-// Gradient ud fra én farve
-function grad(c) {
-  return `linear-gradient(135deg, ${c} 0%, ${shade(c)} 100%)`
-}
-function shade(hex) {
-  const n = parseInt(hex.slice(1), 16)
-  const f = 0.82
-  return `rgb(${Math.round(((n >> 16) & 255) * f)},${Math.round(((n >> 8) & 255) * f)},${Math.round((n & 255) * f)})`
-}
-
 export default function Hjem() {
   const navigate = useNavigate()
-  const anbefalet = opskrifter.slice(2, 7)
+  const [opskrifter, setOpskrifter] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    supabase
+      .from('recipes')
+      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image')
+      .limit(20)
+      .then(({ data }) => {
+        if (!cancelled) { setOpskrifter(data ?? []); setLoading(false) }
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  const featured = opskrifter[0] ?? null
+  const anbefalet = opskrifter.slice(1, 6)
 
   return (
     <div style={styles.page}>
@@ -75,22 +82,13 @@ export default function Hjem() {
         ))}
       </div>
 
-      {/* Ugens opskrift — featured */}
+      {/* Ugens opskrift */}
       <Section titel="Ugens opskrift" />
-      <button
-        style={{ ...styles.featured, background: grad(ugensRet.farve) }}
-        onClick={() => navigate('/madmatch')}
-      >
-        <span style={styles.featuredBadge}>⭐ Mest gemte</span>
-        <div style={styles.featuredEmoji}>{ugensRet.emoji}</div>
-        <div style={styles.featuredBody}>
-          <h3 style={styles.featuredTitel}>{ugensRet.titel}</h3>
-          <p style={styles.featuredMeta}>
-            ⏱ {ugensRet.tid} min · {ugensRet.sværhedsgrad} · af {ugensRet.kok}
-          </p>
-          <p style={styles.featuredTekst}>{ugensRet.beskrivelse}</p>
-        </div>
-      </button>
+      {loading ? (
+        <div style={styles.featuredSkeleton} />
+      ) : featured ? (
+        <FeaturedCard opskrift={featured} onClick={() => navigate(`/opskrift/${featured.id}`)} />
+      ) : null}
 
       {/* Socialt feed */}
       <Section titel="I dit fællesskab" handling="Følg flere" onHandling={() => {}} />
@@ -108,14 +106,11 @@ export default function Hjem() {
               </div>
               <button style={styles.followBtn}>+ Følg</button>
             </div>
-
             <div style={{ ...styles.postImg, background: grad(p.farve) }}>
               <span style={styles.postImgEmoji}>{p.emoji}</span>
               <span style={styles.postRet}>{p.ret}</span>
             </div>
-
-            {p.citat && <p style={styles.postCitat}>“{p.citat}”</p>}
-
+            {p.citat && <p style={styles.postCitat}>"{p.citat}"</p>}
             <div style={styles.postFooter}>
               <span style={styles.postStat}>❤️ {p.likes}</span>
               <span style={styles.postStat}>💬 {p.kommentarer}</span>
@@ -127,37 +122,76 @@ export default function Hjem() {
         ))}
       </div>
 
-      {/* Mere til dig — andre retter */}
+      {/* Mere til dig */}
       <Section titel="Mere til dig" handling="Se alle" onHandling={() => navigate('/madmatch')} />
       <div style={styles.scrollRow}>
-        {anbefalet.map((o) => (
-          <button
-            key={o.id}
-            style={styles.recipeCard}
-            onClick={() => navigate('/madmatch')}
-          >
-            <div style={{ ...styles.recipeHero, background: grad(o.farve) }}>
-              <span style={styles.recipeEmoji}>{o.emoji}</span>
-            </div>
-            <div style={styles.recipeBody}>
-              <p style={styles.recipeTitel}>{o.titel}</p>
-              <p style={styles.recipeMeta}>⏱ {o.tid} min · {o.sværhedsgrad}</p>
-            </div>
-          </button>
-        ))}
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} style={styles.recipeCardSkeleton} />
+            ))
+          : anbefalet.map((o) => (
+              <RecipeCard key={o.id} opskrift={o} onClick={() => navigate(`/opskrift/${o.id}`)} />
+            ))}
       </div>
     </div>
   )
 }
 
+function FeaturedCard({ opskrift, onClick }) {
+  const imgUrl = billedeUrl(opskrift.storage_image)
+  const farve = opskriftFarve(opskrift.tags)
+  const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
+  const sværhed = sværhedLabel(opskrift.difficulty)
+  const meta = [tid && `⏱ ${tid}`, sværhed].filter(Boolean).join(' · ')
+
+  return (
+    <button style={styles.featured} onClick={onClick}>
+      <div style={{ ...styles.featuredHero, background: grad(farve) }}>
+        {imgUrl && <img src={imgUrl} alt={opskrift.title} style={styles.featuredImg} />}
+        <span style={styles.featuredBadge}>⭐ Anbefalet til dig</span>
+      </div>
+      <div style={styles.featuredBody}>
+        <h3 style={styles.featuredTitel}>{opskrift.title}</h3>
+        {meta && <p style={styles.featuredMeta}>{meta}</p>}
+        {opskrift.description && (
+          <p style={styles.featuredTekst}>
+            {opskrift.description.length > 120
+              ? opskrift.description.slice(0, 120) + '…'
+              : opskrift.description}
+          </p>
+        )}
+      </div>
+    </button>
+  )
+}
+
+function RecipeCard({ opskrift, onClick }) {
+  const imgUrl = billedeUrl(opskrift.storage_image)
+  const farve = opskriftFarve(opskrift.tags)
+  const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
+  const sværhed = sværhedLabel(opskrift.difficulty)
+  const meta = [tid, sværhed].filter(Boolean).join(' · ')
+
+  return (
+    <button style={styles.recipeCard} onClick={onClick}>
+      <div style={{ ...styles.recipeHero, background: grad(farve) }}>
+        {imgUrl ? (
+          <img src={imgUrl} alt={opskrift.title} style={styles.recipeImg} />
+        ) : (
+          <span style={styles.recipeInitial}>{opskrift.title.charAt(0)}</span>
+        )}
+      </div>
+      <div style={styles.recipeBody}>
+        <p style={styles.recipeTitel}>{opskrift.title}</p>
+        {meta && <p style={styles.recipeMeta}>{meta}</p>}
+      </div>
+    </button>
+  )
+}
+
 function Stat({ tal, label, ikon, fremhæv }) {
   return (
-    <div
-      style={{
-        ...styles.stat,
-        ...(fremhæv ? { background: colors.green } : null),
-      }}
-    >
+    <div style={{ ...styles.stat, ...(fremhæv ? { background: colors.green } : null) }}>
       <span style={{ ...styles.statTal, color: fremhæv ? '#fff' : colors.text }}>
         {ikon} {tal}
       </span>
@@ -224,7 +258,6 @@ const styles = {
     scrollbarWidth: 'none',
   },
 
-  // Stories
   story: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0, width: 64, position: 'relative' },
   storyRing: { width: 60, height: 60, borderRadius: 999, padding: 3, display: 'flex' },
   storyAvatar: {
@@ -238,31 +271,41 @@ const styles = {
     color: '#fff', background: colors.red, padding: '2px 5px', borderRadius: 999, letterSpacing: 0.5,
   },
 
-  // Featured
   featured: {
     width: '100%', textAlign: 'left', border: 'none', borderRadius: radius.card,
-    boxShadow: shadow.card, padding: 0, overflow: 'hidden', position: 'relative',
-    color: '#fff',
+    boxShadow: shadow.card, padding: 0, overflow: 'hidden', background: colors.card,
+    cursor: 'pointer',
+  },
+  featuredSkeleton: {
+    width: '100%', height: 300, borderRadius: radius.card, background: colors.border,
+  },
+  featuredHero: {
+    width: '100%', height: 200, position: 'relative', overflow: 'hidden',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  featuredImg: {
+    position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
   },
   featuredBadge: {
     position: 'absolute', top: 14, left: 14, fontFamily: font.body, fontSize: 12,
-    fontWeight: 700, background: 'rgba(255,255,255,0.22)', backdropFilter: 'blur(4px)',
-    padding: '5px 11px', borderRadius: 999,
+    fontWeight: 700, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(6px)',
+    color: '#fff', padding: '5px 11px', borderRadius: 999, zIndex: 1,
   },
-  featuredEmoji: {
-    fontSize: 72, textAlign: 'center', padding: '34px 0 8px',
-    filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.22))',
+  featuredBody: { padding: '16px 18px 20px' },
+  featuredTitel: {
+    fontFamily: font.display, fontWeight: 800, fontSize: 22, margin: '0 0 6px',
+    letterSpacing: -0.4, color: colors.text,
   },
-  featuredBody: { padding: '4px 18px 20px' },
-  featuredTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 24, margin: '0 0 6px', letterSpacing: -0.4 },
-  featuredMeta: { fontFamily: font.body, fontSize: 13, fontWeight: 600, opacity: 0.92, margin: '0 0 8px' },
-  featuredTekst: { fontFamily: font.body, fontSize: 14, lineHeight: 1.45, opacity: 0.92, margin: 0 },
+  featuredMeta: {
+    fontFamily: font.body, fontSize: 13, fontWeight: 600, color: colors.muted, margin: '0 0 8px',
+  },
+  featuredTekst: {
+    fontFamily: font.body, fontSize: 14, lineHeight: 1.45, color: colors.muted, margin: 0,
+  },
 
-  // Socialt feed
   feed: { display: 'flex', flexDirection: 'column', gap: 16 },
   post: {
-    background: colors.card, borderRadius: radius.card, boxShadow: shadow.card,
-    padding: 14,
+    background: colors.card, borderRadius: radius.card, boxShadow: shadow.card, padding: 14,
   },
   postHead: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
   postAvatar: {
@@ -294,14 +337,30 @@ const styles = {
   postFooter: { display: 'flex', alignItems: 'center', gap: 16, marginTop: 12 },
   postStat: { fontFamily: font.body, fontSize: 14, fontWeight: 600, color: colors.muted },
 
-  // Mere til dig
   recipeCard: {
     width: 160, flexShrink: 0, background: colors.card, borderRadius: 18,
-    boxShadow: shadow.card, border: 'none', padding: 0, overflow: 'hidden', textAlign: 'left',
+    boxShadow: shadow.card, border: 'none', padding: 0, overflow: 'hidden',
+    textAlign: 'left', cursor: 'pointer',
   },
-  recipeHero: { height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  recipeEmoji: { fontSize: 48, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.18))' },
+  recipeCardSkeleton: {
+    width: 160, height: 170, flexShrink: 0, borderRadius: 18, background: colors.border,
+  },
+  recipeHero: {
+    height: 110, overflow: 'hidden', position: 'relative',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  recipeImg: {
+    position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+  },
+  recipeInitial: {
+    fontSize: 42, fontFamily: font.display, fontWeight: 800,
+    color: 'rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.2))',
+  },
   recipeBody: { padding: '10px 12px 14px' },
-  recipeTitel: { fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, margin: '0 0 4px' },
+  recipeTitel: {
+    fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text,
+    margin: '0 0 4px',
+    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+  },
   recipeMeta: { fontFamily: font.body, fontSize: 12, color: colors.muted, margin: 0 },
 }

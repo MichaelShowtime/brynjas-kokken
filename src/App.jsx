@@ -3,6 +3,7 @@ import { hentAktivBruger } from './data/auth'
 import BottomNav from './components/BottomNav'
 import Hjem from './pages/Hjem'
 import MadMatch from './pages/MadMatch'
+import Opskrift from './pages/Opskrift'
 import Opret from './pages/Opret'
 import Lager from './pages/Lager'
 import Profil from './pages/Profil'
@@ -50,8 +51,9 @@ export default function App() {
 
         {/* Beskyttede ruter */}
         <Route path="/"         element={<ProtectedRoute><Navigate to="/hjem" replace /></ProtectedRoute>} />
-        <Route path="/hjem"     element={<ProtectedRoute><Hjem /></ProtectedRoute>} />
-        <Route path="/madmatch" element={<ProtectedRoute><MadMatch /></ProtectedRoute>} />
+        <Route path="/hjem"           element={<ProtectedRoute><Hjem /></ProtectedRoute>} />
+        <Route path="/opskrift/:id"   element={<ProtectedRoute><Opskrift /></ProtectedRoute>} />
+        <Route path="/madmatch"       element={<ProtectedRoute><MadMatch /></ProtectedRoute>} />
         <Route path="/opret"    element={<ProtectedRoute><Opret /></ProtectedRoute>} />
         <Route path="/lager"    element={<ProtectedRoute><Lager /></ProtectedRoute>} />
         <Route path="/profil"   element={<ProtectedRoute><Profil /></ProtectedRoute>} />
