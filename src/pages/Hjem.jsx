@@ -298,13 +298,16 @@ export default function Hjem() {
             {vennerListe.map((v) => {
               const erAktiv = recentPostEmails.has(v.email)
               return (
-                <div key={v.id} style={styles.story}>
+                <button
+                  key={v.id}
+                  style={{ ...styles.story, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  onClick={() => v.id && navigate(`/bruger/${v.id}`)}
+                >
                   <div style={{ ...styles.storyRing, background: erAktiv ? `linear-gradient(135deg, ${colors.terracotta}, ${colors.red})` : colors.border }}>
                     <div style={styles.storyAvatar}>{v.emoji}</div>
                   </div>
                   <span style={styles.storyNavn}>{v.navn}</span>
-                  {erAktiv && <span style={styles.liveDot}>NY</span>}
-                </div>
+                </button>
               )
             })}
           </div>

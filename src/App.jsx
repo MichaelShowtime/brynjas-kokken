@@ -13,6 +13,7 @@ import Register from './pages/Register'
 import Onboarding from './pages/Onboarding'
 import Kok from './pages/Kok'
 import Galleri from './pages/Galleri'
+import BrugerProfil from './pages/BrugerProfil'
 
 const INGEN_NAV = ['/login', '/register', '/onboarding', '/kok/']
 
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="/lager"          element={<ProtectedRoute><Lager /></ProtectedRoute>} />
         <Route path="/profil"         element={<ProtectedRoute><Profil /></ProtectedRoute>} />
         <Route path="/galleri"        element={<ProtectedRoute><Galleri /></ProtectedRoute>} />
+        <Route path="/bruger/:userId" element={<ProtectedRoute><BrugerProfil /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
