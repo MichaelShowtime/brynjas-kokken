@@ -44,6 +44,7 @@ const T = {
     'hjem.kokkehat':        '🧑‍🍳',
 
     // Mad-match
+    'mm.kunKanLaves': '✓ Kun hvad jeg kan lave nu',
     'mm.titel':       'Mad-match',
     'mm.subtitle':    'Swipe dig til aftensmaden',
     'mm.mitLager':    '🧺 Mit lager',
@@ -77,6 +78,9 @@ const T = {
     'op.fra':             'fra',
     'op.noterPh':         'Skriv dine egne noter, tilpasninger eller tip her…',
     'op.seOriginal':      'Se original opskrift på',
+    'op.tilføjIndkøb':    '🛒 Tilføj manglende til indkøbsliste',
+    'op.tilføjAlt':       '🛒 Tilføj alle til indkøbsliste',
+    'op.tilføjtBekræft':  'tilføjet til din indkøbsliste!',
     'op.startKnap':       '🍳 Start tilberedning',
     'op.chatSpørg':       'Spørg om opskriften',
     'op.chatPh':          'Stil et spørgsmål…',
@@ -303,6 +307,21 @@ const T = {
     'reg.adgPh':         'Min. 6 tegn',
     'reg.gentagPh':      'Samme adgangskode',
 
+    // Indkøbsliste
+    'il.titel':          'Indkøbsliste',
+    'il.tom':            'Din indkøbsliste er tom',
+    'il.tomSub':         'Åbn en opskrift og tilføj de manglende ingredienser direkte.',
+    'il.tilføjManuelt':  '+ Tilføj manuelt',
+    'il.rydTjekkede':    'Ryd tjekkede',
+    'il.flytTilLager':   'Flyt til lager',
+    'il.flyttes':        'Flytter…',
+    'il.fraOpskrift':    'Fra:',
+    'il.vareNavnPh':     'Varenavn…',
+    'il.tilføj':         'Tilføj',
+    'il.annuller':       'Annullér',
+    'il.flytToast':      'varer tilføjet til dit lager!',
+    'il.flytToastEn':    'vare tilføjet til dit lager!',
+
     // Notifikationer
     'notif.titel':   'Notifikationer',
     'notif.tom':     'Ingen notifikationer endnu',
@@ -360,6 +379,7 @@ const T = {
     'hjem.kokkehat':        '🧑‍🍳',
 
     // Mad-match / Food Match
+    'mm.kunKanLaves': '✓ Only what I can make now',
     'mm.titel':       'Food Match',
     'mm.subtitle':    'Swipe your way to dinner',
     'mm.mitLager':    '🧺 My pantry',
@@ -393,6 +413,9 @@ const T = {
     'op.fra':             'from',
     'op.noterPh':         'Write your own notes, adaptations or tips here…',
     'op.seOriginal':      'See original recipe at',
+    'op.tilføjIndkøb':    '🛒 Add missing to shopping list',
+    'op.tilføjAlt':       '🛒 Add all to shopping list',
+    'op.tilføjtBekræft':  'added to your shopping list!',
     'op.startKnap':       '🍳 Start cooking',
     'op.chatSpørg':       'Ask about the recipe',
     'op.chatPh':          'Ask a question…',
@@ -618,6 +641,21 @@ const T = {
     'reg.fejlMatch':     "Passwords don't match.",
     'reg.adgPh':         'Min. 6 characters',
     'reg.gentagPh':      'Same password',
+
+    // Shopping list
+    'il.titel':          'Shopping list',
+    'il.tom':            'Your shopping list is empty',
+    'il.tomSub':         'Open a recipe and add the missing ingredients directly.',
+    'il.tilføjManuelt':  '+ Add manually',
+    'il.rydTjekkede':    'Clear checked',
+    'il.flytTilLager':   'Move to pantry',
+    'il.flyttes':        'Moving…',
+    'il.fraOpskrift':    'From:',
+    'il.vareNavnPh':     'Item name…',
+    'il.tilføj':         'Add',
+    'il.annuller':       'Cancel',
+    'il.flytToast':      'items added to your pantry!',
+    'il.flytToastEn':    'item added to your pantry!',
 
     // Notifications
     'notif.titel':   'Notifications',

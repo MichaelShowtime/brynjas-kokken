@@ -6,6 +6,8 @@ import { hentLager, byggLagerOpslag } from '../data/lager'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
+import { tilføjTilIndkøbsliste } from '../data/indkøbsliste'
+import { gætEmoji, gætKategori } from '../lib/ingrediensUtils'
 
 // ── Mængde-skalering ──────────────────────────────────────────────────────────
 
@@ -140,6 +142,7 @@ export default function Opskrift() {
   const [chatInput, setChatInput] = useState('')
   const [sender, setSender] = useState(false)
   const chatBundRef = useRef(null)
+  const [indkøbsToast, setIndkøbsToast] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -328,6 +331,33 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
                 </div>
               ))}
             </div>
+
+            {/* Indkøbsliste-knap */}
+            {ingredienser.length > 0 && (
+              <button
+                style={s.indkøbsKnap}
+                onClick={() => {
+                  const varer = (mangler.length > 0 ? mangler : ingredienser).map((i) => ({
+                    navn: i.name,
+                    mængde: skalér(i.amount, faktor) ?? null,
+                    enhed: i.unit ?? null,
+                    emoji: gætEmoji(i.name),
+                    kategori: gætKategori(i.name),
+                    opskriftTitel: opskrift.title,
+                    opskriftId: opskrift.id,
+                  }))
+                  tilføjTilIndkøbsliste(varer)
+                  const antal = varer.length
+                  setIndkøbsToast(`${antal} ${t('op.tilføjtBekræft')}`)
+                  setTimeout(() => setIndkøbsToast(null), 3000)
+                }}
+              >
+                {mangler.length > 0 ? t('op.tilføjIndkøb') : t('op.tilføjAlt')}
+              </button>
+            )}
+            {indkøbsToast && (
+              <div style={s.indkøbsToast}>{indkøbsToast}</div>
+            )}
           </section>
         )}
 
@@ -530,6 +560,19 @@ const s = {
   },
   ingrediensMeta: {
     fontFamily: font.body, fontSize: 13, color: colors.muted, flexShrink: 0,
+  },
+
+  indkøbsKnap: {
+    width: '100%', marginTop: 14,
+    fontFamily: font.body, fontWeight: 700, fontSize: 14,
+    color: colors.green, background: 'rgba(47,107,79,0.08)',
+    border: `1.5px solid rgba(47,107,79,0.25)`, borderRadius: radius.button,
+    padding: '13px', cursor: 'pointer', textAlign: 'center',
+  },
+  indkøbsToast: {
+    marginTop: 10, padding: '10px 14px', background: colors.green,
+    color: '#fff', borderRadius: 12, fontFamily: font.body,
+    fontSize: 13.5, fontWeight: 600, textAlign: 'center',
   },
 
   stepsListe: { display: 'flex', flexDirection: 'column', gap: 14 },

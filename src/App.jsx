@@ -16,6 +16,7 @@ import Kok from './pages/Kok'
 import Galleri from './pages/Galleri'
 import BrugerProfil from './pages/BrugerProfil'
 import Notifikationer from './pages/Notifikationer'
+import Indkøbsliste from './pages/Indkøbsliste'
 
 const INGEN_NAV = ['/login', '/register', '/onboarding', '/kok/']
 
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="/galleri"           element={<ProtectedRoute><Galleri /></ProtectedRoute>} />
         <Route path="/bruger/:userId"    element={<ProtectedRoute><BrugerProfil /></ProtectedRoute>} />
         <Route path="/notifikationer"    element={<ProtectedRoute><Notifikationer /></ProtectedRoute>} />
+        <Route path="/indkøbsliste"      element={<ProtectedRoute><Indkøbsliste /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

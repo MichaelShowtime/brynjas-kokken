@@ -27,6 +27,7 @@ export default function MadMatch() {
   const [alleOpskrifter, setAlleOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
   const [brugLager, setBrugLager] = useState(true)
+  const [kunKanLaves, setKunKanLaves] = useState(false)
   const [shuffled, setShuffled] = useState([])
 
   const [index, setIndex] = useState(0)
@@ -93,6 +94,9 @@ export default function MadMatch() {
     const pScore = (o) => (o.tags ?? []).filter((t) => brugerTags.has(t)).length
 
     if (brugLager) {
+      if (kunKanLaves) {
+        liste = liste.filter((o) => analyser(o).kanLaves)
+      }
       // Primær: færreste manglende ingredienser. Sekundær: præference-match
       liste.sort((a, b) => {
         const mDiff = analyser(a).mangler.length - analyser(b).mangler.length
@@ -104,7 +108,7 @@ export default function MadMatch() {
     }
 
     return liste
-  }, [brugLager, shuffled, tagFilter, mealFilter, under30, analyser, afviste, brugerTags])
+  }, [brugLager, kunKanLaves, shuffled, tagFilter, mealFilter, under30, analyser, afviste, brugerTags])
 
   function nulstilStak() {
     setIndex(0)
@@ -117,7 +121,7 @@ export default function MadMatch() {
   function skiftTilstand() {
     const næste = !brugLager
     setBrugLager(næste)
-    if (!næste) setShuffled(bland(alleOpskrifter))
+    if (!næste) { setShuffled(bland(alleOpskrifter)); setKunKanLaves(false) }
     nulstilStak()
   }
 
@@ -246,6 +250,18 @@ export default function MadMatch() {
           {t('mm.under30')}
         </button>
       </div>
+
+      {/* Filter-chips — række 1b: kan laves nu (kun synlig når lager-filter er aktivt) */}
+      {brugLager && (
+        <div style={{ ...styles.filterRow, marginTop: 4 }}>
+          <button
+            style={{ ...styles.filterChip, ...(kunKanLaves ? styles.filterChipAktiv : null) }}
+            onClick={() => { setKunKanLaves((v) => !v); nulstilStak() }}
+          >
+            {t('mm.kunKanLaves')}
+          </button>
+        </div>
+      )}
 
       {/* Filter-chips — række 2: måltidstype */}
       <div style={{ ...styles.filterRow, marginTop: 6 }}>

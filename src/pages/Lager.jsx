@@ -7,74 +7,11 @@ import {
 import { supabase } from '../lib/supabase'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
+import { gætKategori, gætEmoji, gætEnhed } from '../lib/ingrediensUtils'
+import { hentIndkøbsliste } from '../data/indkøbsliste'
 
 // Module-level cache — survives re-renders, re-fetches only on hard reload
 let _katalogCache = null
-
-function gætKategori(navn) {
-  const n = navn.toLowerCase()
-  if (/oregano|timian|rosmarin|kanel|paprika|gurkemeje|spidskommen|karry|chiliflager|chilipulver|stødt peber|salt\b|stjerneanis|muskatnød|vaniljesukker|bagepulver|natron|laurbær|nelliker|allehånde|cayenne|hvidløgspulver|fennikelfrø|kardamom|sambal|ras el hanout|garam masala|sichuan|tørret|stødt|pulver|urter|krydderi/.test(n)) return 'krydderier'
-  if (/frosn|frossen/.test(n)) return 'frys'
-  if (/mælk|fløde|smør|æg|ost|yoghurt|skyr|ricotta|cream cheese|crème fraîche|creme fraiche|mascarpone|kefir|kvark|brie|gedeost|hytteost|flødeos|danbo|cheddar|mozzarella|parmesan|feta/.test(n)) return 'køl'
-  if (/kylling|oksekød|svinekød|hakket kød|laks|tun\b|rejer|flæsk\b|bacon|skinke|pølse|lever\b|and\b|lam\b|kalv|kotelet|nakkefilet|mørbrønd|bøf|torsk|sild\b|fisk\b/.test(n)) return 'køl'
-  if (/løg|gulerod|tomat|broccoli|blomkål|spinat|agurk|peberfrugt|kartoffel|søde kartofler|avocado|squash|svampe|champignon|aubergine|selleri|fennikel|asparges|porrer|purre|spidskål|grønkål|hvidkål|rødkål|ærter\b|majs|ingefær|citron|lime|appelsin|banan|æble|pære|mango|ananas|jordbær|hindbær|blåbær|tranebær|rabarber|koriander|basilikum|persille|dild|mynte|ramsløg|rucola|salat\b/.test(n)) return 'grønt'
-  return 'tørvarer'
-}
-
-function gætEmoji(navn) {
-  const n = navn.toLowerCase()
-  if (/kylling|høne/.test(n)) return '🍗'
-  if (/oksekød|hakket kød|bøf|tartar/.test(n)) return '🥩'
-  if (/laks|torsk|fisk|tun\b/.test(n)) return '🐟'
-  if (/rejer/.test(n)) return '🦐'
-  if (/æg/.test(n)) return '🥚'
-  if (/mælk|fløde|kefir/.test(n)) return '🥛'
-  if (/smør/.test(n)) return '🧈'
-  if (/ost|mozz|parmes|feta|cheddar|brie|gedeost|hytteost/.test(n)) return '🧀'
-  if (/tomat/.test(n)) return '🍅'
-  if (/løg|purløg|porrer|purre/.test(n)) return '🧅'
-  if (/hvidløg/.test(n)) return '🧄'
-  if (/gulerod/.test(n)) return '🥕'
-  if (/kartoffel/.test(n)) return '🥔'
-  if (/broccoli|blomkål|kål/.test(n)) return '🥦'
-  if (/spinat|salat\b|rucola/.test(n)) return '🥬'
-  if (/avocado/.test(n)) return '🥑'
-  if (/citron|lime/.test(n)) return '🍋'
-  if (/appelsin/.test(n)) return '🍊'
-  if (/banan/.test(n)) return '🍌'
-  if (/æble/.test(n)) return '🍎'
-  if (/jordbær|hindbær|blåbær|bær/.test(n)) return '🍓'
-  if (/mango|ananas/.test(n)) return '🍍'
-  if (/champignon|svamp/.test(n)) return '🍄'
-  if (/agurk|squash/.test(n)) return '🥒'
-  if (/peberfrugt/.test(n)) return '🫑'
-  if (/pasta|spaghetti|tagliatelle|penne|rigatoni|fusilli|orzo|lasagne/.test(n)) return '🍝'
-  if (/ris\b|quinoa|bulgur|couscous/.test(n)) return '🍚'
-  if (/mel\b|hvedemel|rugmel/.test(n)) return '🌾'
-  if (/sukker|honning|sirup|melis/.test(n)) return '🍬'
-  if (/chokolade/.test(n)) return '🍫'
-  if (/salt\b/.test(n)) return '🧂'
-  if (/chili|peber/.test(n)) return '🌶️'
-  if (/kanel/.test(n)) return '🪵'
-  if (/persille|basilikum|koriander|dild|mynte|timian|rosmarin|oregano|ingefær/.test(n)) return '🌿'
-  if (/olie/.test(n)) return '🫙'
-  if (/brød|rugbrød|baguette|bolle/.test(n)) return '🍞'
-  if (/bønner|linser|kikærter/.test(n)) return '🫘'
-  if (/kokosmælk|kokos/.test(n)) return '🥥'
-  if (/vin\b|hvidvin|rødvin/.test(n)) return '🍷'
-  if (/citron|lime/.test(n)) return '🍋'
-  return '🥄'
-}
-
-function gætEnhed(navn) {
-  const n = navn.toLowerCase()
-  if (/salt|peber|karry|gurkemeje|kanel|spidskommen|paprika|bagepulver|natron|chili|oregano|timian|rosmarin|stødt|tørret|pulver|fennikel|kardamom/.test(n)) return 'tsk'
-  if (/olie|sojasauce|eddike|sennep|worcestershire|tabasco|fiskesauce|østerssauce/.test(n)) return 'spsk'
-  if (/mælk|fløde|kefir|yoghurt|skyr/.test(n)) return 'dl'
-  if (/kød|fisk|laks|kylling|oksekød|smør|ost|mel|sukker|havregryn|bacon|skinke|pasta|ris|linser|kikærter/.test(n)) return 'g'
-  if (/løg|tomat|gulerod|kartoffel|æble|citron|banan|æg|peberfrugt|agurk|squash/.test(n)) return 'stk'
-  return 'stk'
-}
 
 // ── Udløbs-hjælper ────────────────────────────────────────────────────────────
 function udløbsInfo(udløbDato, t) {
@@ -96,6 +33,7 @@ export default function Lager() {
   const [tilføjOpen, setTilføjOpen] = useState(false)
   const [udløbEdit, setUdløbEdit]   = useState(null)
   const [redigerVare, setRedigerVare] = useState(null)
+  const indkøbsAntal = hentIndkøbsliste().length
 
   // Opdatér state + localStorage
   function opdater(nyListe) { setLager(nyListe); gemLager(nyListe) }
@@ -140,6 +78,13 @@ export default function Lager() {
       {/* Header */}
       <div style={s.header}>
         <h1 style={s.titel}>{t('lag.titel')}</h1>
+        <button style={s.indkøbsBtn} onClick={() => navigate('/indkøbsliste')}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          {indkøbsAntal > 0 && <span style={s.indkøbsBadge}>{indkøbsAntal}</span>}
+        </button>
         <button style={s.tilføjBtn} onClick={() => setTilføjOpen(true)}>
           <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> {t('lag.tilføj').replace('+ ', '')}
         </button>
@@ -689,6 +634,8 @@ const s = {
   header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '28px 20px 12px' },
   titel: { fontFamily: font.display, fontWeight: 800, fontSize: 32, color: colors.text, margin: 0, letterSpacing: -0.5 },
   tilføjBtn: { display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: '#fff', background: colors.green, border: 'none', borderRadius: 999, padding: '10px 18px', boxShadow: shadow.fab },
+  indkøbsBtn: { position: 'relative', width: 40, height: 40, borderRadius: 999, background: colors.card, boxShadow: shadow.card, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, marginRight: 4 },
+  indkøbsBadge: { position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: 999, background: colors.terracotta, border: `2px solid ${colors.bg}` },
 
   // Tabs
 
