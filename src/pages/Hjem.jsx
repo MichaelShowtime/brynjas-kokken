@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { opslag } from '../data/feed'
 import { hentVenner, hentVennerFraDB } from '../data/venner'
 import { hentAktivBruger } from '../data/auth'
 import { hentKreationer } from '../data/kreationer'
@@ -104,26 +103,32 @@ export default function Hjem() {
       if (cancelled) return
       if (vennerData.length) setVennerListe(vennerData)
 
-      const venUserIds = vennerData.map((v) => v.id).filter(Boolean)
-      const emails = vennerData.map((v) => v.email).filter(Boolean)
+      // Inkludér altid brugerens eget id/email så egne posts vises
+      const venUserIds = [bruger.id, ...vennerData.map((v) => v.id)].filter(Boolean)
+      const emails     = [bruger.email, ...vennerData.map((v) => v.email)].filter(Boolean)
 
       // 2. Bed om notifikationstilladelse når man har venner
-      if (venUserIds.length > 0 && 'Notification' in window && Notification.permission === 'default') {
+      if (vennerData.length > 0 && 'Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission()
       }
 
-      // 3. Hent posts — fra venner hvis man følger nogen, ellers alle (discovery)
-      const query = venUserIds.length > 0
-        ? supabase.from('posts').select('*').in('user_id', venUserIds)
-        : supabase.from('posts').select('*')
-      const { data: postsData } = await query.order('created_at', { ascending: false }).limit(20)
-      if (!cancelled && postsData?.length) setDbPosts(postsData)
+      // 3. Hent posts — matcher på user_id ELLER bruger_email (fallback for gamle posts)
+      const idFilter   = venUserIds.join(',')
+      const mailFilter = emails.map(e => `"${e}"`).join(',')
+      const { data } = await supabase
+        .from('posts')
+        .select('*')
+        .or(`user_id.in.(${idFilter}),bruger_email.in.(${mailFilter})`)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      const postsData = data ?? []
+      if (!cancelled && postsData.length) setDbPosts(postsData)
 
-      // 4. Realtime — nye posts fra venner
+      // 4. Realtime — nye posts fra mig selv og venner
       channel = supabase.channel(`hjem-feed-${bruger.id}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
           const post = payload.new
-          const erFraVen = venUserIds.length === 0 || venUserIds.includes(post.user_id)
+          const erFraVen = venUserIds.includes(post.user_id) || emails.includes(post.bruger_email)
           if (!erFraVen) return
 
           // Opdater feed live
@@ -368,45 +373,26 @@ export default function Hjem() {
               </div>
             </article>
           ))
-          : opslag.map((p) => (
-            <article key={p.id} style={styles.post}>
-              <div style={styles.postHead}>
-                <div style={styles.postAvatar}>{p.avatar}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={styles.postNavn}>
-                    {p.navn}{' '}
-                    <span style={styles.postHandling}>{p.handling}</span>
-                  </p>
-                  <p style={styles.postTid}>{p.tid}</p>
+          : vennerListe.length === 0
+            ? (
+              <div style={styles.feedTom}>
+                <span style={{ fontSize: 40 }}>👨‍👩‍👧</span>
+                <p style={styles.feedTomTitel}>Dit fællesskab venter på dig</p>
+                <p style={styles.feedTomTekst}>Tilføj venner for at se hvad de laver i køkkenet — og lad dem følge med i dine retter.</p>
+                <div style={styles.feedTomKnapper}>
+                  <button style={styles.feedTomPrimær} onClick={() => navigate('/profil')}>+ Find venner</button>
+                  <button style={styles.feedTomSekundær} onClick={() => navigate('/opret')}>Del en ret</button>
                 </div>
-                <button style={styles.followBtn} onClick={() => navigate('/profil')}>+ Følg</button>
               </div>
-              <div style={{ ...styles.postImg, background: grad(p.farve) }}>
-                <span style={styles.postImgEmoji}>{p.emoji}</span>
-                <span style={styles.postRet}>{p.ret}</span>
+            )
+            : (
+              <div style={styles.feedTom}>
+                <span style={{ fontSize: 40 }}>🍳</span>
+                <p style={styles.feedTomTitel}>Ingen har postet endnu</p>
+                <p style={styles.feedTomTekst}>Vær den første til at dele en ret — dine venner vil se den her.</p>
+                <button style={styles.feedTomPrimær} onClick={() => navigate('/opret')}>Del din første ret</button>
               </div>
-              {p.citat && <p style={styles.postCitat}>"{p.citat}"</p>}
-              <div style={styles.postFooter}>
-                <span style={styles.postStat}>❤️ {p.likes}</span>
-                <span style={styles.postStat}>💬 {p.kommentarer}</span>
-                {p.opskriftId ? (
-                  <button
-                    style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
-                    onClick={() => navigate(`/opskrift/${p.opskriftId}`)}
-                  >
-                    Lav også →
-                  </button>
-                ) : (
-                  <button
-                    style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
-                    onClick={() => navigate('/madmatch')}
-                  >
-                    Lav også →
-                  </button>
-                )}
-              </div>
-            </article>
-          ))
+            )
         }
       </div>}
 
@@ -669,6 +655,13 @@ const styles = {
   },
 
   feed: { display: 'flex', flexDirection: 'column', gap: 16 },
+
+  feedTom: { background: colors.card, borderRadius: radius.card, boxShadow: shadow.card, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' },
+  feedTomTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: 0, letterSpacing: -0.3 },
+  feedTomTekst: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0, lineHeight: 1.55, maxWidth: 280 },
+  feedTomKnapper: { display: 'flex', gap: 10, marginTop: 4 },
+  feedTomPrimær: { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: '#fff', background: colors.green, border: 'none', borderRadius: radius.button, padding: '11px 20px', cursor: 'pointer' },
+  feedTomSekundær: { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: colors.green, background: 'rgba(47,107,79,0.10)', border: 'none', borderRadius: radius.button, padding: '11px 20px', cursor: 'pointer' },
   post: {
     background: colors.card, borderRadius: radius.card, boxShadow: shadow.card, padding: 14,
   },

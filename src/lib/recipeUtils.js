@@ -1,7 +1,9 @@
 export const STORAGE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/recipes`
 
 export function billedeUrl(storageImage) {
-  return storageImage ? `${STORAGE_BASE}/${storageImage}` : null
+  if (!storageImage) return null
+  if (storageImage.startsWith('http')) return storageImage
+  return `${STORAGE_BASE}/${storageImage}`
 }
 
 const TAG_FARVE = {

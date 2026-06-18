@@ -95,40 +95,46 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
 
   async function gem() {
     setUploader(true)
-    let uploadUrl = null
+    let storagePath = null
+    let publicUrl   = null
     if (foto) {
-      const navn = `kreation_${Date.now()}_${foto.name.replace(/\s/g, '_')}`
-      const { data } = await supabase.storage.from('recipes').upload(navn, foto, {
-        cacheControl: '3600', upsert: false,
-      })
-      uploadUrl = data?.path ?? null
+      const ext  = foto.name.split('.').pop() || 'jpg'
+      const navn = `kreationer/${Date.now()}.${ext}`
+      const { data, error } = await supabase.storage
+        .from('recipes').upload(navn, foto, { cacheControl: '3600', upsert: true })
+      if (!error && data?.path) {
+        storagePath = data.path
+        const { data: urlData } = supabase.storage.from('recipes').getPublicUrl(data.path)
+        publicUrl = urlData?.publicUrl ?? null
+      }
     }
     const bruger = hentAktivBruger()
     gemKreation({
-      id: Date.now().toString(),
-      titel: opskrift.title,
+      id:         Date.now().toString(),
+      titel:      opskrift.title,
       opskriftId: opskrift.id,
       tidBrugt,
-      dato: new Date().toISOString(),
-      foto: uploadUrl,
-      bruger: bruger?.navn ?? 'Anonym',
+      dato:       new Date().toISOString(),
+      foto:       publicUrl ?? storagePath,
+      bruger:     bruger?.navn ?? 'Anonym',
     })
 
     // Del med fællesskabet → insert i posts-tabel
     if (del && bruger) {
       await supabase.from('posts').insert({
-        bruger_email: bruger.email,
-        bruger_navn: bruger.navn,
-        bruger_avatar: bruger.avatar ?? '🧑‍🍳',
-        opskrift_id: String(opskrift.id),
+        user_id:        bruger.id,
+        bruger_email:   bruger.email,
+        bruger_navn:    bruger.navn,
+        bruger_avatar:  bruger.avatar ?? '🧑‍🍳',
+        opskrift_id:    String(opskrift.id),
         opskrift_titel: opskrift.title,
-        foto_path: uploadUrl,
-        citat: citat.trim() || null,
+        foto_path:      publicUrl ?? storagePath,
+        citat:          citat.trim() || null,
       })
     }
 
     setUploader(false)
-    onGem(fotoUrl)
+    onGem(publicUrl ?? fotoUrl)
   }
 
   return (
