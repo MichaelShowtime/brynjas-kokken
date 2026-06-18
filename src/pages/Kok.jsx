@@ -83,6 +83,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
   const [citat, setCitat] = useState('')
   const [del, setDel] = useState(false)
   const [uploader, setUploader] = useState(false)
+  const [uploadFejl, setUploadFejl] = useState(null)
   const kameraRef  = useRef(null)
   const galleriRef = useRef(null)
 
@@ -92,18 +93,26 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
     setFoto(fil)
     setFotoUrl(URL.createObjectURL(fil))
     setDel(true)
+    setUploadFejl(null)
   }
 
   async function gem() {
     setUploader(true)
+    setUploadFejl(null)
     const bruger = hentAktivBruger()
     let publicUrl = null
     if (foto && bruger?.id) {
-      const ext  = foto.name.split('.').pop() || 'jpg'
-      const navn = `avatarer/kreation_${bruger.id}_${Date.now()}.${ext}`
+      const ext  = foto.name.split('.').pop().toLowerCase() || 'jpg'
+      // UUID first in filename — matches the Storage policy that works for avatars
+      const navn = `avatarer/${bruger.id}_kreation_${Date.now()}.${ext}`
       const { data, error } = await supabase.storage
         .from('recipes').upload(navn, foto, { cacheControl: '3600', upsert: true })
-      if (!error && data?.path) {
+      if (error) {
+        setUploadFejl('Foto kunne ikke uploades — prøv igen.')
+        setUploader(false)
+        return
+      }
+      if (data?.path) {
         const { data: urlData } = supabase.storage.from('recipes').getPublicUrl(data.path)
         publicUrl = urlData?.publicUrl ?? null
       }
@@ -163,6 +172,12 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
         )}
         <input ref={kameraRef}  type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={vælgFoto} />
         <input ref={galleriRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={vælgFoto} />
+
+        {uploadFejl && (
+          <p style={{ fontFamily: 'var(--font-body, sans-serif)', fontSize: 13, color: '#C0392B', margin: '4px 0 0', textAlign: 'center' }}>
+            {uploadFejl}
+          </p>
+        )}
 
         {/* Del med fællesskabet */}
         <div style={m.delRække}>

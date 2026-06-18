@@ -4,6 +4,18 @@ import { supabase } from '../lib/supabase'
 
 const SESSION_KEY = 'simmer_bruger_v2'
 
+// Alle nøgler der tilhører én bestemt bruger — ryddes ved skift/logout
+const BRUGER_KEYS = [
+  SESSION_KEY,
+  'simmer_likes',
+  'simmer_kreationer',
+  'brynjas_venner',
+  'simmer_lager',
+  'brynjas_afviste',
+  'simmer_brugere',
+  'simmer_session',
+]
+
 // ── Profil-cache ─────────────────────────────────────────────────────────────
 
 export function hentAktivBruger() {
@@ -15,11 +27,7 @@ function gemBruger(bruger) {
 }
 
 function fjernBruger() {
-  try {
-    localStorage.removeItem(SESSION_KEY)
-    localStorage.removeItem('simmer_brugere')
-    localStorage.removeItem('simmer_session')
-  } catch {}
+  try { BRUGER_KEYS.forEach((k) => localStorage.removeItem(k)) } catch {}
 }
 
 function bygBruger(userId, email, kunde) {
@@ -75,6 +83,9 @@ export async function registrerBruger({ email, navn, efternavn, telefon, usernam
     username:   normUsername,
   })
 
+  // Ryd evt. forrige brugers data inden ny session
+  fjernBruger()
+
   const bruger = bygBruger(userId, normEmail, {
     first_name: navn.trim(),
     last_name:  efternavn?.trim() ?? '',
@@ -97,6 +108,9 @@ export async function logInd({ email, password }) {
     return { ok: false, fejl: error.message }
   }
 
+  // Ryd evt. forrige brugers data inden ny session sættes
+  fjernBruger()
+
   const { data: kunde } = await supabase.from('customers')
     .select('*').eq('user_id', data.user.id).maybeSingle()
 
@@ -115,6 +129,10 @@ export async function syncSession() {
     return null
   }
   const cached = hentAktivBruger()
+
+  // Anden bruger end den der sidder i cachen — ryd alt lokalt data
+  if (cached?.id !== session.user.id) fjernBruger()
+
   if (cached?.id === session.user.id) return cached
 
   const { data: kunde } = await supabase.from('customers')

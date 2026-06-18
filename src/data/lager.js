@@ -3,37 +3,12 @@
 
 const KEY = 'simmer_lager'
 
-// Startdata — bruges kun første gang (ingen localStorage-data endnu)
-const STANDARD_LAGER = [
-  { id: 1,  navn: 'Kyllingebryst',      mængde: '600',  enhed: 'g',     kategori: 'køl',       emoji: '🍗', udløb: dagFra(1),  snartTom: false },
-  { id: 2,  navn: 'Madlavningsfløde',   mængde: '2½',   enhed: 'dl',    kategori: 'køl',       emoji: '🥛', udløb: dagFra(3),  snartTom: false },
-  { id: 3,  navn: 'Spinat',             mængde: '1',    enhed: 'pose',  kategori: 'køl',       emoji: '🥬', udløb: dagFra(2),  snartTom: false },
-  { id: 4,  navn: 'Æg',                 mængde: '8',    enhed: 'stk',   kategori: 'køl',       emoji: '🥚', udløb: null,       snartTom: false },
-  { id: 5,  navn: 'Feta',               mængde: '',     enhed: 'rest',  kategori: 'køl',       emoji: '🧀', udløb: null,       snartTom: true  },
-  { id: 6,  navn: 'Løg',                mængde: '4',    enhed: 'stk',   kategori: 'grønt',     emoji: '🧅', udløb: null,       snartTom: false },
-  { id: 7,  navn: 'Hvidløg',            mængde: '1',    enhed: 'knold', kategori: 'grønt',     emoji: '🧄', udløb: null,       snartTom: false },
-  { id: 8,  navn: 'Peberfrugt',         mængde: '2',    enhed: 'stk',   kategori: 'grønt',     emoji: '🫑', udløb: null,       snartTom: false },
-  { id: 9,  navn: 'Kartofler',          mængde: '~1',   enhed: 'kg',    kategori: 'grønt',     emoji: '🥔', udløb: null,       snartTom: false },
-  { id: 10, navn: 'Avocado',            mængde: '',     enhed: 'lav',   kategori: 'grønt',     emoji: '🥑', udløb: null,       snartTom: true  },
-  { id: 11, navn: 'Pasta',              mængde: '400',  enhed: 'g',     kategori: 'tørvarer',  emoji: '🍝', udløb: null,       snartTom: false },
-  { id: 12, navn: 'Røde linser',        mængde: '3',    enhed: 'dl',    kategori: 'tørvarer',  emoji: '🌾', udløb: null,       snartTom: false },
-  { id: 13, navn: 'Ris',                mængde: '',     enhed: 'næsten tom', kategori: 'tørvarer', emoji: '🍚', udløb: null,  snartTom: true  },
-  { id: 14, navn: 'Hakkede tomater',    mængde: '4',    enhed: 'dåser', kategori: 'tørvarer',  emoji: '🍅', udløb: null,       snartTom: false },
-  { id: 15, navn: 'Sorte bønner',       mængde: '2',    enhed: 'dåser', kategori: 'tørvarer',  emoji: '🫘', udløb: null,       snartTom: false },
-]
-
-function dagFra(n) {
-  const d = new Date()
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
-
 export function hentLager() {
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) return JSON.parse(raw)
   } catch {}
-  return STANDARD_LAGER
+  return []
 }
 
 export function gemLager(liste) {
