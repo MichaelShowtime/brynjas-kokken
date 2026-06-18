@@ -303,6 +303,14 @@ const T = {
     'reg.adgPh':         'Min. 6 tegn',
     'reg.gentagPh':      'Samme adgangskode',
 
+    // Notifikationer
+    'notif.titel':   'Notifikationer',
+    'notif.tom':     'Ingen notifikationer endnu',
+    'notif.tomSub':  'Når nogen følger dig eller liker dine kreationer, ser du det her.',
+    'notif.følger':  'begyndte at følge dig',
+    'notif.likede':  'likede din kreation',
+    'notif.henter':  'Henter…',
+
     // Bruger profil
     'bp.kreationer':     'kreationer',
     'bp.kreation':       'kreation',
@@ -610,6 +618,14 @@ const T = {
     'reg.fejlMatch':     "Passwords don't match.",
     'reg.adgPh':         'Min. 6 characters',
     'reg.gentagPh':      'Same password',
+
+    // Notifications
+    'notif.titel':   'Notifications',
+    'notif.tom':     'No notifications yet',
+    'notif.tomSub':  "When someone follows you or likes your creations, you'll see it here.",
+    'notif.følger':  'started following you',
+    'notif.likede':  'liked your creation',
+    'notif.henter':  'Loading…',
 
     // Bruger profil / User profile
     'bp.kreationer':     'creations',

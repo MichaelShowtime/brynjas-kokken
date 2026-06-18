@@ -49,6 +49,19 @@ export default function Hjem() {
 
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
+  const [harUlæste, setHarUlæste] = useState(false)
+
+  useEffect(() => {
+    if (!bruger?.id) return
+    const sidst = localStorage.getItem('simmer_notif_sist')
+    const cutoff = sidst ?? '1970-01-01T00:00:00Z'
+    supabase
+      .from('venner')
+      .select('*', { count: 'exact', head: true })
+      .eq('ven_user_id', bruger.id)
+      .gt('created_at', cutoff)
+      .then(({ count }) => { if ((count ?? 0) > 0) setHarUlæste(true) })
+  }, [bruger?.id])
 
   // Recipes — kun opskrifter med tags, filtreret på brugerens tags
   useEffect(() => {
@@ -217,11 +230,20 @@ export default function Hjem() {
             {hilsen(t)},<br />{bruger?.navn ?? 'Kok'} 👋
           </h1>
         </div>
-        <button style={{ ...styles.avatar, border: 'none', cursor: 'pointer', padding: 0 }} onClick={() => navigate('/profil')}>
-          {bruger?.avatarUrl
-            ? <img src={bruger.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 999 }} />
-            : bruger?.avatar ?? '🧑‍🍳'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button style={styles.klokkeBtn} onClick={() => { setHarUlæste(false); navigate('/notifikationer') }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {harUlæste && <span style={styles.badge} />}
+          </button>
+          <button style={{ ...styles.avatar, border: 'none', cursor: 'pointer', padding: 0 }} onClick={() => navigate('/profil')}>
+            {bruger?.avatarUrl
+              ? <img src={bruger.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 999 }} />
+              : bruger?.avatar ?? '🧑‍🍳'}
+          </button>
+        </div>
       </header>
 
       {/* Streak / stats */}
@@ -512,6 +534,18 @@ const styles = {
     width: 48, height: 48, borderRadius: 999, background: colors.card,
     boxShadow: shadow.card, display: 'flex', alignItems: 'center',
     justifyContent: 'center', fontSize: 24, flexShrink: 0,
+  },
+  klokkeBtn: {
+    position: 'relative', width: 40, height: 40, borderRadius: 999,
+    background: colors.card, boxShadow: shadow.card,
+    border: 'none', cursor: 'pointer', flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: colors.text,
+  },
+  badge: {
+    position: 'absolute', top: 8, right: 8,
+    width: 8, height: 8, borderRadius: 999,
+    background: colors.red, border: `2px solid ${colors.bg}`,
   },
 
   stats: { display: 'flex', gap: 10, margin: '20px 0 4px' },
