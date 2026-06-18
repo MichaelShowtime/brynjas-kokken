@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import Anthropic from '@anthropic-ai/sdk'
 import { supabase } from '../lib/supabase'
 import { hentLager, byggLagerOpslag } from '../data/lager'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
@@ -131,6 +132,13 @@ export default function Opskrift() {
   const [loading, setLoading] = useState(true)
   const [portioner, setPortioner] = useState(null)
   const [noter, setNoter] = useState('')
+  const [chatÅben, setChatÅben] = useState(false)
+  const [beskeder, setBeskeder] = useState([
+    { rolle: 'ai', tekst: 'Hej! Jeg kender denne opskrift ud og ind – hvad vil du vide?' },
+  ])
+  const [chatInput, setChatInput] = useState('')
+  const [sender, setSender] = useState(false)
+  const chatBundRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
@@ -151,6 +159,56 @@ export default function Opskrift() {
   }, [id])
 
   const lagerOpslag = useMemo(() => byggLagerOpslag(hentLager()), [])
+
+  useEffect(() => {
+    if (chatÅben && chatBundRef.current) {
+      chatBundRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [beskeder, chatÅben])
+
+  async function sendBesked() {
+    const tekst = chatInput.trim()
+    if (!tekst || sender) return
+    const nyBeskeder = [...beskeder, { rolle: 'bruger', tekst }]
+    setBeskeder(nyBeskeder)
+    setChatInput('')
+    setSender(true)
+    try {
+      const client = new Anthropic({
+        apiKey: import.meta.env.VITE_ANTHROPIC_KEY,
+        dangerouslyAllowBrowser: true,
+      })
+      const systemPrompt = `Du er en hjælpsom madassistent der UDELUKKENDE kan svare på spørgsmål om denne specifikke opskrift. Svar altid på dansk.
+
+OPSKRIFT: ${opskrift.title}
+${opskrift.description ? `BESKRIVELSE: ${opskrift.description}\n` : ''}PORTIONER: ${opskrift.servings ?? 'ikke angivet'}
+TILBEREDNINGSTID: ${[opskrift.prep_time && `forberedelse ${opskrift.prep_time} min`, opskrift.cook_time && `tilberedning ${opskrift.cook_time} min`].filter(Boolean).join(', ') || 'ikke angivet'}
+
+INGREDIENSER:
+${(opskrift.ingredients ?? []).map((i) => `- ${[i.name, i.amount, i.unit].filter(Boolean).join(' ')}`).join('\n')}
+
+FREMGANGSMÅDE:
+${(opskrift.steps ?? []).map((trin, idx) => `${idx + 1}. ${trin}`).join('\n')}${opskrift.tags?.length ? `\n\nTAGS: ${opskrift.tags.join(', ')}` : ''}
+
+VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke opskrift — ingredienser, tilberedning, udskiftninger, serveringsforslag, tips og tricks. Hvis spørgsmålet ikke handler om denne ret, svar præcis: "Jeg er kun ekspert i denne ret! Spørg mig om ingredienser, tilberedningstips, udskiftninger eller serveringsforslag 😊"`
+      const apiMessages = nyBeskeder.slice(1).map((m) => ({
+        role: m.rolle === 'bruger' ? 'user' : 'assistant',
+        content: m.tekst,
+      }))
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: apiMessages,
+      })
+      const svar = response.content[0]?.text ?? 'Beklager, jeg kunne ikke svare.'
+      setBeskeder((prev) => [...prev, { rolle: 'ai', tekst: svar }])
+    } catch {
+      setBeskeder((prev) => [...prev, { rolle: 'ai', tekst: 'Beklager, der opstod en fejl. Prøv igen.' }])
+    } finally {
+      setSender(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -309,6 +367,68 @@ export default function Opskrift() {
           🍳 Start tilberedning
         </button>
       </div>
+
+      {/* AI Chat */}
+      <style>{`
+        @keyframes simmerSlideUp { from { transform: translateX(-50%) translateY(100%) } to { transform: translateX(-50%) translateY(0) } }
+        @keyframes simmerDot { 0%,80%,100% { opacity:0.3 } 40% { opacity:1 } }
+        .sd { animation: simmerDot 1.4s infinite; display:inline-block; margin:0 1px; }
+        .sd:nth-child(2) { animation-delay:.2s }
+        .sd:nth-child(3) { animation-delay:.4s }
+      `}</style>
+
+      {!chatÅben && (
+        <button style={s.chatFab} onClick={() => setChatÅben(true)} aria-label="Spørg AI om opskriften">
+          💬
+        </button>
+      )}
+
+      {chatÅben && (
+        <>
+          <div style={s.chatOverlay} onClick={() => setChatÅben(false)} />
+          <div style={s.chatDrawer}>
+            <div style={s.chatHeader}>
+              <div style={s.chatDragPil} />
+              <span style={s.chatTitel}>Spørg om opskriften</span>
+              <button style={s.chatLuk} onClick={() => setChatÅben(false)}>✕</button>
+            </div>
+            <div style={s.chatBeskeder}>
+              {beskeder.map((m, i) => (
+                <div key={i} style={m.rolle === 'bruger' ? s.chatRækkeBruger : s.chatRækkeAi}>
+                  <div style={m.rolle === 'bruger' ? s.chatBobleBruger : s.chatBobbleAi}>
+                    {m.tekst}
+                  </div>
+                </div>
+              ))}
+              {sender && (
+                <div style={s.chatRækkeAi}>
+                  <div style={s.chatBobbleAi}>
+                    <span className="sd">•</span>
+                    <span className="sd">•</span>
+                    <span className="sd">•</span>
+                  </div>
+                </div>
+              )}
+              <div ref={chatBundRef} />
+            </div>
+            <div style={s.chatInputRække}>
+              <input
+                style={s.chatInputFelt}
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendBesked()}
+                placeholder="Stil et spørgsmål…"
+                disabled={sender}
+              />
+              <button
+                style={{ ...s.chatSend, opacity: (!chatInput.trim() || sender) ? 0.4 : 1 }}
+                onClick={sendBesked}
+                disabled={!chatInput.trim() || sender}
+              >↑</button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -442,5 +562,84 @@ const s = {
     color: '#fff', background: colors.green,
     border: 'none', borderRadius: radius.button, cursor: 'pointer',
     boxShadow: shadow.fab,
+  },
+
+  // ── Chat ──────────────────────────────────────────────────────────────────────
+  chatFab: {
+    position: 'fixed', bottom: 88, right: 20, zIndex: 200,
+    width: 52, height: 52, borderRadius: 999,
+    background: colors.green, border: 'none',
+    boxShadow: shadow.fab, fontSize: 22, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  chatOverlay: {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.32)', zIndex: 290,
+  },
+  chatDrawer: {
+    position: 'fixed', bottom: 0, left: '50%',
+    transform: 'translateX(-50%)',
+    width: '100%', maxWidth: 480,
+    background: colors.bg,
+    borderRadius: '20px 20px 0 0',
+    boxShadow: '0 -4px 28px rgba(0,0,0,0.14)',
+    zIndex: 300,
+    display: 'flex', flexDirection: 'column',
+    maxHeight: '72vh',
+    animation: 'simmerSlideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both',
+  },
+  chatHeader: {
+    display: 'flex', alignItems: 'center',
+    padding: '14px 16px 10px',
+    borderBottom: `1px solid ${colors.border}`,
+    position: 'relative', flexShrink: 0,
+  },
+  chatDragPil: {
+    position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
+    width: 36, height: 4, borderRadius: 999, background: colors.border,
+  },
+  chatTitel: {
+    fontFamily: font.display, fontWeight: 800, fontSize: 15.5,
+    color: colors.text, flex: 1, textAlign: 'center', marginTop: 10,
+  },
+  chatLuk: {
+    background: 'none', border: 'none', fontSize: 17, color: colors.muted,
+    cursor: 'pointer', padding: '4px 2px', marginTop: 10, lineHeight: 1,
+  },
+  chatBeskeder: {
+    flex: 1, overflowY: 'auto', padding: '14px 14px 8px',
+    display: 'flex', flexDirection: 'column', gap: 10,
+  },
+  chatRækkeBruger: { display: 'flex', justifyContent: 'flex-end' },
+  chatRækkeAi:    { display: 'flex', justifyContent: 'flex-start' },
+  chatBobleBruger: {
+    maxWidth: '78%',
+    background: colors.green, color: '#fff',
+    padding: '10px 14px',
+    borderRadius: '18px 18px 4px 18px',
+    fontFamily: font.body, fontSize: 14.5, lineHeight: 1.45,
+  },
+  chatBobbleAi: {
+    maxWidth: '78%',
+    background: colors.card, color: colors.text,
+    padding: '10px 14px',
+    borderRadius: '18px 18px 18px 4px',
+    fontFamily: font.body, fontSize: 14.5, lineHeight: 1.45,
+    boxShadow: shadow.card,
+  },
+  chatInputRække: {
+    display: 'flex', gap: 8, padding: '10px 14px 22px',
+    borderTop: `1px solid ${colors.border}`, flexShrink: 0,
+  },
+  chatInputFelt: {
+    flex: 1, padding: '11px 14px',
+    fontFamily: font.body, fontSize: 14.5, color: colors.text,
+    background: colors.card, border: `1.5px solid ${colors.border}`,
+    borderRadius: 999, outline: 'none',
+  },
+  chatSend: {
+    width: 42, height: 42, borderRadius: 999, flexShrink: 0,
+    background: colors.green, border: 'none',
+    color: '#fff', fontSize: 18, fontWeight: 700, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
 }
