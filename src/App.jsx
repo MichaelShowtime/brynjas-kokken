@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { hentAktivBruger } from './data/auth'
+import { hentAktivBruger, syncSession } from './data/auth'
 import BottomNav from './components/BottomNav'
 import Hjem from './pages/Hjem'
 import MadMatch from './pages/MadMatch'
@@ -11,6 +12,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Onboarding from './pages/Onboarding'
 import Kok from './pages/Kok'
+import Galleri from './pages/Galleri'
 
 const INGEN_NAV = ['/login', '/register', '/onboarding', '/kok/']
 
@@ -23,9 +25,7 @@ function ProtectedRoute({ children }) {
 
 function GæsteRoute({ children }) {
   const bruger = hentAktivBruger()
-  if (bruger) {
-    return <Navigate to={bruger.onboardingFærdig ? '/hjem' : '/onboarding'} replace />
-  }
+  if (bruger) return <Navigate to={bruger.onboardingFærdig ? '/hjem' : '/onboarding'} replace />
   return children
 }
 
@@ -38,29 +38,33 @@ function OnboardingRoute({ children }) {
 
 export default function App() {
   const { pathname } = useLocation()
+  const [klar, setKlar] = useState(false)
   const visNav = !INGEN_NAV.some((p) => pathname.startsWith(p))
+
+  // Synkronisér Supabase-session med localStorage ved app-start
+  useEffect(() => {
+    syncSession().finally(() => setKlar(true))
+  }, [])
+
+  if (!klar) return null
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <Routes>
-        {/* Gæste-ruter */}
-        <Route path="/login" element={<GæsteRoute><Login /></GæsteRoute>} />
-        <Route path="/register" element={<GæsteRoute><Register /></GæsteRoute>} />
-
-        {/* Onboarding — kræver login, men onboarding ikke færdig */}
+        <Route path="/login"      element={<GæsteRoute><Login /></GæsteRoute>} />
+        <Route path="/register"   element={<GæsteRoute><Register /></GæsteRoute>} />
         <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
 
-        {/* Beskyttede ruter */}
-        <Route path="/"         element={<ProtectedRoute><Navigate to="/hjem" replace /></ProtectedRoute>} />
+        <Route path="/"               element={<ProtectedRoute><Navigate to="/hjem" replace /></ProtectedRoute>} />
         <Route path="/hjem"           element={<ProtectedRoute><Hjem /></ProtectedRoute>} />
         <Route path="/opskrift/:id"   element={<ProtectedRoute><Opskrift /></ProtectedRoute>} />
         <Route path="/kok/:id"        element={<ProtectedRoute><Kok /></ProtectedRoute>} />
         <Route path="/madmatch"       element={<ProtectedRoute><MadMatch /></ProtectedRoute>} />
-        <Route path="/opret"    element={<ProtectedRoute><Opret /></ProtectedRoute>} />
-        <Route path="/lager"    element={<ProtectedRoute><Lager /></ProtectedRoute>} />
-        <Route path="/profil"   element={<ProtectedRoute><Profil /></ProtectedRoute>} />
+        <Route path="/opret"          element={<ProtectedRoute><Opret /></ProtectedRoute>} />
+        <Route path="/lager"          element={<ProtectedRoute><Lager /></ProtectedRoute>} />
+        <Route path="/profil"         element={<ProtectedRoute><Profil /></ProtectedRoute>} />
+        <Route path="/galleri"        element={<ProtectedRoute><Galleri /></ProtectedRoute>} />
 
-        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { registrerBruger } from '../data/auth'
-import { supabase } from '../lib/supabase'
 import { colors, shadow, radius, font } from '../data/theme'
 
 export default function Register() {
@@ -11,6 +10,7 @@ export default function Register() {
   const [efternavn, setEfternavn] = useState('')
   const [telefon, setTelefon] = useState('')
   const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
   const [visPassword, setVisPassword] = useState(false)
@@ -20,33 +20,23 @@ export default function Register() {
   function næsteTrin(e) {
     e.preventDefault()
     setFejl('')
-    if (!navn.trim() || !efternavn.trim() || !email.trim())
-      return setFejl('Navn og e-mail skal udfyldes.')
+    if (!navn.trim() || !efternavn.trim() || !email.trim() || !username.trim())
+      return setFejl('Alle felter undtagen telefon skal udfyldes.')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
       return setFejl('Indtast en gyldig e-mailadresse.')
+    if (username.trim().length < 3)
+      return setFejl('Brugernavn skal være mindst 3 tegn.')
     setTrin(2)
   }
 
   async function håndterOpret(e) {
     e.preventDefault()
     setFejl('')
-    if (password !== password2)
-      return setFejl('Adgangskoderne matcher ikke.')
+    if (password !== password2) return setFejl('Adgangskoderne matcher ikke.')
     setLoading(true)
-    const res = registrerBruger({ email, navn, efternavn, telefon, password })
-    if (!res.ok) {
-      setLoading(false)
-      return setFejl(res.fejl)
-    }
-    // Gem i Supabase customers tabel (fire-and-forget — fejl blokerer ikke bruger)
-    await supabase.from('customers').insert({
-      email: email.trim().toLowerCase(),
-      first_name: navn.trim(),
-      last_name: efternavn.trim(),
-      phone: telefon.trim() || null,
-      created_at: new Date().toISOString(),
-    })
+    const res = await registrerBruger({ email, navn, efternavn, telefon, username, password })
     setLoading(false)
+    if (!res.ok) return setFejl(res.fejl)
     navigate('/onboarding', { replace: true })
   }
 
@@ -92,7 +82,21 @@ export default function Register() {
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="anna@mail.dk" style={s.input} autoComplete="email" required />
 
-              <label style={s.label}>
+              <label style={s.label}>Brugernavn</label>
+              <div style={s.usernameWrap}>
+                <span style={s.usernameAt}>@</span>
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  placeholder="annakok"
+                  style={{ ...s.input, paddingLeft: 28, marginBottom: 0 }}
+                  autoComplete="username"
+                  required
+                />
+              </div>
+              <p style={s.usernameTip}>Kun bogstaver, tal og _ — bruges når venner finder dig</p>
+
+              <label style={{ ...s.label, marginTop: 8 }}>
                 Telefonnummer <span style={{ color: colors.mutedLight, fontWeight: 400 }}>(valgfrit)</span>
               </label>
               <input type="tel" value={telefon} onChange={(e) => setTelefon(e.target.value)}
@@ -197,6 +201,10 @@ const s = {
   styrkeWrap: { display: 'flex', alignItems: 'center', gap: 6, margin: '10px 0 4px' },
   styrkeBar: { flex: 1, height: 4, borderRadius: 999, transition: 'background 0.3s' },
   styrkeTekst: { fontFamily: font.body, fontSize: 12, fontWeight: 700, color: colors.muted, flexShrink: 0 },
+
+  usernameWrap: { position: 'relative', marginBottom: 4 },
+  usernameAt: { position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontFamily: font.body, fontSize: 15, color: colors.mutedLight, pointerEvents: 'none' },
+  usernameTip: { fontFamily: font.body, fontSize: 12, color: colors.mutedLight, margin: '0 0 14px' },
 
   primærBtn: { padding: '14px', fontFamily: font.body, fontWeight: 700, fontSize: 15, color: '#fff', background: colors.green, border: 'none', borderRadius: radius.button, boxShadow: shadow.fab, cursor: 'pointer' },
   tilbageBtn: { background: 'none', border: 'none', fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.green, padding: '0 0 14px', cursor: 'pointer' },

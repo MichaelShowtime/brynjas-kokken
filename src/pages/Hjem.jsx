@@ -66,50 +66,64 @@ export default function Hjem() {
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
 
-  // Recipes
+  // Recipes — kun opskrifter med tags, filtreret på brugerens tags
   useEffect(() => {
     let cancelled = false
+    const brugerTags = bruger?.tags ?? []
     supabase
       .from('recipes')
       .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image')
-      .limit(20)
+      .not('tags', 'is', null)
+      .neq('tags', '{}')
+      .limit(60)
       .then(({ data }) => {
-        if (!cancelled) { setOpskrifter(data ?? []); setLoading(false) }
+        if (cancelled) return
+        const alle = (data ?? []).filter(r => r.tags?.length > 0)
+        // Sorter: retter der matcher brugerens tags kommer først
+        const sorteret = brugerTags.length > 0
+          ? [...alle].sort((a, b) => {
+              const aMatch = a.tags.filter(t => brugerTags.includes(t)).length
+              const bMatch = b.tags.filter(t => brugerTags.includes(t)).length
+              return bMatch - aMatch
+            })
+          : alle
+        if (!cancelled) { setOpskrifter(sorteret); setLoading(false) }
       })
     return () => { cancelled = true }
-  }, [])
+  }, [bruger?.tags?.join(',')])
 
   // Venner → filtreret feed → realtime
   useEffect(() => {
-    if (!bruger?.email) return
+    if (!bruger?.id) return
     let cancelled = false
     let channel = null
 
     async function init() {
-      // 1. Hent venner
-      const vennerData = await hentVennerFraDB(bruger.email)
+      // 1. Hent venner (bruger nu user_id)
+      const vennerData = await hentVennerFraDB(bruger.id)
       if (cancelled) return
       if (vennerData.length) setVennerListe(vennerData)
 
+      const venUserIds = vennerData.map((v) => v.id).filter(Boolean)
       const emails = vennerData.map((v) => v.email).filter(Boolean)
 
       // 2. Bed om notifikationstilladelse når man har venner
-      if (emails.length > 0 && 'Notification' in window && Notification.permission === 'default') {
+      if (venUserIds.length > 0 && 'Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission()
       }
 
       // 3. Hent posts — fra venner hvis man følger nogen, ellers alle (discovery)
-      const query = emails.length > 0
-        ? supabase.from('posts').select('*').in('bruger_email', emails)
+      const query = venUserIds.length > 0
+        ? supabase.from('posts').select('*').in('user_id', venUserIds)
         : supabase.from('posts').select('*')
       const { data: postsData } = await query.order('created_at', { ascending: false }).limit(20)
       if (!cancelled && postsData?.length) setDbPosts(postsData)
 
       // 4. Realtime — nye posts fra venner
-      channel = supabase.channel(`hjem-feed-${bruger.email}`)
+      channel = supabase.channel(`hjem-feed-${bruger.id}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
           const post = payload.new
-          const erFraVen = emails.length === 0 || emails.includes(post.bruger_email)
+          const erFraVen = venUserIds.length === 0 || venUserIds.includes(post.user_id)
           if (!erFraVen) return
 
           // Opdater feed live
@@ -138,7 +152,7 @@ export default function Hjem() {
       if (channel) supabase.removeChannel(channel)
       if (toastTimer.current) clearTimeout(toastTimer.current)
     }
-  }, [bruger?.email])
+  }, [bruger?.id])
 
   function håndterSøg(tekst) {
     setSøgeTekst(tekst)
@@ -159,28 +173,28 @@ export default function Hjem() {
 
   // Hent likes når posts loader
   useEffect(() => {
-    if (!dbPosts.length || !bruger?.email) return
+    if (!dbPosts.length || !bruger?.id) return
     const ids = dbPosts.map((p) => p.id)
-    supabase.from('post_likes').select('post_id, bruger_email').in('post_id', ids).then(({ data }) => {
+    supabase.from('post_likes').select('post_id, user_id').in('post_id', ids).then(({ data }) => {
       const map = {}
       for (const like of data ?? []) {
         if (!map[like.post_id]) map[like.post_id] = { count: 0, likedByMe: false }
         map[like.post_id].count++
-        if (like.bruger_email === bruger.email) map[like.post_id].likedByMe = true
+        if (like.user_id === bruger.id) map[like.post_id].likedByMe = true
       }
       setPostLikes(map)
     })
-  }, [dbPosts, bruger?.email])
+  }, [dbPosts, bruger?.id])
 
   async function toggleLike(postId) {
-    if (!bruger?.email) return
+    if (!bruger?.id) return
     const cur = postLikes[postId] ?? { count: 0, likedByMe: false }
     if (cur.likedByMe) {
       setPostLikes((prev) => ({ ...prev, [postId]: { count: Math.max(0, cur.count - 1), likedByMe: false } }))
-      await supabase.from('post_likes').delete().eq('post_id', postId).eq('bruger_email', bruger.email)
+      await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', bruger.id)
     } else {
       setPostLikes((prev) => ({ ...prev, [postId]: { count: cur.count + 1, likedByMe: true } }))
-      await supabase.from('post_likes').insert({ post_id: postId, bruger_email: bruger.email })
+      await supabase.from('post_likes').insert({ post_id: postId, user_id: bruger.id })
     }
   }
 
@@ -397,8 +411,8 @@ export default function Hjem() {
       </div>}
 
       {/* Mere til dig */}
-      {!søgerAktivt && <Section titel="Mere til dig" handling="Se alle" onHandling={() => navigate('/madmatch')} />}
-      {!søgerAktivt && <div style={styles.scrollRow}>
+      {!søgerAktivt && <Section titel="Mere til dig" handling="Se alle" onHandling={() => navigate('/galleri')} />}
+      {!søgerAktivt && <div style={styles.swipeRække}>
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} style={styles.recipeCardSkeleton} />
@@ -602,6 +616,12 @@ const styles = {
     margin: '0 -20px', paddingLeft: 20, paddingRight: 20,
     scrollbarWidth: 'none',
   },
+  swipeRække: {
+    display: 'flex', gap: 14, overflowX: 'auto', padding: '4px 0 12px',
+    margin: '0 -20px', paddingLeft: 20, paddingRight: 20,
+    scrollbarWidth: 'none', scrollSnapType: 'x mandatory',
+    WebkitOverflowScrolling: 'touch',
+  },
 
   story: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0, width: 64, position: 'relative' },
   storyRing: { width: 60, height: 60, borderRadius: 999, padding: 3, display: 'flex' },
@@ -685,7 +705,7 @@ const styles = {
   recipeCard: {
     width: 160, flexShrink: 0, background: colors.card, borderRadius: 18,
     boxShadow: shadow.card, border: 'none', padding: 0, overflow: 'hidden',
-    textAlign: 'left', cursor: 'pointer',
+    textAlign: 'left', cursor: 'pointer', scrollSnapAlign: 'start',
   },
   recipeCardSkeleton: {
     width: 160, height: 170, flexShrink: 0, borderRadius: 18, background: colors.border,

@@ -86,10 +86,10 @@ export const ONBOARDING_TRIN = [
     ikon: '⏱️',
     multi: false,
     svar: [
-      { label: '⚡ Under 20 min — hurtigt og nemt', tags: ['hurtig'] },
-      { label: '⏱️ 20–40 min — hverdagskok',        tags: ['medium-tid'] },
-      { label: '🏠 Over 40 min — elsker at lave mad', tags: ['weekend'] },
-      { label: '🔄 Det varierer',                    tags: [] },
+      { label: '⚡ Under 20 min — hurtigt og simpelt',          tags: ['hurtig'] },
+      { label: '⏱️ 20–40 min — det nemme men gode',            tags: ['medium-tid'] },
+      { label: '🏠 Over 40 min — den passionerede hverdagskok', tags: ['weekend'] },
+      { label: '🔄 Det kommer an på dagen',                     tags: [] },
     ],
   },
   {

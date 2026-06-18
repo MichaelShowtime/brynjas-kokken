@@ -99,10 +99,9 @@ const KATEGORI_LABELS = {
 export default function Lager() {
   const navigate = useNavigate()
   const [lager, setLager]           = useState(hentLager)
-  const [aktiv, setAktiv]           = useState('råvarer')
   const [tilføjOpen, setTilføjOpen] = useState(false)
   const [udløbEdit, setUdløbEdit]   = useState(null)
-  const [redigerVare, setRedigerVare] = useState(null) // vare-objekt til edit
+  const [redigerVare, setRedigerVare] = useState(null)
 
   // Opdatér state + localStorage
   function opdater(nyListe) { setLager(nyListe); gemLager(nyListe) }
@@ -144,17 +143,9 @@ export default function Lager() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div style={s.tabs}>
-        <button style={{ ...s.tab, ...(aktiv === 'råvarer' ? s.tabAktiv : {}) }}
-          onClick={() => setAktiv('råvarer')}>Råvarer</button>
-        <button style={{ ...s.tab, ...(aktiv === 'villave' ? s.tabAktiv : {}) }}
-          onClick={() => setAktiv('villave')}>Vil lave</button>
-      </div>
-
-      {aktiv === 'råvarer' && (
+      {/* Udløbs-advarsel */}
+      {true && (
         <>
-          {/* Udløbs-advarsel */}
           {udløberSnart > 0 && (
             <div style={s.advarsel}>
               <span style={{ fontSize: 16 }}>⚠️</span>
@@ -226,17 +217,12 @@ export default function Lager() {
           {lager.length === 0 && (
             <div style={s.tom}>
               <span style={{ fontSize: 40 }}>🧺</span>
-              <p style={s.tomTekst}>Dit lager er tomt.<br />Tryk "+ Tilføj" for at komme i gang.</p>
+              <p style={s.tomTekst}>Dit lager er tomt</p>
+              <p style={s.tomSub}>Tilføj dine råvarer — så kan Mad-match finde retter du kan lave med det du har hjemme.</p>
+              <button style={s.tomKnap} onClick={() => setTilføjOpen(true)}>+ Tilføj din første vare</button>
             </div>
           )}
         </>
-      )}
-
-      {aktiv === 'villave' && (
-        <div style={s.tom}>
-          <span style={{ fontSize: 40 }}>🍳</span>
-          <p style={s.tomTekst}>Her vises retter du kan lave med dit lager.<br />Aktiver "Matcher mit lager" i Mad-match.</p>
-        </div>
       )}
 
       {/* Tilføj-sheet */}
@@ -705,9 +691,6 @@ const s = {
   tilføjBtn: { display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: '#fff', background: colors.green, border: 'none', borderRadius: 999, padding: '10px 18px', boxShadow: shadow.fab },
 
   // Tabs
-  tabs: { display: 'flex', gap: 8, padding: '0 20px 16px' },
-  tab: { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: colors.muted, background: colors.card, border: `1.5px solid ${colors.border}`, borderRadius: 999, padding: '9px 20px' },
-  tabAktiv: { color: '#fff', background: colors.green, border: `1.5px solid ${colors.green}` },
 
   // Advarsel
   advarsel: { display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 16px 14px', background: '#FEF3EC', border: '1px solid #F5C9A7', borderRadius: 14, padding: '12px 14px' },
@@ -738,7 +721,9 @@ const s = {
 
   // Tom
   tom: { textAlign: 'center', padding: '60px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 },
-  tomTekst: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0, lineHeight: 1.6 },
+  tomTekst: { fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: '0 0 8px' },
+  tomSub:   { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: '0 0 20px', lineHeight: 1.6, maxWidth: 280, textAlign: 'center' },
+  tomKnap:  { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: '#fff', background: colors.green, border: 'none', borderRadius: radius.button, padding: '12px 24px', cursor: 'pointer' },
 
   // Sheet overlay
   overlay: { position: 'fixed', inset: 0, background: 'rgba(31,36,33,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 },

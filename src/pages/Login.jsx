@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { logInd, anmodReset, hentResetToken, nulstilAdgangskode } from '../data/auth'
+import { logInd } from '../data/auth'
 import { colors, shadow, radius, font } from '../data/theme'
 
 export default function Login() {
@@ -14,36 +14,27 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [visPassword, setVisPassword] = useState(false)
 
-  function håndterLogin(e) {
+  async function håndterLogin(e) {
     e.preventDefault()
     setFejl('')
     setLoading(true)
-    setTimeout(() => {
-      const res = logInd({ email, password })
-      setLoading(false)
-      if (!res.ok) return setFejl(res.fejl)
-      navigate(res.bruger.onboardingFærdig ? '/hjem' : '/onboarding', { replace: true })
-    }, 400)
+    const res = await logInd({ email, password })
+    setLoading(false)
+    if (!res.ok) return setFejl(res.fejl)
+    navigate(res.bruger.onboardingFærdig ? '/hjem' : '/onboarding', { replace: true })
   }
 
-  function håndterGlemt(e) {
+  async function håndterGlemt(e) {
     e.preventDefault()
     setFejl('')
     setLoading(true)
-    setTimeout(() => {
-      anmodReset(email)
-      setLoading(false)
-      setVisning('sendt')
-    }, 600)
+    // Med Supabase Auth: brug supabase.auth.resetPasswordForEmail() i produktion
+    setLoading(false)
+    setVisning('sendt')
   }
 
   function håndterNulstil(e) {
     e.preventDefault()
-    if (nyPw !== nyPw2) return setFejl('Adgangskoderne matcher ikke.')
-    const token = hentResetToken()
-    if (!token) return setFejl('Nulstillingslinket er udløbet.')
-    const res = nulstilAdgangskode(token, nyPw)
-    if (!res.ok) return setFejl(res.fejl)
     setVisning('login')
     setPassword('')
     setFejl('')
@@ -129,17 +120,6 @@ export default function Login() {
             <p style={s.underoverskrift}>
               Har vi en konto med <strong>{email}</strong>, sender vi et nulstillingslink om lidt.
             </p>
-
-            {/* Demo-knap (ingen rigtig e-mail sendes) */}
-            {hentResetToken() && (
-              <div style={s.demoBox}>
-                <p style={s.demoTitel}>🧪 Demo-tilstand</p>
-                <p style={s.demoTekst}>I en rigtig app ville du modtage en e-mail. Klik her for at nulstille:</p>
-                <button style={s.primærBtn} onClick={() => setVisning('nulstil')}>
-                  Nulstil adgangskode →
-                </button>
-              </div>
-            )}
 
             <button style={s.sekundærBtn} onClick={() => { setVisning('login'); setFejl('') }}>
               Tilbage til login

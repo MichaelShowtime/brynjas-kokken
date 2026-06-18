@@ -6,7 +6,7 @@ import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
 import { hentKreationer } from '../data/kreationer'
 import { hentLikes, fjernLike } from '../data/likes'
 import { billedeUrl, opskriftFarve, grad, tidLabel } from '../lib/recipeUtils'
-import { hentVenner, hentVennerFraDB, tilføjVenDB, fjernVenDB, hentAntalFølgere } from '../data/venner'
+import { hentVenner, hentVennerFraDB, tilføjVenDB, fjernVenDB, hentAntalFølgere, søgBrugere } from '../data/venner'
 import { colors, shadow, radius, font } from '../data/theme'
 
 const AVATARER = ['🧑‍🍳','👩‍🍳','👨‍🍳','🧑🏽‍🍳','👩🏽‍🍳','👨🏾‍🍳','🧑🏻‍🍳','👩🏿‍🍳','🐻','🦊','🐸','🌻']
@@ -52,16 +52,32 @@ function hentNotif()    { try { return { ...DEFAULT_NOTIF, ...JSON.parse(localSt
 function hentPrivatliv(){ try { return { ...DEFAULT_PRIV,  ...JSON.parse(localStorage.getItem(PRIVATLIV_KEY)) } } catch { return DEFAULT_PRIV } }
 
 // ── Tilføj ven-dialog ────────────────────────────────────────────────────────
-function TilføjVenDialog({ brugerEmail, onLuk, onTilføjet }) {
+function TilføjVenDialog({ brugerId, onLuk, onTilføjet }) {
   const [input, setInput] = useState('')
+  const [resultater, setResultater] = useState([])
+  const [valgt, setValgt] = useState(null)
   const [fejl, setFejl] = useState('')
   const [loading, setLoading] = useState(false)
+  const søgeTimer = useRef(null)
 
-  async function håndter() {
-    if (!input.trim()) return
+  function håndterInput(tekst) {
+    setInput(tekst)
+    setValgt(null)
+    setFejl('')
+    if (søgeTimer.current) clearTimeout(søgeTimer.current)
+    if (tekst.trim().length < 2) { setResultater([]); return }
+    søgeTimer.current = setTimeout(async () => {
+      const data = await søgBrugere(tekst.trim())
+      setResultater(data)
+    }, 200)
+  }
+
+  async function håndterTilføj() {
+    const username = valgt?.username ?? input.trim()
+    if (!username) return
     setLoading(true)
     setFejl('')
-    const res = await tilføjVenDB(brugerEmail, input)
+    const res = await tilføjVenDB(brugerId, username)
     setLoading(false)
     if (!res.ok) { setFejl(res.fejl); return }
     onTilføjet(res.ven)
@@ -71,21 +87,40 @@ function TilføjVenDialog({ brugerEmail, onLuk, onTilføjet }) {
   return (
     <div style={s.overlay} onClick={onLuk}>
       <div style={s.dialog} onClick={e => e.stopPropagation()}>
-        <p style={s.dialogTitel}>Tilføj ven</p>
-        <p style={s.dialogTekst}>Indtast en vens e-mailadresse for at tilføje dem.</p>
-        <input
-          type="email"
-          value={input}
-          onChange={e => { setInput(e.target.value); setFejl('') }}
-          placeholder="fx. sofie@mail.dk"
-          style={{ ...s.input, marginBottom: fejl ? 6 : 14 }}
-          autoFocus
-          onKeyDown={e => e.key === 'Enter' && håndter()}
-        />
-        {fejl && <p style={{ fontFamily: font.body, fontSize: 12.5, color: colors.red, margin: '0 0 12px' }}>{fejl}</p>}
+        <p style={s.dialogTitel}>Find en ven</p>
+        <p style={s.dialogTekst}>Søg på brugernavn for at følge nogen.</p>
+
+        <div style={{ position: 'relative', marginBottom: 6 }}>
+          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontFamily: font.body, fontSize: 15, color: colors.mutedLight, pointerEvents: 'none' }}>@</span>
+          <input
+            value={input}
+            onChange={e => håndterInput(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+            placeholder="brugernavn"
+            style={{ ...s.input, paddingLeft: 28, marginBottom: 0 }}
+            autoFocus
+          />
+        </div>
+
+        {resultater.length > 0 && !valgt && (
+          <div style={{ background: colors.bg, borderRadius: 12, overflow: 'hidden', marginBottom: 10, border: `1px solid ${colors.border}` }}>
+            {resultater.map((r) => (
+              <button key={r.user_id} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'transparent', border: 'none', borderBottom: `1px solid ${colors.border}`, cursor: 'pointer' }}
+                onClick={() => { setValgt(r); setInput(r.username); setResultater([]) }}>
+                <span style={{ fontSize: 22 }}>{r.avatar ?? '🧑‍🍳'}</span>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ fontFamily: font.body, fontWeight: 700, fontSize: 14, color: colors.text, margin: 0 }}>{r.first_name} {r.last_name}</p>
+                  <p style={{ fontFamily: font.body, fontSize: 12.5, color: colors.mutedLight, margin: 0 }}>@{r.username}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {fejl && <p style={{ fontFamily: font.body, fontSize: 12.5, color: colors.red, margin: '0 0 10px' }}>{fejl}</p>}
+
         <button style={{ ...s.dialogBekræft, background: colors.green, opacity: loading ? 0.7 : 1 }}
-          onClick={håndter} disabled={loading}>
-          {loading ? 'Søger…' : 'Tilføj'}
+          onClick={håndterTilføj} disabled={loading}>
+          {loading ? 'Tilføjer…' : 'Følg'}
         </button>
         <button style={s.dialogAnnuller} onClick={onLuk}>Annullér</button>
       </div>
@@ -123,11 +158,11 @@ export default function Profil() {
 
   // Hent rigtige venner + følgere fra Supabase
   useEffect(() => {
-    if (bruger?.email) {
-      hentVennerFraDB(bruger.email).then((liste) => { if (liste.length) setVenner(liste) })
-      hentAntalFølgere(bruger.email).then(setAntalFølgere)
+    if (bruger?.id) {
+      hentVennerFraDB(bruger.id).then((liste) => { if (liste.length) setVenner(liste) })
+      hentAntalFølgere(bruger.id).then(setAntalFølgere)
     }
-  }, [bruger?.email])
+  }, [bruger?.id])
 
   useEffect(() => {
     if (visning === 'hoved') {
@@ -158,9 +193,9 @@ export default function Profil() {
     }
   }
 
-  function håndterLogUd() {
+  async function håndterLogUd() {
     setLogUdDialog(false)
-    logUd()
+    await logUd()
     navigate('/login', { replace: true })
   }
 
@@ -189,7 +224,7 @@ export default function Profil() {
           {streak > 0 && <div style={s.streakBadge}>🔥 {streak}</div>}
         </div>
         <h1 style={s.navn}>{bruger.navn} {bruger.efternavn}</h1>
-        <p style={s.brugernavn}>{bruger.email}</p>
+        <p style={s.brugernavn}>{bruger.username ? `@${bruger.username}` : bruger.email}</p>
         {bruger.bio && <p style={s.bio}>{bruger.bio}</p>}
 
         <div style={s.statsRow}>
@@ -400,7 +435,7 @@ export default function Profil() {
 
       {tilføjVenÅben && (
         <TilføjVenDialog
-          brugerEmail={bruger.email}
+          brugerId={bruger.id}
           onLuk={() => setTilføjVenÅben(false)}
           onTilføjet={(nyVen) => setVenner((prev) => [...prev, nyVen])}
         />
@@ -417,25 +452,34 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
   const [efternavn, setEfternavn] = useState(bruger.efternavn || '')
   const [bio, setBio] = useState(bruger.bio || '')
   const [telefon, setTelefon] = useState(bruger.telefon || '')
+  const [username, setUsername] = useState(bruger.username || '')
+  const [brugernavnFejl, setBrugernavnFejl] = useState('')
   const [avatarFil, setAvatarFil] = useState(null)
   const [avatarFotoUrl, setAvatarFotoUrl] = useState(bruger.avatarUrl || null)
   const [gemmer, setGemmer] = useState(false)
-  const fotoInputRef = useRef(null)
+  const uploadRef = useRef(null)
+  const kameraRef = useRef(null)
 
   function vælgFoto(e) {
     const fil = e.target.files?.[0]
     if (!fil) return
     setAvatarFil(fil)
     setAvatarFotoUrl(URL.createObjectURL(fil))
+    e.target.value = ''
   }
 
   async function gem() {
+    const normUsername = username.trim().toLowerCase()
+    if (normUsername.length > 0 && normUsername.length < 3) {
+      setBrugernavnFejl('Brugernavn skal være mindst 3 tegn.')
+      return
+    }
     setGemmer(true)
     let nyAvatarUrl = bruger.avatarUrl || null
     if (avatarFil) {
       try {
         const ext = avatarFil.name.split('.').pop() || 'jpg'
-        const sti = `avatarer/${bruger.email.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.${ext}`
+        const sti = `avatarer/${bruger.id}_${Date.now()}.${ext}`
         const { data, error } = await supabase.storage.from('recipes').upload(sti, avatarFil, { upsert: true })
         if (!error && data?.path) {
           const { data: urlData } = supabase.storage.from('recipes').getPublicUrl(data.path)
@@ -444,7 +488,7 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
       } catch {}
     }
     setGemmer(false)
-    onGem({ avatar, navn, efternavn, bio, telefon, avatarUrl: nyAvatarUrl })
+    onGem({ avatar, navn, efternavn, bio, telefon, username: normUsername || bruger.username, avatarUrl: nyAvatarUrl })
   }
 
   return (
@@ -465,6 +509,18 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
         <input value={efternavn} onChange={(e) => setEfternavn(e.target.value)}
           placeholder="Efternavn" style={s.input} />
 
+        <label style={s.feltLabel}>Brugernavn</label>
+        <div style={{ position: 'relative', marginBottom: brugernavnFejl ? 4 : 16 }}>
+          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontFamily: font.body, fontSize: 15, color: colors.mutedLight, pointerEvents: 'none' }}>@</span>
+          <input
+            value={username}
+            onChange={(e) => { setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')); setBrugernavnFejl('') }}
+            placeholder="ditbrugernavn"
+            style={{ ...s.input, paddingLeft: 28, marginBottom: 0 }}
+          />
+        </div>
+        {brugernavnFejl && <p style={{ fontFamily: font.body, fontSize: 12.5, color: colors.red, margin: '0 0 14px' }}>{brugernavnFejl}</p>}
+
         <label style={s.feltLabel}>Telefonnummer</label>
         <input value={telefon} onChange={(e) => setTelefon(e.target.value)}
           placeholder="+45 12 34 56 78" style={s.input} />
@@ -475,19 +531,26 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
           style={{ ...s.input, height: 80, resize: 'none' }} />
 
         <label style={s.feltLabel}>Profilbillede</label>
-        <input ref={fotoInputRef} type="file" accept="image/*" onChange={vælgFoto} style={{ display: 'none' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
-          <div style={{ width: 72, height: 72, borderRadius: 999, overflow: 'hidden', background: s.avatar.background, border: `2px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, flexShrink: 0 }}>
+        <input ref={uploadRef} type="file" accept="image/*" onChange={vælgFoto} style={{ display: 'none' }} />
+        <input ref={kameraRef} type="file" accept="image/*" capture="environment" onChange={vælgFoto} style={{ display: 'none' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+          <div style={{ width: 72, height: 72, borderRadius: 999, overflow: 'hidden', background: colors.bg, border: `2px solid ${colors.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, flexShrink: 0 }}>
             {avatarFotoUrl
               ? <img src={avatarFotoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : avatar}
           </div>
-          <button style={{ ...s.sekundærBtn, width: 'auto', marginTop: 0, padding: '10px 16px' }}
-            onClick={() => fotoInputRef.current?.click()}>
-            📷 Upload foto
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button style={{ ...s.sekundærBtn, width: 'auto', marginTop: 0, padding: '9px 14px', fontSize: 13 }}
+              onClick={() => uploadRef.current?.click()}>
+              🖼️ Upload foto
+            </button>
+            <button style={{ ...s.sekundærBtn, width: 'auto', marginTop: 0, padding: '9px 14px', fontSize: 13 }}
+              onClick={() => kameraRef.current?.click()}>
+              📷 Tag foto
+            </button>
+          </div>
           {avatarFotoUrl && bruger.avatarUrl !== avatarFotoUrl && (
-            <button style={{ background: 'none', border: 'none', color: colors.muted, fontSize: 13, padding: 0, cursor: 'pointer' }}
+            <button style={{ background: 'none', border: 'none', color: colors.muted, fontSize: 13, padding: 0, cursor: 'pointer', alignSelf: 'flex-start' }}
               onClick={() => { setAvatarFil(null); setAvatarFotoUrl(bruger.avatarUrl || null) }}>
               Fortryd
             </button>
