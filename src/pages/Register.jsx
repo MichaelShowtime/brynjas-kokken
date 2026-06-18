@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { registrerBruger } from '../data/auth'
 import { colors, shadow, radius, font } from '../data/theme'
+import { useLang } from '../lib/lang'
 
 export default function Register() {
   const navigate = useNavigate()
-  const [trin, setTrin] = useState(1) // 1: basis-info, 2: adgangskode
+  const { t } = useLang()
+  const [trin, setTrin] = useState(1)
   const [navn, setNavn] = useState('')
   const [efternavn, setEfternavn] = useState('')
   const [telefon, setTelefon] = useState('')
@@ -21,18 +23,18 @@ export default function Register() {
     e.preventDefault()
     setFejl('')
     if (!navn.trim() || !efternavn.trim() || !email.trim() || !username.trim())
-      return setFejl('Alle felter undtagen telefon skal udfyldes.')
+      return setFejl(t('reg.fejlAllefelter'))
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-      return setFejl('Indtast en gyldig e-mailadresse.')
+      return setFejl(t('reg.fejlEmail'))
     if (username.trim().length < 3)
-      return setFejl('Brugernavn skal være mindst 3 tegn.')
+      return setFejl(t('reg.fejlBrugernavn'))
     setTrin(2)
   }
 
   async function håndterOpret(e) {
     e.preventDefault()
     setFejl('')
-    if (password !== password2) return setFejl('Adgangskoderne matcher ikke.')
+    if (password !== password2) return setFejl(t('reg.fejlMatch'))
     setLoading(true)
     const res = await registrerBruger({ email, navn, efternavn, telefon, username, password })
     setLoading(false)
@@ -47,42 +49,42 @@ export default function Register() {
         {/* Brand */}
         <div style={s.brand}>
           <span style={{ fontSize: 28 }}>🔥</span>
-          <span style={s.brandNavn}>Brynjas Køkken</span>
+          <span style={s.brandNavn}>{t('reg.brand')}</span>
         </div>
 
         {/* Fremgang */}
         <div style={s.fremgang}>
           <div style={{ ...s.fremgangBar, width: trin === 1 ? '50%' : '100%' }} />
         </div>
-        <p style={s.fremgangTekst}>Trin {trin} af 2</p>
+        <p style={s.fremgangTekst}>{t('reg.trin')} {trin} {t('reg.af')} 2</p>
 
-        {/* Trin 1: Basis-info */}
+        {/* Trin 1 */}
         {trin === 1 && (
           <>
-            <h1 style={s.overskrift}>Opret din konto</h1>
-            <p style={s.underoverskrift}>Fortæl os lidt om dig, så vi kan personalisere Brynjas Køkken.</p>
+            <h1 style={s.overskrift}>{t('reg.opret')}</h1>
+            <p style={s.underoverskrift}>{t('reg.underT')}</p>
 
             {fejl && <div style={s.fejlboks}>{fejl}</div>}
 
             <form onSubmit={næsteTrin} style={s.form}>
               <div style={s.rækkeInput}>
                 <div style={{ flex: 1 }}>
-                  <label style={s.label}>Fornavn</label>
+                  <label style={s.label}>{t('reg.fornavn')}</label>
                   <input value={navn} onChange={(e) => setNavn(e.target.value)}
                     placeholder="Anna" style={s.input} autoComplete="given-name" required />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={s.label}>Efternavn</label>
+                  <label style={s.label}>{t('reg.efternavn')}</label>
                   <input value={efternavn} onChange={(e) => setEfternavn(e.target.value)}
                     placeholder="Jensen" style={s.input} autoComplete="family-name" required />
                 </div>
               </div>
 
-              <label style={s.label}>E-mail</label>
+              <label style={s.label}>{t('reg.email')}</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="anna@mail.dk" style={s.input} autoComplete="email" required />
 
-              <label style={s.label}>Brugernavn</label>
+              <label style={s.label}>{t('reg.brugernavn')}</label>
               <div style={s.usernameWrap}>
                 <span style={s.usernameAt}>@</span>
                 <input
@@ -97,44 +99,45 @@ export default function Register() {
               <p style={s.usernameTip}>Kun bogstaver, tal og _ — bruges når venner finder dig</p>
 
               <label style={{ ...s.label, marginTop: 8 }}>
-                Telefonnummer <span style={{ color: colors.mutedLight, fontWeight: 400 }}>(valgfrit)</span>
+                {t('reg.telefon')}
               </label>
               <input type="tel" value={telefon} onChange={(e) => setTelefon(e.target.value)}
                 placeholder="+45 12 34 56 78" style={s.input} autoComplete="tel" />
 
-              <button type="submit" style={s.primærBtn}>Næste →</button>
+              <button type="submit" style={s.primærBtn}>{t('reg.næste')} →</button>
             </form>
           </>
         )}
 
-        {/* Trin 2: Adgangskode */}
+        {/* Trin 2 */}
         {trin === 2 && (
           <>
-            <button style={s.tilbageBtn} onClick={() => { setTrin(1); setFejl('') }}>‹ Tilbage</button>
-            <h1 style={s.overskrift}>Vælg adgangskode</h1>
+            <button style={s.tilbageBtn} onClick={() => { setTrin(1); setFejl('') }}>
+              {t('reg.tilbage')}
+            </button>
+            <h1 style={s.overskrift}>{t('reg.adgangskode')}</h1>
             <p style={s.underoverskrift}>Mindst 6 tegn. Vi gemmer den sikkert.</p>
 
             {fejl && <div style={s.fejlboks}>{fejl}</div>}
 
             <form onSubmit={håndterOpret} style={s.form}>
-              <label style={s.label}>Adgangskode</label>
+              <label style={s.label}>{t('reg.adgangskode')}</label>
               <div style={s.pwWrap}>
                 <input type={visPassword ? 'text' : 'password'} value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 6 tegn" style={{ ...s.input, marginBottom: 0 }}
+                  placeholder={t('reg.adgPh')} style={{ ...s.input, marginBottom: 0 }}
                   autoComplete="new-password" required />
                 <button type="button" style={s.visBtn} onClick={() => setVisPassword(!visPassword)}>
                   {visPassword ? '🙈' : '👁️'}
                 </button>
               </div>
 
-              <label style={{ ...s.label, marginTop: 16 }}>Gentag adgangskode</label>
+              <label style={{ ...s.label, marginTop: 16 }}>{t('reg.gentag')}</label>
               <input type={visPassword ? 'text' : 'password'} value={password2}
                 onChange={(e) => setPassword2(e.target.value)}
-                placeholder="Samme adgangskode" style={s.input}
+                placeholder={t('reg.gentagPh')} style={s.input}
                 autoComplete="new-password" required />
 
-              {/* Styrkeindikator */}
               {password.length > 0 && (
                 <div style={s.styrkeWrap}>
                   {[1,2,3,4].map((n) => (
@@ -154,7 +157,7 @@ export default function Register() {
               <button type="submit"
                 style={{ ...s.primærBtn, marginTop: 8, opacity: loading ? 0.7 : 1 }}
                 disabled={loading}>
-                {loading ? 'Opretter konto…' : 'Opret konto'}
+                {loading ? t('reg.opretter') : t('reg.opretKnap')}
               </button>
             </form>
 
@@ -167,8 +170,8 @@ export default function Register() {
         )}
 
         <p style={s.skiftTekst}>
-          Har du allerede en konto?{' '}
-          <Link to="/login" style={s.link}>Log ind her</Link>
+          {t('reg.harKonto')}{' '}
+          <Link to="/login" style={s.link}>{t('reg.logIndHer')}</Link>
         </p>
       </div>
     </div>

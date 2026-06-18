@@ -3,21 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { billedeUrl, opskriftFarve, grad } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
-
-function relativTid(isoString) {
-  const diff = Date.now() - new Date(isoString).getTime()
-  const min = Math.floor(diff / 60000)
-  if (min < 1) return 'Lige nu'
-  if (min < 60) return `${min} min siden`
-  const timer = Math.floor(min / 60)
-  if (timer < 24) return `${timer} t siden`
-  const dage = Math.floor(timer / 24)
-  return `${dage} dag${dage > 1 ? 'e' : ''} siden`
-}
+import { useLang, relativTidLang } from '../lib/lang'
 
 export default function BrugerProfil() {
   const { userId } = useParams()
   const navigate   = useNavigate()
+  const { t } = useLang()
   const [kunde, setKunde]   = useState(null)
   const [posts, setPosts]   = useState([])
   const [loading, setLoading] = useState(true)
@@ -52,8 +43,8 @@ export default function BrugerProfil() {
   if (!kunde) {
     return (
       <div style={s.loadPage}>
-        <p style={s.loadTekst}>Bruger ikke fundet</p>
-        <button style={s.tilbage} onClick={() => navigate(-1)}>← Tilbage</button>
+        <p style={s.loadTekst}>{t('bp.ikkeFundet')}</p>
+        <button style={s.tilbage} onClick={() => navigate(-1)}>{t('bp.tilbage')}</button>
       </div>
     )
   }
@@ -75,18 +66,18 @@ export default function BrugerProfil() {
         <h1 style={s.navn}>{navn}</h1>
         {kunde.username && <p style={s.username}>@{kunde.username}</p>}
         {kunde.bio && <p style={s.bio}>{kunde.bio}</p>}
-        <p style={s.antalPosts}>{posts.length} {posts.length === 1 ? 'kreation' : 'kreationer'}</p>
+        <p style={s.antalPosts}>{posts.length} {posts.length === 1 ? t('bp.kreation') : t('bp.kreationer')}</p>
       </div>
 
       {/* Posts */}
       <div style={s.sektionHead}>
-        <h2 style={s.sektionTitel}>Kreationer</h2>
+        <h2 style={s.sektionTitel}>{t('bp.kreationerTitel')}</h2>
       </div>
 
       {posts.length === 0 ? (
         <div style={s.tom}>
           <span style={{ fontSize: 36 }}>🍳</span>
-          <p style={s.tomTekst}>Ingen kreationer endnu</p>
+          <p style={s.tomTekst}>{t('bp.tom')}</p>
         </div>
       ) : (
         <div style={s.feed}>
@@ -105,13 +96,13 @@ export default function BrugerProfil() {
                 <div style={s.postBody}>
                   <div style={s.postMeta}>
                     <span style={s.postRetNavn}>{p.opskrift_titel}</span>
-                    <span style={s.postTid}>{relativTid(p.created_at)}</span>
+                    <span style={s.postTid}>{relativTidLang(p.created_at, t)}</span>
                   </div>
                   {p.citat && <p style={s.postCitat}>"{p.citat}"</p>}
                   {p.opskrift_id && (
                     <button style={s.lavOgsåBtn}
                       onClick={() => navigate(`/opskrift/${p.opskrift_id}`)}>
-                      Lav også →
+                      {t('bp.lavOgså')}
                     </button>
                   )}
                 </div>

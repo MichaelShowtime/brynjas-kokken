@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { hentLager, byggLagerOpslag } from '../data/lager'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
+import { useLang } from '../lib/lang'
 
 // ── Mængde-skalering ──────────────────────────────────────────────────────────
 
@@ -53,13 +54,12 @@ function skalér(mængde, faktor) {
 
 // ── Portionsvælger ────────────────────────────────────────────────────────────
 
-function PortionVælger({ portioner, original, onChange }) {
-  // Brug "stk" for store batches (kager, cookies, kugler), ellers "pers."
-  const enhed = original > 8 ? 'stk' : 'pers.'
+function PortionVælger({ portioner, original, onChange, t }) {
+  const enhed = original > 8 ? t('op.stk') : t('op.pers')
 
   return (
     <div style={pv.wrap}>
-      <span style={pv.label}>Tilpas mængde</span>
+      <span style={pv.label}>{t('op.tilpasMængde')}</span>
       <div style={pv.kontrol}>
         <button
           style={{ ...pv.btn, opacity: portioner <= 1 ? 0.35 : 1 }}
@@ -78,7 +78,7 @@ function PortionVælger({ portioner, original, onChange }) {
       </div>
       {portioner !== original && (
         <button style={pv.nulstil} onClick={() => onChange(original)}>
-          Nulstil til {original}
+          {t('op.nulstilTil')} {original}
         </button>
       )}
     </div>
@@ -128,13 +128,14 @@ function gemNoter(id, tekst) { try { localStorage.setItem(NOTER_KEY(id), tekst) 
 export default function Opskrift() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { t } = useLang()
   const [opskrift, setOpskrift] = useState(null)
   const [loading, setLoading] = useState(true)
   const [portioner, setPortioner] = useState(null)
   const [noter, setNoter] = useState('')
   const [chatÅben, setChatÅben] = useState(false)
-  const [beskeder, setBeskeder] = useState([
-    { rolle: 'ai', tekst: 'Hej! Jeg kender denne opskrift ud og ind – hvad vil du vide?' },
+  const [beskeder, setBeskeder] = useState(() => [
+    { rolle: 'ai', tekst: null },
   ])
   const [chatInput, setChatInput] = useState('')
   const [sender, setSender] = useState(false)
@@ -178,19 +179,19 @@ export default function Opskrift() {
         apiKey: import.meta.env.VITE_ANTHROPIC_KEY,
         dangerouslyAllowBrowser: true,
       })
-      const systemPrompt = `Du er en hjælpsom madassistent der UDELUKKENDE kan svare på spørgsmål om denne specifikke opskrift. Svar altid på dansk.
+      const systemPrompt = `You are a helpful cooking assistant that EXCLUSIVELY answers questions about this specific recipe. ${t('op.chatLang')}
 
-OPSKRIFT: ${opskrift.title}
-${opskrift.description ? `BESKRIVELSE: ${opskrift.description}\n` : ''}PORTIONER: ${opskrift.servings ?? 'ikke angivet'}
-TILBEREDNINGSTID: ${[opskrift.prep_time && `forberedelse ${opskrift.prep_time} min`, opskrift.cook_time && `tilberedning ${opskrift.cook_time} min`].filter(Boolean).join(', ') || 'ikke angivet'}
+RECIPE: ${opskrift.title}
+${opskrift.description ? `DESCRIPTION: ${opskrift.description}\n` : ''}SERVINGS: ${opskrift.servings ?? 'not specified'}
+COOKING TIME: ${[opskrift.prep_time && `prep ${opskrift.prep_time} min`, opskrift.cook_time && `cook ${opskrift.cook_time} min`].filter(Boolean).join(', ') || 'not specified'}
 
-INGREDIENSER:
+INGREDIENTS:
 ${(opskrift.ingredients ?? []).map((i) => `- ${[i.name, i.amount, i.unit].filter(Boolean).join(' ')}`).join('\n')}
 
-FREMGANGSMÅDE:
+INSTRUCTIONS:
 ${(opskrift.steps ?? []).map((trin, idx) => `${idx + 1}. ${trin}`).join('\n')}${opskrift.tags?.length ? `\n\nTAGS: ${opskrift.tags.join(', ')}` : ''}
 
-VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke opskrift — ingredienser, tilberedning, udskiftninger, serveringsforslag, tips og tricks. Hvis spørgsmålet ikke handler om denne ret, svar præcis: "Jeg er kun ekspert i denne ret! Spørg mig om ingredienser, tilberedningstips, udskiftninger eller serveringsforslag 😊"`
+IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe — ingredients, cooking, substitutions, serving suggestions, tips and tricks. If the question is not about this dish, respond exactly: "${t('op.chatOffTopic')}"`
       const apiMessages = nyBeskeder.slice(1).map((m) => ({
         role: m.rolle === 'bruger' ? 'user' : 'assistant',
         content: m.tekst,
@@ -201,10 +202,10 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
         system: systemPrompt,
         messages: apiMessages,
       })
-      const svar = response.content[0]?.text ?? 'Beklager, jeg kunne ikke svare.'
+      const svar = response.content[0]?.text ?? t('op.chatFejl')
       setBeskeder((prev) => [...prev, { rolle: 'ai', tekst: svar }])
     } catch {
-      setBeskeder((prev) => [...prev, { rolle: 'ai', tekst: 'Beklager, der opstod en fejl. Prøv igen.' }])
+      setBeskeder((prev) => [...prev, { rolle: 'ai', tekst: t('op.chatFejl') }])
     } finally {
       setSender(false)
     }
@@ -214,7 +215,7 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
     return (
       <div style={s.loadPage}>
         <div style={s.loadSpinner}>🍳</div>
-        <p style={s.loadTekst}>Henter opskrift…</p>
+        <p style={s.loadTekst}>{t('op.henter')}</p>
       </div>
     )
   }
@@ -222,8 +223,8 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
   if (!opskrift) {
     return (
       <div style={s.loadPage}>
-        <p style={s.loadTekst}>Opskrift ikke fundet</p>
-        <button style={s.backBtnInline} onClick={() => navigate(-1)}>← Tilbage</button>
+        <p style={s.loadTekst}>{t('op.ikkeFundet')}</p>
+        <button style={s.backBtnInline} onClick={() => navigate(-1)}>{t('op.tilbage')}</button>
       </div>
     )
   }
@@ -280,7 +281,7 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
           )}
         </div>
 
-        {opskrift.source && <p style={s.kilde}>fra {opskrift.source}</p>}
+        {opskrift.source && <p style={s.kilde}>{t('op.fra')} {opskrift.source}</p>}
 
         {opskrift.description && (
           <p style={s.beskrivelse}>{opskrift.description}</p>
@@ -290,10 +291,10 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
         {ingredienser.length > 0 && (
           <section style={s.sektion}>
             <div style={s.sektionHeader}>
-              <h2 style={s.sektionTitel}>Ingredienser</h2>
+              <h2 style={s.sektionTitel}>{t('op.ingredienser')}</h2>
               {mangler.length === 0
-                ? <span style={s.harAltBadge}>Du har alt ✓</span>
-                : <span style={s.manglerBadge}>{mangler.length} mangler</span>
+                ? <span style={s.harAltBadge}>{t('op.duHarAlt')}</span>
+                : <span style={s.manglerBadge}>{mangler.length} {t('op.mangler')}</span>
               }
             </div>
 
@@ -303,6 +304,7 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
                 portioner={portioner}
                 original={originalPortioner}
                 onChange={setPortioner}
+                t={t}
               />
             )}
 
@@ -332,7 +334,7 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
         {/* Fremgangsmåde */}
         {opskrift.steps?.length > 0 && (
           <section style={s.sektion}>
-            <h2 style={s.sektionTitel}>Fremgangsmåde</h2>
+            <h2 style={s.sektionTitel}>{t('op.fremgangsmåde')}</h2>
             <div style={s.stepsListe}>
               {opskrift.steps.map((trin, idx) => (
                 <div key={idx} style={s.trin}>
@@ -346,11 +348,11 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
 
         {/* Noter */}
         <section style={s.sektion}>
-          <h2 style={s.sektionTitel}>Mine noter</h2>
+          <h2 style={s.sektionTitel}>{t('op.mineNoter')}</h2>
           <textarea
             value={noter}
             onChange={(e) => { setNoter(e.target.value); gemNoter(id, e.target.value) }}
-            placeholder="Skriv dine egne noter, tilpasninger eller tip her…"
+            placeholder={t('op.noterPh')}
             style={s.noterFelt}
           />
         </section>
@@ -358,13 +360,13 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
         {/* Kildelink */}
         {opskrift.source_url && (
           <a href={opskrift.source_url} target="_blank" rel="noopener noreferrer" style={s.kildeLink}>
-            Se original opskrift på {opskrift.source} →
+            {t('op.seOriginal')} {opskrift.source} →
           </a>
         )}
 
         {/* Start cook mode */}
         <button style={s.startKnap} onClick={() => navigate(`/kok/${opskrift.id}`)}>
-          🍳 Start tilberedning
+          {t('op.startKnap')}
         </button>
       </div>
 
@@ -389,14 +391,14 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
           <div style={s.chatDrawer}>
             <div style={s.chatHeader}>
               <div style={s.chatDragPil} />
-              <span style={s.chatTitel}>Spørg om opskriften</span>
+              <span style={s.chatTitel}>{t('op.chatSpørg')}</span>
               <button style={s.chatLuk} onClick={() => setChatÅben(false)}>✕</button>
             </div>
             <div style={s.chatBeskeder}>
               {beskeder.map((m, i) => (
                 <div key={i} style={m.rolle === 'bruger' ? s.chatRækkeBruger : s.chatRækkeAi}>
                   <div style={m.rolle === 'bruger' ? s.chatBobleBruger : s.chatBobbleAi}>
-                    {m.tekst}
+                    {m.tekst ?? t('op.chatVelkomst')}
                   </div>
                 </div>
               ))}
@@ -417,7 +419,7 @@ VIGTIG REGEL: Du MÅ KUN svare på spørgsmål relateret til denne specifikke op
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendBesked()}
-                placeholder="Stil et spørgsmål…"
+                placeholder={t('op.chatPh')}
                 disabled={sender}
               />
               <button

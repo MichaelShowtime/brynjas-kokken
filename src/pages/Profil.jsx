@@ -8,6 +8,7 @@ import { hentLikes, fjernLike } from '../data/likes'
 import { billedeUrl, opskriftFarve, grad, tidLabel } from '../lib/recipeUtils'
 import { hentVenner, hentVennerFraDB, tilføjVenDB, fjernVenDB, hentAntalFølgere, søgBrugere } from '../data/venner'
 import { colors, shadow, radius, font } from '../data/theme'
+import { useLang } from '../lib/lang'
 
 const AVATARER = ['🧑‍🍳','👩‍🍳','👨‍🍳','🧑🏽‍🍳','👩🏽‍🍳','👨🏾‍🍳','🧑🏻‍🍳','👩🏿‍🍳','🐻','🦊','🐸','🌻']
 
@@ -53,6 +54,7 @@ function hentPrivatliv(){ try { return { ...DEFAULT_PRIV,  ...JSON.parse(localSt
 
 // ── Tilføj ven-dialog ────────────────────────────────────────────────────────
 function TilføjVenDialog({ brugerId, onLuk, onTilføjet }) {
+  const { t } = useLang()
   const [input, setInput] = useState('')
   const [resultater, setResultater] = useState([])
   const [valgt, setValgt] = useState(null)
@@ -87,8 +89,8 @@ function TilføjVenDialog({ brugerId, onLuk, onTilføjet }) {
   return (
     <div style={s.overlay} onClick={onLuk}>
       <div style={s.dialog} onClick={e => e.stopPropagation()}>
-        <p style={s.dialogTitel}>Find en ven</p>
-        <p style={s.dialogTekst}>Søg på brugernavn for at følge nogen.</p>
+        <p style={s.dialogTitel}>{t('pf.tv.titel')}</p>
+        <p style={s.dialogTekst}>{t('pf.tv.tekst')}</p>
 
         <div style={{ position: 'relative', marginBottom: 6 }}>
           <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontFamily: font.body, fontSize: 15, color: colors.mutedLight, pointerEvents: 'none' }}>@</span>
@@ -120,9 +122,9 @@ function TilføjVenDialog({ brugerId, onLuk, onTilføjet }) {
 
         <button style={{ ...s.dialogBekræft, background: colors.green, opacity: loading ? 0.7 : 1 }}
           onClick={håndterTilføj} disabled={loading}>
-          {loading ? 'Tilføjer…' : 'Følg'}
+          {loading ? t('pf.tv.tilføjer') : t('pf.tv.følg')}
         </button>
-        <button style={s.dialogAnnuller} onClick={onLuk}>Annullér</button>
+        <button style={s.dialogAnnuller} onClick={onLuk}>{t('pf.tv.annuller')}</button>
       </div>
     </div>
   )
@@ -139,6 +141,7 @@ const FAQ = [
 
 export default function Profil() {
   const navigate = useNavigate()
+  const { t } = useLang()
   const [visning, setVisning] = useState('hoved')
   const [bruger, setBruger] = useState(hentAktivBruger)
   const [aktivTab, setAktivTab] = useState('likes')
@@ -207,6 +210,14 @@ export default function Profil() {
   if (visning === 'privatliv')       return <PrivatlivSide onTilbage={() => setVisning('hoved')} />
   if (visning === 'hjælp')           return <HjælpSide onTilbage={() => setVisning('hoved')} />
 
+  // Translated settings items (defined here so t() is in scope)
+  const INDST = [
+    { emoji: '🔔', labelKey: 'pf.notif',    subKey: 'pf.notifSub',    side: 'notifikationer' },
+    { emoji: '🌍', labelKey: 'pf.sprog',    subKey: 'pf.sprogsub',    side: 'sprog' },
+    { emoji: '🛡️', labelKey: 'pf.privatliv', subKey: 'pf.privatlivSub', side: 'privatliv' },
+    { emoji: '❓', labelKey: 'pf.hjælp',    subKey: null,             side: 'hjælp' },
+  ]
+
   // ── Hoved-profil ─────────────────────────────────────────────────────────
   if (!bruger) return null
 
@@ -228,13 +239,13 @@ export default function Profil() {
         {bruger.bio && <p style={s.bio}>{bruger.bio}</p>}
 
         <div style={s.statsRow}>
-          <Stat tal={kreationer.length} label="retter" /><div style={s.statDiv} />
-          <Stat tal={antalFølgere} label="følgere" /><div style={s.statDiv} />
-          <Stat tal={venner.length} label="følger" />
+          <Stat tal={kreationer.length} label={t('pf.retter')} /><div style={s.statDiv} />
+          <Stat tal={antalFølgere} label={t('pf.følgere')} /><div style={s.statDiv} />
+          <Stat tal={venner.length} label={t('pf.følger')} />
         </div>
 
         <div style={s.btnRow}>
-          <button style={s.editBtn} onClick={() => setVisning('rediger')}>Rediger profil</button>
+          <button style={s.editBtn} onClick={() => setVisning('rediger')}>{t('pf.redigerProfil')}</button>
           <button style={s.shareBtn} onClick={håndterShare}><ShareIcon /></button>
         </div>
       </div>
@@ -242,12 +253,12 @@ export default function Profil() {
       {/* Tags */}
       <div style={s.sektion}>
         <div style={s.sektionHeader}>
-          <h2 style={s.sektionTitel}>Mine tags</h2>
-          <button style={s.redigerTagsBtn} onClick={() => setVisning('tags')}>Rediger</button>
+          <h2 style={s.sektionTitel}>{t('pf.mineTags')}</h2>
+          <button style={s.redigerTagsBtn} onClick={() => setVisning('tags')}>{t('pf.rediger')}</button>
         </div>
-        <p style={s.sektionHint}>Bruges til at skræddersy Mad-match og forslag</p>
+        <p style={s.sektionHint}>{t('pf.tagsHint')}</p>
         {bruger.tags.length === 0 ? (
-          <button style={s.tilføjTagsBtn} onClick={() => setVisning('tags')}>+ Tilføj dine første tags</button>
+          <button style={s.tilføjTagsBtn} onClick={() => setVisning('tags')}>{t('pf.tilføjTags')}</button>
         ) : (
           <div style={s.tagGrid}>
             {bruger.tags.map((id) => {
@@ -265,14 +276,14 @@ export default function Profil() {
       {/* Venner */}
       <div style={s.kort}>
         <div style={s.kortHeader}>
-          <p style={s.kortTitel}>Madvenner {venner.length > 0 ? `(${venner.length})` : ''}</p>
-          {venner.length > 0 && <button style={s.seeAll} onClick={() => setTilføjVenÅben(true)}>+ Tilføj</button>}
+          <p style={s.kortTitel}>{t('pf.madvenner')} {venner.length > 0 ? `(${venner.length})` : ''}</p>
+          {venner.length > 0 && <button style={s.seeAll} onClick={() => setTilføjVenÅben(true)}>{t('pf.tilføj')}</button>}
         </div>
         {venner.length === 0 ? (
           <div style={s.inviterBoks}>
             <span style={{ fontSize: 32 }}>👥</span>
-            <p style={s.inviterTekst}>Invitér dine venner til Brynjas Køkken og del madoplevelser!</p>
-            <button style={s.inviterKnap} onClick={() => setTilføjVenÅben(true)}>+ Tilføj din første ven</button>
+            <p style={s.inviterTekst}>{t('pf.inviterTekst')}</p>
+            <button style={s.inviterKnap} onClick={() => setTilføjVenÅben(true)}>{t('pf.tilføjFørste')}</button>
           </div>
         ) : (
           <div style={s.vennerRække}>
@@ -296,19 +307,19 @@ export default function Profil() {
 
       {/* Statistik */}
       <div style={s.kort}>
-        <p style={{ ...s.kortTitel, marginBottom: 14 }}>Din madstatistik</p>
+        <p style={{ ...s.kortTitel, marginBottom: 14 }}>{t('pf.statistik')}</p>
         <div style={s.statGrid}>
           <div style={s.statBox}>
             <span style={s.statBoxTal}>{streak}</span>
-            <span style={s.statBoxLabel}>🔥 Dages streak</span>
+            <span style={s.statBoxLabel}>{t('pf.streak')}</span>
           </div>
           <div style={s.statBox}>
             <span style={s.statBoxTal}>{kreationer.length}</span>
-            <span style={s.statBoxLabel}>🍽️ Retter lavet</span>
+            <span style={s.statBoxLabel}>{t('pf.retterLavet')}</span>
           </div>
           <div style={s.statBox}>
             <span style={s.statBoxTal}>{gnsTid ? `${gnsTid}m` : '—'}</span>
-            <span style={s.statBoxLabel}>⏱ Gns. tid</span>
+            <span style={s.statBoxLabel}>{t('pf.gnsTid')}</span>
           </div>
         </div>
       </div>
@@ -316,13 +327,13 @@ export default function Profil() {
       {/* Tabs */}
       <div style={s.tabs}>
         {[
-          { id: 'likes',     label: `❤️ Likes (${likes.length})` },
-          { id: 'kreationer', label: `Kreationer (${kreationer.length})` },
-          { id: 'badges',    label: 'Badges' },
-        ].map((t) => (
-          <button key={t.id} onClick={() => setAktivTab(t.id)}
-            style={{ ...s.tab, ...(aktivTab === t.id ? s.tabAktiv : {}) }}>
-            {t.label}
+          { id: 'likes',      label: `❤️ ${t('pf.likes')} (${likes.length})` },
+          { id: 'kreationer', label: `${t('pf.kreationer')} (${kreationer.length})` },
+          { id: 'badges',     label: t('pf.badges') },
+        ].map((tab) => (
+          <button key={tab.id} onClick={() => setAktivTab(tab.id)}
+            style={{ ...s.tab, ...(aktivTab === tab.id ? s.tabAktiv : {}) }}>
+            {tab.label}
           </button>
         ))}
       </div>
@@ -331,7 +342,7 @@ export default function Profil() {
       {aktivTab === 'likes' && (
         <div style={s.tabIndhold}>
           {likes.length === 0
-            ? <TomTab emoji="❤️" tekst="Swipe højre i Mad-match for at gemme retter her." knap="Åbn Mad-match" onKnap={() => navigate('/madmatch')} />
+            ? <TomTab emoji="❤️" tekst={t('pf.swipeTip')} knap={t('pf.åbnMadMatch')} onKnap={() => navigate('/madmatch')} />
             : (
               <div style={s.grid2}>
                 {likes.map((o) => {
@@ -361,7 +372,7 @@ export default function Profil() {
       {aktivTab === 'kreationer' && (
         <div style={s.tabIndhold}>
           {kreationer.length === 0
-            ? <TomTab emoji="📸" tekst="Tag et billede og skab din første kreation." knap="Gå til Opret" onKnap={() => navigate('/opret')} />
+            ? <TomTab emoji="📸" tekst={t('pf.tagBillede')} knap={t('pf.gåTilOpret')} onKnap={() => navigate('/opret')} />
             : kreationer.map((k) => {
               const fotoSrc = k.foto
                 ? (k.foto.startsWith('blob:') ? k.foto : billedeUrl(k.foto))
@@ -402,33 +413,28 @@ export default function Profil() {
 
       {/* Indstillinger */}
       <div style={s.sektion}>
-        <h2 style={s.sektionTitel}>Indstillinger</h2>
-        {[
-          { emoji: '🔔', label: 'Notifikationer', sub: 'Daglige forslag kl. 17:00', side: 'notifikationer' },
-          { emoji: '🌍', label: 'Sprog',           sub: 'Dansk',                    side: 'sprog' },
-          { emoji: '🛡️', label: 'Privatliv',       sub: 'Offentlig profil',         side: 'privatliv' },
-          { emoji: '❓', label: 'Hjælp & feedback', sub: null,                       side: 'hjælp' },
-        ].map((item) => (
+        <h2 style={s.sektionTitel}>{t('pf.indstillinger')}</h2>
+        {INDST.map((item) => (
           <button key={item.side} style={s.indstRække} onClick={() => setVisning(item.side)}>
             <span style={s.indstEmoji}>{item.emoji}</span>
             <div style={{ flex: 1, textAlign: 'left' }}>
-              <p style={s.indstLabel}>{item.label}</p>
-              {item.sub && <p style={s.indstSub}>{item.sub}</p>}
+              <p style={s.indstLabel}>{t(item.labelKey)}</p>
+              {item.subKey && <p style={s.indstSub}>{t(item.subKey)}</p>}
             </div>
             <span style={s.indstPil}>›</span>
           </button>
         ))}
       </div>
 
-      <button style={s.logUdBtn} onClick={() => setLogUdDialog(true)}>Log ud</button>
+      <button style={s.logUdBtn} onClick={() => setLogUdDialog(true)}>{t('pf.logUd')}</button>
 
       {logUdDialog && (
         <div style={s.overlay} onClick={() => setLogUdDialog(false)}>
           <div style={s.dialog} onClick={(e) => e.stopPropagation()}>
-            <p style={s.dialogTitel}>Log ud?</p>
-            <p style={s.dialogTekst}>Du kan altid logge ind igen med din e-mail og adgangskode.</p>
-            <button style={s.dialogBekræft} onClick={håndterLogUd}>Log ud</button>
-            <button style={s.dialogAnnuller} onClick={() => setLogUdDialog(false)}>Annullér</button>
+            <p style={s.dialogTitel}>{t('pf.logUdTitel')}</p>
+            <p style={s.dialogTekst}>{t('pf.logUdTekst')}</p>
+            <button style={s.dialogBekræft} onClick={håndterLogUd}>{t('pf.logUdBekræft')}</button>
+            <button style={s.dialogAnnuller} onClick={() => setLogUdDialog(false)}>{t('pf.annuller')}</button>
           </div>
         </div>
       )}
@@ -447,6 +453,7 @@ export default function Profil() {
 // ─── Rediger profil ─────────────────────────────────────────────────────────
 
 function RedigerProfil({ bruger, onGem, onTilbage }) {
+  const { t } = useLang()
   const [avatar, setAvatar] = useState(bruger.avatar)
   const [navn, setNavn] = useState(bruger.navn || '')
   const [efternavn, setEfternavn] = useState(bruger.efternavn || '')
@@ -471,7 +478,7 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
   async function gem() {
     const normUsername = username.trim().toLowerCase()
     if (normUsername.length > 0 && normUsername.length < 3) {
-      setBrugernavnFejl('Brugernavn skal være mindst 3 tegn.')
+      setBrugernavnFejl(t('pf.re.usernavnFejl'))
       return
     }
     setGemmer(true)
@@ -493,23 +500,23 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
 
   return (
     <div style={s.subSide}>
-      <SubHeader titel="Rediger profil" onTilbage={onTilbage} />
+      <SubHeader titel={t('pf.re.titel')} onTilbage={onTilbage} />
       <div style={s.subIndhold}>
 
         <div style={s.læsOnlyFelt}>
-          <span style={s.læsOnlyLabel}>E-mail</span>
+          <span style={s.læsOnlyLabel}>{t('pf.re.email')}</span>
           <span style={s.læsOnlyVærdi}>{bruger.email}</span>
         </div>
 
-        <label style={s.feltLabel}>Fornavn</label>
+        <label style={s.feltLabel}>{t('pf.re.fornavn')}</label>
         <input value={navn} onChange={(e) => setNavn(e.target.value)}
-          placeholder="Fornavn" style={s.input} />
+          placeholder={t('pf.re.fornavn')} style={s.input} />
 
-        <label style={s.feltLabel}>Efternavn</label>
+        <label style={s.feltLabel}>{t('pf.re.efternavn')}</label>
         <input value={efternavn} onChange={(e) => setEfternavn(e.target.value)}
-          placeholder="Efternavn" style={s.input} />
+          placeholder={t('pf.re.efternavn')} style={s.input} />
 
-        <label style={s.feltLabel}>Brugernavn</label>
+        <label style={s.feltLabel}>{t('pf.re.brugernavn')}</label>
         <div style={{ position: 'relative', marginBottom: brugernavnFejl ? 4 : 16 }}>
           <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontFamily: font.body, fontSize: 15, color: colors.mutedLight, pointerEvents: 'none' }}>@</span>
           <input
@@ -521,16 +528,16 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
         </div>
         {brugernavnFejl && <p style={{ fontFamily: font.body, fontSize: 12.5, color: colors.red, margin: '0 0 14px' }}>{brugernavnFejl}</p>}
 
-        <label style={s.feltLabel}>Telefonnummer</label>
+        <label style={s.feltLabel}>{t('pf.re.telefon')}</label>
         <input value={telefon} onChange={(e) => setTelefon(e.target.value)}
           placeholder="+45 12 34 56 78" style={s.input} />
 
-        <label style={s.feltLabel}>Bio</label>
+        <label style={s.feltLabel}>{t('pf.re.bio')}</label>
         <textarea value={bio} onChange={(e) => setBio(e.target.value)}
-          placeholder="Fortæl lidt om din madstil…"
+          placeholder={t('pf.re.bioPh')}
           style={{ ...s.input, height: 80, resize: 'none' }} />
 
-        <label style={s.feltLabel}>Profilbillede</label>
+        <label style={s.feltLabel}>{t('pf.re.billede')}</label>
         <input ref={uploadRef} type="file" accept="image/*" onChange={vælgFoto} style={{ display: 'none' }} />
         <input ref={kameraRef} type="file" accept="image/*" capture="environment" onChange={vælgFoto} style={{ display: 'none' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
@@ -542,22 +549,16 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <button style={{ ...s.sekundærBtn, width: 'auto', marginTop: 0, padding: '9px 14px', fontSize: 13 }}
               onClick={() => uploadRef.current?.click()}>
-              🖼️ Upload foto
+              {t('pf.re.uploadFoto')}
             </button>
             <button style={{ ...s.sekundærBtn, width: 'auto', marginTop: 0, padding: '9px 14px', fontSize: 13 }}
               onClick={() => kameraRef.current?.click()}>
-              📷 Tag foto
+              {t('pf.re.tagFoto')}
             </button>
           </div>
-          {avatarFotoUrl && bruger.avatarUrl !== avatarFotoUrl && (
-            <button style={{ background: 'none', border: 'none', color: colors.muted, fontSize: 13, padding: 0, cursor: 'pointer', alignSelf: 'flex-start' }}
-              onClick={() => { setAvatarFil(null); setAvatarFotoUrl(bruger.avatarUrl || null) }}>
-              Fortryd
-            </button>
-          )}
         </div>
 
-        <label style={s.feltLabel}>Eller vælg emoji-avatar</label>
+        <label style={s.feltLabel}>{t('pf.re.ellerEmoji')}</label>
         <div style={s.avatarGrid}>
           {AVATARER.map((a) => (
             <button key={a} onClick={() => { setAvatar(a); setAvatarFil(null); setAvatarFotoUrl(null) }}
@@ -568,9 +569,9 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
         </div>
 
         <button style={{ ...s.primærBtn, opacity: gemmer ? 0.7 : 1 }} onClick={gem} disabled={gemmer}>
-          {gemmer ? 'Gemmer…' : 'Gem ændringer'}
+          {gemmer ? t('pf.re.gemmer') : t('pf.re.gem')}
         </button>
-        <button style={s.sekundærBtn} onClick={onTilbage}>Annullér</button>
+        <button style={s.sekundærBtn} onClick={onTilbage}>{t('pf.re.annuller')}</button>
       </div>
     </div>
   )
@@ -579,6 +580,7 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
 // ─── Tags-side ───────────────────────────────────────────────────────────────
 
 function TagsSide({ bruger, onGem, onTilbage }) {
+  const { t } = useLang()
   const [tags, setTags] = useState(new Set(bruger.tags))
 
   function toggle(id) {
@@ -591,9 +593,9 @@ function TagsSide({ bruger, onGem, onTilbage }) {
 
   return (
     <div style={s.subSide}>
-      <SubHeader titel="Mine tags" onTilbage={onTilbage} />
+      <SubHeader titel={t('pf.ts.titel')} onTilbage={onTilbage} />
       <div style={s.subIndhold}>
-        <p style={s.subBeskrivelse}>Vælg tags der passer til dig — de bruges til at skræddersy Mad-match og dine daglige forslag.</p>
+        <p style={s.subBeskrivelse}>{t('pf.ts.beskrivelse')}</p>
 
         {TAG_KATEGORIER.map((kat) => {
           const katTags = ALLE_TAGS.filter((t) => t.kategori === kat.id)
@@ -617,9 +619,9 @@ function TagsSide({ bruger, onGem, onTilbage }) {
         })}
 
         <button style={s.primærBtn} onClick={() => onGem({ tags: [...tags] })}>
-          Gem tags ({tags.size} valgt)
+          {t('pf.ts.gemTags')} ({tags.size} {t('pf.ts.valgt')})
         </button>
-        <button style={s.sekundærBtn} onClick={onTilbage}>Annullér</button>
+        <button style={s.sekundærBtn} onClick={onTilbage}>{t('pf.ts.annuller')}</button>
       </div>
     </div>
   )
@@ -628,6 +630,7 @@ function TagsSide({ bruger, onGem, onTilbage }) {
 // ─── Notifikationer ──────────────────────────────────────────────────────────
 
 function NotifikationerSide({ onTilbage }) {
+  const { t } = useLang()
   const [notif, setNotif] = useState(hentNotif)
   function toggle(key) {
     const ny = { ...notif, [key]: !notif[key] }
@@ -636,13 +639,13 @@ function NotifikationerSide({ onTilbage }) {
   }
   return (
     <div style={s.subSide}>
-      <SubHeader titel="Notifikationer" onTilbage={onTilbage} />
+      <SubHeader titel={t('pf.no.titel')} onTilbage={onTilbage} />
       <div style={s.subIndhold}>
-        <p style={s.subBeskrivelse}>Vælg hvornår Brynjas Køkken må sende dig beskeder.</p>
+        <p style={s.subBeskrivelse}>{t('pf.no.beskrivelse')}</p>
         {[
-          { key: 'daglige', label: 'Daglige madforslag', sub: 'Kl. 17:00 hver dag' },
-          { key: 'venner',  label: 'Venners aktivitet',  sub: 'Når nogen i dit netværk laver noget' },
-          { key: 'ugentlig',label: 'Ugentlig madplan',   sub: 'Mandag morgen' },
+          { key: 'daglige',  label: t('pf.no.daglige'),  sub: t('pf.no.dagligeSub') },
+          { key: 'venner',   label: t('pf.no.venner'),   sub: t('pf.no.vennerSub') },
+          { key: 'ugentlig', label: t('pf.no.ugentlig'), sub: t('pf.no.ugentligSub') },
         ].map((item) => (
           <div key={item.key} style={s.toggleRække}>
             <div style={{ flex: 1 }}>
@@ -660,18 +663,22 @@ function NotifikationerSide({ onTilbage }) {
 // ─── Sprog ────────────────────────────────────────────────────────────────────
 
 function SprogSide({ onTilbage }) {
-  const [valgt, setValgt] = useState('da')
+  const { lang, setLang, t } = useLang()
+  const SPROG = [
+    { kode: 'da', label: t('pf.sp.dansk'),   flag: '🇩🇰' },
+    { kode: 'en', label: t('pf.sp.english'), flag: '🇬🇧' },
+  ]
   return (
     <div style={s.subSide}>
-      <SubHeader titel="Sprog" onTilbage={onTilbage} />
+      <SubHeader titel={t('pf.sp.titel')} onTilbage={onTilbage} />
       <div style={s.subIndhold}>
-        <p style={s.subBeskrivelse}>Vælg dit foretrukne sprog.</p>
-        {[{ kode: 'da', label: 'Dansk', flag: '🇩🇰' }, { kode: 'en', label: 'English', flag: '🇬🇧' }, { kode: 'no', label: 'Norsk', flag: '🇳🇴' }, { kode: 'sv', label: 'Svenska', flag: '🇸🇪' }].map((sp) => (
-          <button key={sp.kode} onClick={() => setValgt(sp.kode)}
-            style={{ ...s.valgRække, ...(valgt === sp.kode ? s.valgRækkeAktiv : {}) }}>
+        <p style={s.subBeskrivelse}>{t('pf.sp.vælg')}</p>
+        {SPROG.map((sp) => (
+          <button key={sp.kode} onClick={() => setLang(sp.kode)}
+            style={{ ...s.valgRække, ...(lang === sp.kode ? s.valgRækkeAktiv : {}) }}>
             <span style={{ fontSize: 22 }}>{sp.flag}</span>
             <span style={{ ...s.indstLabel, flex: 1, textAlign: 'left' }}>{sp.label}</span>
-            {valgt === sp.kode && <span style={{ color: colors.green, fontWeight: 800 }}>✓</span>}
+            {lang === sp.kode && <span style={{ color: colors.green, fontWeight: 800 }}>✓</span>}
           </button>
         ))}
       </div>
@@ -682,6 +689,7 @@ function SprogSide({ onTilbage }) {
 // ─── Privatliv ────────────────────────────────────────────────────────────────
 
 function PrivatlivSide({ onTilbage }) {
+  const { t } = useLang()
   const [priv, setPriv] = useState(hentPrivatliv)
   function toggle(key) {
     const ny = { ...priv, [key]: !priv[key] }
@@ -690,13 +698,13 @@ function PrivatlivSide({ onTilbage }) {
   }
   return (
     <div style={s.subSide}>
-      <SubHeader titel="Privatliv" onTilbage={onTilbage} />
+      <SubHeader titel={t('pf.pv.titel')} onTilbage={onTilbage} />
       <div style={s.subIndhold}>
-        <p style={s.subBeskrivelse}>Styr hvad andre kan se om dig.</p>
+        <p style={s.subBeskrivelse}>{t('pf.pv.beskrivelse')}</p>
         {[
-          { key: 'offentlig', label: 'Offentlig profil',           sub: 'Alle kan finde og se din profil' },
-          { key: 'aktivitet', label: 'Del aktivitet med venner',   sub: 'Venner kan se hvad du laver' },
-          { key: 'streak',    label: 'Vis streak offentligt',      sub: 'Din streak vises på din profil' },
+          { key: 'offentlig', label: t('pf.pv.offentlig'), sub: t('pf.pv.offentligSub') },
+          { key: 'aktivitet', label: t('pf.pv.aktivitet'), sub: t('pf.pv.aktivitetSub') },
+          { key: 'streak',    label: t('pf.pv.streak'),    sub: t('pf.pv.streakSub') },
         ].map((item) => (
           <div key={item.key} style={s.toggleRække}>
             <div style={{ flex: 1 }}>
@@ -714,15 +722,22 @@ function PrivatlivSide({ onTilbage }) {
 // ─── Hjælp ────────────────────────────────────────────────────────────────────
 
 function HjælpSide({ onTilbage }) {
+  const { t } = useLang()
   const [åben, setÅben] = useState(null)
   const [feedback, setFeedback] = useState('')
   const [sendt, setSendt] = useState(false)
+  const FAQ_T = [
+    { q: t('pf.hj.faq0q'), a: t('pf.hj.faq0a') },
+    { q: t('pf.hj.faq1q'), a: t('pf.hj.faq1a') },
+    { q: t('pf.hj.faq2q'), a: t('pf.hj.faq2a') },
+    { q: t('pf.hj.faq3q'), a: t('pf.hj.faq3a') },
+  ]
   return (
     <div style={s.subSide}>
-      <SubHeader titel="Hjælp & feedback" onTilbage={onTilbage} />
+      <SubHeader titel={t('pf.hj.titel')} onTilbage={onTilbage} />
       <div style={s.subIndhold}>
-        <h3 style={s.subSektionTitel}>Ofte stillede spørgsmål</h3>
-        {FAQ.map((f, i) => (
+        <h3 style={s.subSektionTitel}>{t('pf.hj.faqTitel')}</h3>
+        {FAQ_T.map((f, i) => (
           <div key={i} style={s.faqItem}>
             <button style={s.faqQ} onClick={() => setÅben(åben === i ? null : i)}>
               <span style={{ flex: 1, textAlign: 'left' }}>{f.q}</span>
@@ -731,18 +746,18 @@ function HjælpSide({ onTilbage }) {
             {åben === i && <p style={s.faqA}>{f.a}</p>}
           </div>
         ))}
-        <h3 style={{ ...s.subSektionTitel, marginTop: 28 }}>Send feedback</h3>
+        <h3 style={{ ...s.subSektionTitel, marginTop: 28 }}>{t('pf.hj.feedbackTitel')}</h3>
         {sendt
-          ? <div style={s.infoBox}>✅ Tak for din feedback!</div>
+          ? <div style={s.infoBox}>{t('pf.hj.tak')}</div>
           : <>
               <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Fortæl os hvad du synes…"
+                placeholder={t('pf.hj.feedbackPh')}
                 style={{ ...s.input, height: 100, resize: 'none' }} />
-              <button style={s.primærBtn} onClick={() => feedback.trim() && setSendt(true)}>Send</button>
+              <button style={s.primærBtn} onClick={() => feedback.trim() && setSendt(true)}>{t('pf.hj.send')}</button>
             </>
         }
         <div style={{ ...s.infoBox, marginTop: 20, textAlign: 'center' }}>
-          <p style={{ margin: 0, fontWeight: 700, color: colors.text }}>Brynjas Køkken · Version 0.1.0</p>
+          <p style={{ margin: 0, fontWeight: 700, color: colors.text }}>{t('pf.hj.version')}</p>
         </div>
       </div>
     </div>
@@ -752,9 +767,10 @@ function HjælpSide({ onTilbage }) {
 // ─── Delte hjælpekomponenter ─────────────────────────────────────────────────
 
 function SubHeader({ titel, onTilbage }) {
+  const { t } = useLang()
   return (
     <div style={s.subHeader}>
-      <button style={s.tilbageBtn} onClick={onTilbage}>‹ Profil</button>
+      <button style={s.tilbageBtn} onClick={onTilbage}>‹ {t('nav.profil')}</button>
       <h1 style={s.subTitel}>{titel}</h1>
     </div>
   )

@@ -6,6 +6,7 @@ import {
 } from '../data/lager'
 import { supabase } from '../lib/supabase'
 import { colors, shadow, radius, font } from '../data/theme'
+import { useLang } from '../lib/lang'
 
 // Module-level cache — survives re-renders, re-fetches only on hard reload
 let _katalogCache = null
@@ -76,28 +77,21 @@ function gætEnhed(navn) {
 }
 
 // ── Udløbs-hjælper ────────────────────────────────────────────────────────────
-function udløbsInfo(udløbDato) {
+function udløbsInfo(udløbDato, t) {
   if (!udløbDato) return null
   const i_dag = new Date(); i_dag.setHours(0,0,0,0)
   const udløb = new Date(udløbDato); udløb.setHours(0,0,0,0)
   const dage = Math.round((udløb - i_dag) / 86400000)
-  if (dage < 0)  return { tekst: 'Udløbet',          farve: colors.red,        kritisk: true }
-  if (dage === 0) return { tekst: 'Udløber i dag',    farve: colors.red,        kritisk: true }
-  if (dage === 1) return { tekst: 'Udløber i morgen', farve: colors.red,        kritisk: true }
-  if (dage <= 5)  return { tekst: `om ${dage} dage`,  farve: colors.terracotta, kritisk: false }
+  if (dage < 0)  return { tekst: t('lag.udløbet'),           farve: colors.red,        kritisk: true }
+  if (dage === 0) return { tekst: t('lag.udløberIDag'),       farve: colors.red,        kritisk: true }
+  if (dage === 1) return { tekst: t('lag.udløberIm'),         farve: colors.red,        kritisk: true }
+  if (dage <= 5)  return { tekst: `${t('lag.omDage')} ${dage} ${t('lag.dage')}`, farve: colors.terracotta, kritisk: false }
   return null
-}
-
-const KATEGORI_LABELS = {
-  køl:       'Køl',
-  grønt:     'Grønt & Frugt',
-  tørvarer:  'Tørvarer & Konserves',
-  frys:      'Frys',
-  krydderier:'Krydderier',
 }
 
 export default function Lager() {
   const navigate = useNavigate()
+  const { t } = useLang()
   const [lager, setLager]           = useState(hentLager)
   const [tilføjOpen, setTilføjOpen] = useState(false)
   const [udløbEdit, setUdløbEdit]   = useState(null)
@@ -121,14 +115,22 @@ export default function Lager() {
     .map((k) => ({ ...k, varer: lager.filter((v) => v.kategori === k.id) }))
     .filter((g) => g.varer.length > 0)
 
+  const KATEGORI_LABELS = {
+    køl:       t('lag.kat.køl'),
+    grønt:     t('lag.kat.grønt'),
+    tørvarer:  t('lag.kat.tørvarer'),
+    frys:      t('lag.kat.frys'),
+    krydderier:t('lag.kat.krydderier'),
+  }
+
   // Tæl kritiske varer
   const snartUdløb = lager.filter((v) => {
-    const info = udløbsInfo(v.udløb)
+    const info = udløbsInfo(v.udløb, t)
     return info?.kritisk
   }).length
 
   const udløberSnart = lager.filter((v) => {
-    const info = udløbsInfo(v.udløb)
+    const info = udløbsInfo(v.udløb, t)
     return info !== null
   }).length
 
@@ -137,9 +139,9 @@ export default function Lager() {
 
       {/* Header */}
       <div style={s.header}>
-        <h1 style={s.titel}>Lager</h1>
+        <h1 style={s.titel}>{t('lag.titel')}</h1>
         <button style={s.tilføjBtn} onClick={() => setTilføjOpen(true)}>
-          <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Tilføj
+          <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> {t('lag.tilføj').replace('+ ', '')}
         </button>
       </div>
 
@@ -150,8 +152,8 @@ export default function Lager() {
             <div style={s.advarsel}>
               <span style={{ fontSize: 16 }}>⚠️</span>
               <span style={s.advarselTekst}>
-                {udløberSnart} {udløberSnart === 1 ? 'vare udløber' : 'varer udløber'} snart.{' '}
-                <span style={s.advarselLink} onClick={() => navigate('/madmatch')}>Se retter der bruger dem →</span>
+                {udløberSnart} {udløberSnart === 1 ? t('lag.vare') : t('lag.varer')} {t('lag.udløberSnart')}{' '}
+                <span style={s.advarselLink} onClick={() => navigate('/madmatch')}>{t('lag.seRetter')}</span>
               </span>
             </div>
           )}
@@ -159,10 +161,10 @@ export default function Lager() {
           {/* Varer per kategori */}
           {grupper.map((g) => (
             <div key={g.id} style={s.gruppe}>
-              <p style={s.gruppeLabel}>{g.label.toUpperCase()}</p>
+              <p style={s.gruppeLabel}>{(KATEGORI_LABELS[g.id] ?? g.label).toUpperCase()}</p>
               <div style={s.kortBoks}>
                 {g.varer.map((v, i) => {
-                  const info = udløbsInfo(v.udløb)
+                  const info = udløbsInfo(v.udløb, t)
                   const harUdløb = !!v.udløb
                   const erSidst = i === g.varer.length - 1
                   return (
@@ -184,14 +186,14 @@ export default function Lager() {
 
                           {/* Snart-tom badge */}
                           {v.snartTom && !info && (
-                            <span style={s.snartTomBadge}>Snart tom</span>
+                            <span style={s.snartTomBadge}>{t('lag.snartTom')}</span>
                           )}
 
                           {/* Ingen udløbsdato */}
                           {!harUdløb && !v.snartTom && !info && (
                             <button style={s.udløbReminder}
                               onClick={() => setUdløbEdit(v.id)}>
-                              <span style={{ color: colors.green }}>+ Udløbsdato</span>
+                              <span style={{ color: colors.green }}>{t('lag.tilføjUdløb')}</span>
                             </button>
                           )}
                         </div>
@@ -217,9 +219,9 @@ export default function Lager() {
           {lager.length === 0 && (
             <div style={s.tom}>
               <span style={{ fontSize: 40 }}>🧺</span>
-              <p style={s.tomTekst}>Dit lager er tomt</p>
-              <p style={s.tomSub}>Tilføj dine råvarer — så kan Mad-match finde retter du kan lave med det du har hjemme.</p>
-              <button style={s.tomKnap} onClick={() => setTilføjOpen(true)}>+ Tilføj din første vare</button>
+              <p style={s.tomTekst}>{t('lag.tom')}</p>
+              <p style={s.tomSub}>{t('lag.tomSub')}</p>
+              <button style={s.tomKnap} onClick={() => setTilføjOpen(true)}>{t('lag.tilføj')}</button>
             </div>
           )}
         </>
@@ -227,7 +229,7 @@ export default function Lager() {
 
       {/* Tilføj-sheet */}
       {tilføjOpen && (
-        <TilføjSheet onTilføj={tilføj} onLuk={() => setTilføjOpen(false)} />
+        <TilføjSheet onTilføj={tilføj} onLuk={() => setTilføjOpen(false)} t={t} KATEGORI_LABELS={KATEGORI_LABELS} />
       )}
 
       {/* Rediger vare-sheet */}
@@ -237,6 +239,7 @@ export default function Lager() {
           onGem={(data) => gem(redigerVare.id, data)}
           onSlet={() => slet(redigerVare.id)}
           onLuk={() => setRedigerVare(null)}
+          t={t}
         />
       )}
 
@@ -247,6 +250,7 @@ export default function Lager() {
           navn={lager.find(v => v.id === udløbEdit)?.navn}
           onGem={sætUdløb}
           onLuk={() => setUdløbEdit(null)}
+          t={t}
         />
       )}
     </div>
@@ -303,7 +307,7 @@ function BarcodeScanner({ onDetected, onLuk }) {
   )
 }
 
-function TilføjSheet({ onTilføj, onLuk }) {
+function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
   const [søgning, setSøgning]     = useState('')
   const [valgt, setValgt]         = useState(null)
   const [mængde, setMængde]       = useState('')
@@ -422,7 +426,7 @@ function TilføjSheet({ onTilføj, onLuk }) {
         <div style={s.greb} />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h2 style={s.sheetTitel}>Tilføj råvare</h2>
+          <h2 style={s.sheetTitel}>{t('lag.tilføjDialog.titel')}</h2>
           <button style={s.lukBtn} onClick={onLuk}>✕</button>
         </div>
 
@@ -447,7 +451,7 @@ function TilføjSheet({ onTilføj, onLuk }) {
               ref={søgeRef}
               value={søgning}
               onChange={(e) => { setSøgning(e.target.value); setValgt(null) }}
-              placeholder="Søg ingrediens, fx. Løg…"
+              placeholder={t('lag.søgPh')}
               style={s.søgeInput}
             />
             {søgning && (
@@ -507,7 +511,7 @@ function TilføjSheet({ onTilføj, onLuk }) {
             </div>
 
             {/* Mængde + enhed */}
-            <label style={s.feltLabel}>Mængde</label>
+            <label style={s.feltLabel}>{t('lag.mængde')}</label>
             <div style={{ display: 'flex', gap: 10 }}>
               <input
                 type="number"
@@ -528,9 +532,7 @@ function TilføjSheet({ onTilføj, onLuk }) {
             </div>
 
             {/* Udløbsdato */}
-            <label style={s.feltLabel}>
-              Udløbsdato <span style={{ color: colors.mutedLight, fontWeight: 400 }}>(valgfrit)</span>
-            </label>
+            <label style={s.feltLabel}>{t('lag.udløber')}</label>
             <input
               type="date"
               value={udløb}
@@ -543,7 +545,7 @@ function TilføjSheet({ onTilføj, onLuk }) {
               style={{ ...s.primærBtn, opacity: valgt ? 1 : 0.5 }}
               onClick={håndterTilføj}
             >
-              Tilføj til lager
+              {t('lag.tilføjDialog.gem')}
             </button>
           </div>
         )}
@@ -554,7 +556,7 @@ function TilføjSheet({ onTilføj, onLuk }) {
 
 // ── Rediger vare-sheet ────────────────────────────────────────────────────────
 
-function RedigerSheet({ vare, onGem, onSlet, onLuk }) {
+function RedigerSheet({ vare, onGem, onSlet, onLuk, t }) {
   const [mængde, setMængde] = useState(vare.mængde ?? '')
   const [enhed, setEnhed]   = useState(vare.enhed ?? 'stk')
   const [udløb, setUdløb]   = useState(vare.udløb ?? '')
@@ -577,7 +579,7 @@ function RedigerSheet({ vare, onGem, onSlet, onLuk }) {
         </div>
 
         {/* Mængde + enhed */}
-        <label style={s.feltLabel}>Mængde</label>
+        <label style={s.feltLabel}>{t('lag.mængde')}</label>
         <div style={{ display: 'flex', gap: 10 }}>
           <input
             type="number" inputMode="decimal"
@@ -592,29 +594,27 @@ function RedigerSheet({ vare, onGem, onSlet, onLuk }) {
         </div>
 
         {/* Udløbsdato */}
-        <label style={s.feltLabel}>
-          Udløbsdato <span style={{ color: colors.mutedLight, fontWeight: 400 }}>(valgfrit)</span>
-        </label>
+        <label style={s.feltLabel}>{t('lag.udløber')}</label>
         <input
           type="date" value={udløb} onChange={(e) => setUdløb(e.target.value)}
           min={new Date().toISOString().slice(0,10)}
           style={s.input}
         />
 
-        <button style={s.primærBtn} onClick={gem}>Gem ændringer</button>
+        <button style={s.primærBtn} onClick={gem}>{t('lag.redigerDialog.gem')}</button>
 
         {/* Slet */}
         {bekræftSlet ? (
           <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-            <button style={s.ghostBtn} onClick={() => setBekræftSlet(false)}>Annullér</button>
+            <button style={s.ghostBtn} onClick={() => setBekræftSlet(false)}>{t('lag.annuller')}</button>
             <button style={{ ...s.primærBtn, background: colors.red }} onClick={onSlet}>
-              Slet permanent
+              {t('lag.slet')}
             </button>
           </div>
         ) : (
           <button style={{ ...s.ghostBtn, color: colors.red, marginTop: 6 }}
             onClick={() => setBekræftSlet(true)}>
-            🗑 Fjern fra lager
+            🗑 {t('lag.slet')}
           </button>
         )}
       </div>
@@ -636,14 +636,14 @@ function PencilIcon() {
 
 // ── Udløbsdato-dialog ─────────────────────────────────────────────────────────
 
-function UdløbDialog({ id, navn, onGem, onLuk }) {
+function UdløbDialog({ id, navn, onGem, onLuk, t }) {
   const [dato, setDato] = useState('')
 
   return (
     <div style={s.overlay} onClick={onLuk}>
       <div style={{ ...s.sheet, paddingBottom: 32 }} onClick={(e) => e.stopPropagation()}>
         <div style={s.greb} />
-        <h2 style={s.sheetTitel}>Registrér udløbsdato</h2>
+        <h2 style={s.sheetTitel}>{t('lag.udløber')}</h2>
         <p style={{ fontFamily: font.body, fontSize: 14, color: colors.muted, margin: '0 0 20px' }}>
           {navn}
         </p>
@@ -656,9 +656,9 @@ function UdløbDialog({ id, navn, onGem, onLuk }) {
           autoFocus
         />
         <button style={{ ...s.primærBtn, marginTop: 12 }} onClick={() => dato && onGem(id, dato)}>
-          Gem dato
+          {t('lag.gem')}
         </button>
-        <button style={s.ghostBtn} onClick={onLuk}>Annullér</button>
+        <button style={s.ghostBtn} onClick={onLuk}>{t('lag.annuller')}</button>
       </div>
     </div>
   )

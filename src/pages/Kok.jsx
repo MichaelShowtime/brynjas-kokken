@@ -5,6 +5,7 @@ import { billedeUrl, opskriftFarve, tidLabel, grad } from '../lib/recipeUtils'
 import { gemKreation } from '../data/kreationer'
 import { hentAktivBruger } from '../data/auth'
 import { colors, shadow, radius, font } from '../data/theme'
+import { useLang } from '../lib/lang'
 
 // ── Timer-hook ──────────────────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ function useWakeLock() {
 
 // ── Afslut-modal ────────────────────────────────────────────────────────────
 
-function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
+function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
   const [foto, setFoto] = useState(null)
   const [fotoUrl, setFotoUrl] = useState(null)
   const [citat, setCitat] = useState('')
@@ -108,7 +109,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
       const { data, error } = await supabase.storage
         .from('recipes').upload(navn, foto, { cacheControl: '3600', upsert: true })
       if (error) {
-        setUploadFejl('Foto kunne ikke uploades — prøv igen.')
+        setUploadFejl(t('kok.modal.fejl'))
         setUploader(false)
         return
       }
@@ -148,9 +149,9 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
     <div style={m.overlay}>
       <div style={m.kort}>
         <div style={m.emoji}>🎉</div>
-        <h2 style={m.titel}>Lykkes det?</h2>
+        <h2 style={m.titel}>{t('kok.modal.titel')}</h2>
         <p style={m.tekst}>
-          Du brugte <strong>{tidBrugt}</strong> på {opskrift.title}.
+          {t('kok.modal.brugte')} <strong>{tidBrugt}</strong> {t('kok.modal.på')} {opskrift.title}.
         </p>
 
         {/* Foto — preview eller to knapper */}
@@ -162,11 +163,11 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
           <div style={m.fotoValg}>
             <button style={m.fotoValgKnap} onClick={() => kameraRef.current?.click()}>
               <span style={{ fontSize: 22 }}>📷</span>
-              <span style={m.fotoValgLabel}>Tag foto</span>
+              <span style={m.fotoValgLabel}>{t('kok.modal.tagFoto')}</span>
             </button>
             <button style={m.fotoValgKnap} onClick={() => galleriRef.current?.click()}>
               <span style={{ fontSize: 22 }}>🖼️</span>
-              <span style={m.fotoValgLabel}>Upload foto</span>
+              <span style={m.fotoValgLabel}>{t('kok.modal.upload')}</span>
             </button>
           </div>
         )}
@@ -181,7 +182,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
 
         {/* Del med fællesskabet */}
         <div style={m.delRække}>
-          <span style={m.delLabel}>Del med fællesskabet 🌍</span>
+          <span style={m.delLabel}>{t('kok.modal.del')}</span>
           <button
             role="switch" aria-checked={del}
             onClick={() => setDel((v) => !v)}
@@ -195,16 +196,16 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
           <textarea
             value={citat}
             onChange={(e) => setCitat(e.target.value)}
-            placeholder="Tilføj en kommentar… (valgfrit)"
+            placeholder={t('kok.modal.citatPh')}
             style={m.citatInput}
             maxLength={200}
           />
         )}
 
         <div style={m.knapper}>
-          <button style={m.sekundærKnap} onClick={onFortsæt}>Fortsæt</button>
+          <button style={m.sekundærKnap} onClick={onFortsæt}>{t('kok.modal.fortsæt')}</button>
           <button style={m.primærKnap} onClick={gem} disabled={uploader}>
-            {uploader ? 'Gemmer…' : del ? 'Gem & Del' : 'Gem til arkiv'}
+            {uploader ? t('kok.modal.gemmer') : del ? t('kok.modal.gemDel') : t('kok.modal.arkiv')}
           </button>
         </div>
       </div>
@@ -217,6 +218,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
 export default function Kok() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { t } = useLang()
   const [opskrift, setOpskrift] = useState(null)
   const [loading, setLoading] = useState(true)
   const [tjeklisteMarkeret, setTjeklisteMarkeret] = useState({})
@@ -264,7 +266,7 @@ export default function Kok() {
     return (
       <div style={s.loadPage}>
         <div style={{ fontSize: 48 }}>🍳</div>
-        <p style={s.loadTekst}>{loading ? 'Henter opskrift…' : 'Opskrift ikke fundet'}</p>
+        <p style={s.loadTekst}>{loading ? t('kok.henter') : t('kok.ikkeFundet')}</p>
       </div>
     )
   }
@@ -293,11 +295,11 @@ export default function Kok() {
         <span style={s.timerDisplay}>{format(sekunder)}</span>
         <div style={s.timerKnapper}>
           {kører
-            ? <button style={s.timerKnap} onClick={pause}>⏸ Pause</button>
-            : <button style={{ ...s.timerKnap, background: colors.green, color: '#fff' }} onClick={start}>▶ Start</button>
+            ? <button style={s.timerKnap} onClick={pause}>{t('kok.pause')}</button>
+            : <button style={{ ...s.timerKnap, background: colors.green, color: '#fff' }} onClick={start}>{t('kok.start')}</button>
           }
           <button style={{ ...s.timerKnap, opacity: sekunder === 0 ? 0.3 : 1 }} onClick={stop} disabled={sekunder === 0}>
-            ⏹ Stop
+            {t('kok.nulstil')}
           </button>
         </div>
       </div>
@@ -308,7 +310,7 @@ export default function Kok() {
           <div style={s.fremgangBar}>
             <div style={{ ...s.fremgangFill, width: `${fremgang * 100}%` }} />
           </div>
-          <span style={s.fremgangTekst}>{antalMarkeret}/{antalTrin} trin</span>
+          <span style={s.fremgangTekst}>{antalMarkeret}/{antalTrin} {t('kok.trin').toLowerCase()}</span>
         </div>
       )}
 
@@ -316,7 +318,7 @@ export default function Kok() {
         {/* Ingredienser — kompakt */}
         {ingredienser.length > 0 && (
           <section style={s.sektion}>
-            <h2 style={s.sektionTitel}>Ingredienser</h2>
+            <h2 style={s.sektionTitel}>{t('kok.ingredienser')}</h2>
             <div style={s.ingrediensGitter}>
               {ingredienser.map((i, idx) => (
                 <div key={idx} style={s.ingrediensBrik}>
@@ -333,7 +335,7 @@ export default function Kok() {
         {/* Trin-tjekliste */}
         {trin.length > 0 && (
           <section style={s.sektion}>
-            <h2 style={s.sektionTitel}>Fremgangsmåde</h2>
+            <h2 style={s.sektionTitel}>{t('op.fremgangsmåde')}</h2>
             <div style={s.trinListe}>
               {trin.map((tekst, idx) => {
                 const gjort = !!tjeklisteMarkeret[idx]
@@ -361,7 +363,7 @@ export default function Kok() {
       {!færdig && (
         <div style={s.afslutBar}>
           <button style={s.afslutKnap} onClick={handleAfslut}>
-            ✓ Afslut tilberedning
+            {t('kok.afslut')}
           </button>
         </div>
       )}
@@ -370,8 +372,8 @@ export default function Kok() {
       {færdig && (
         <div style={s.succesBesked}>
           <span style={{ fontSize: 28 }}>🎉</span>
-          <span style={s.succesTekst}>Gemt til dit arkiv!</span>
-          <button style={s.tilbageKnap} onClick={() => navigate(-1)}>Tilbage til opskrift</button>
+          <span style={s.succesTekst}>{t('kok.færdig.titel')}</span>
+          <button style={s.tilbageKnap} onClick={() => navigate(-1)}>{t('kok.færdig.tilbage')}</button>
         </div>
       )}
 
@@ -382,6 +384,7 @@ export default function Kok() {
           tidBrugt={format(sekunder)}
           onGem={handleGem}
           onFortsæt={() => { setVisAfslut(false); start() }}
+          t={t}
         />
       )}
     </div>

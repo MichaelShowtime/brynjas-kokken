@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { hentAktivBruger, syncSession } from './data/auth'
+import { LangProvider } from './lib/lang'
 import BottomNav from './components/BottomNav'
 import Hjem from './pages/Hjem'
 import MadMatch from './pages/MadMatch'
@@ -50,6 +51,7 @@ export default function App() {
   if (!klar) return null
 
   return (
+    <LangProvider>
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <Routes>
         <Route path="/login"      element={<GæsteRoute><Login /></GæsteRoute>} />
@@ -72,5 +74,6 @@ export default function App() {
 
       {visNav && hentAktivBruger()?.onboardingFærdig && <BottomNav />}
     </div>
+    </LangProvider>
   )
 }

@@ -7,30 +7,14 @@ import { hentLikes } from '../data/likes'
 import { colors, shadow, radius, font } from '../data/theme'
 import { supabase } from '../lib/supabase'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
+import { useLang, relativTidLang, datoLinjeLang } from '../lib/lang'
 
-function relativTid(isoString) {
-  const diff = Date.now() - new Date(isoString).getTime()
-  const min = Math.floor(diff / 60000)
-  if (min < 1) return 'Lige nu'
-  if (min < 60) return `${min} min siden`
-  const timer = Math.floor(min / 60)
-  if (timer < 24) return `${timer} t siden`
-  const dage = Math.floor(timer / 24)
-  return `${dage} dag${dage > 1 ? 'e' : ''} siden`
-}
-
-function hilsen() {
-  const t = new Date().getHours()
-  if (t < 10) return 'Godmorgen'
-  if (t < 14) return 'God formiddag'
-  if (t < 18) return 'God eftermiddag'
-  return 'God aften'
-}
-
-function datoLinje() {
-  return new Date()
-    .toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })
-    .toUpperCase()
+function hilsen(t) {
+  const h = new Date().getHours()
+  if (h < 10) return t('hjem.godmorgen')
+  if (h < 14) return t('hjem.godFormiddag')
+  if (h < 18) return t('hjem.godEftermiddag')
+  return t('hjem.godAftenen')
 }
 
 function beregnStreak(kreationer) {
@@ -48,6 +32,7 @@ function beregnStreak(kreationer) {
 
 export default function Hjem() {
   const navigate = useNavigate()
+  const { t, lang } = useLang()
   const [opskrifter, setOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
   const [vennerListe, setVennerListe] = useState(() => hentVenner())
@@ -227,18 +212,22 @@ export default function Hjem() {
       {/* Hilsen */}
       <header style={styles.topRow}>
         <div>
-          <p style={styles.eyebrow}>{datoLinje()}</p>
+          <p style={styles.eyebrow}>{datoLinjeLang(lang)}</p>
           <h1 style={styles.title}>
-            {hilsen()},<br />{bruger?.navn ?? 'Kok'} 👋
+            {hilsen(t)},<br />{bruger?.navn ?? 'Kok'} 👋
           </h1>
         </div>
-        <div style={styles.avatar}>{bruger?.avatar ?? '🧑‍🍳'}</div>
+        <button style={{ ...styles.avatar, border: 'none', cursor: 'pointer', padding: 0 }} onClick={() => navigate('/profil')}>
+          {bruger?.avatarUrl
+            ? <img src={bruger.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 999 }} />
+            : bruger?.avatar ?? '🧑‍🍳'}
+        </button>
       </header>
 
       {/* Streak / stats */}
       <div style={styles.stats}>
-        <Stat tal={streak > 0 ? streak : '—'} label="dages streak" ikon="🔥" fremhæv />
-        <Stat tal={kreationer.length || '—'} label="retter lavet" ikon="🍳" />
+        <Stat tal={streak > 0 ? streak : '—'} label={t('hjem.streakLabel')} ikon="🔥" fremhæv />
+        <Stat tal={kreationer.length || '—'} label={t('pf.retterLavet').replace('🍽️ ', '')} ikon="🍳" />
         <Stat tal={likes.length || '—'} label="gemte" ikon="🔖" />
       </div>
 
@@ -249,7 +238,7 @@ export default function Hjem() {
           type="search"
           value={søgeTekst}
           onChange={(e) => håndterSøg(e.target.value)}
-          placeholder="Søg i opskrifter…"
+          placeholder={t('hjem.søgPlaceholder').replace('🔍 ', '')}
           style={styles.søgeInput}
         />
         {søgeTekst && (
@@ -261,7 +250,7 @@ export default function Hjem() {
       {søgerAktivt && (
         <div style={styles.søgePanel}>
           {søgeResultater.length === 0 ? (
-            <p style={styles.søgeTom}>Ingen opskrifter fundet for "{søgeTekst}"</p>
+            <p style={styles.søgeTom}>{t('hjem.søgIngen')} "{søgeTekst}"</p>
           ) : (
             søgeResultater.map((o) => {
               const img = billedeUrl(o.storage_image)
@@ -285,13 +274,13 @@ export default function Hjem() {
       )}
 
       {/* Stories — aktive venner */}
-      {!søgerAktivt && <Section titel="Aktive lige nu" handling="Tilføj venner" onHandling={() => navigate('/profil')} />}
+      {!søgerAktivt && <Section titel={t('hjem.aktivNu')} handling={t('pf.tilføj')} onHandling={() => navigate('/profil')} />}
       {!søgerAktivt && (
         vennerListe.length === 0 ? (
           <div style={styles.tomVenner}>
             <span style={{ fontSize: 28 }}>👥</span>
-            <p style={styles.tomVennerTekst}>Tilføj venner for at se, hvad de laver i køkkenet.</p>
-            <button style={styles.tilføjVenBtn} onClick={() => navigate('/profil')}>+ Find venner</button>
+            <p style={styles.tomVennerTekst}>{t('hjem.ingenAktive')}</p>
+            <button style={styles.tilføjVenBtn} onClick={() => navigate('/profil')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
           </div>
         ) : (
           <div style={styles.scrollRow}>
@@ -315,7 +304,7 @@ export default function Hjem() {
       )}
 
       {/* Ugens opskrift */}
-      {!søgerAktivt && <Section titel="Ugens opskrift" />}
+      {!søgerAktivt && <Section titel={lang === 'en' ? 'Recipe of the week' : 'Ugens opskrift'} />}
       {!søgerAktivt && (loading ? (
         <div style={styles.featuredSkeleton} />
       ) : featured ? (
@@ -323,7 +312,7 @@ export default function Hjem() {
       ) : null)}
 
       {/* Socialt feed */}
-      {!søgerAktivt && <Section titel="I dit fællesskab" handling="Følg flere" onHandling={() => navigate('/profil')} />}
+      {!søgerAktivt && <Section titel={t('hjem.senesteFeed')} handling={lang === 'en' ? 'Follow more' : 'Følg flere'} onHandling={() => navigate('/profil')} />}
       {!søgerAktivt && <div style={styles.feed}>
         {dbPosts.length > 0
           ? dbPosts.map((p) => (
@@ -333,11 +322,11 @@ export default function Hjem() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={styles.postNavn}>
                     {p.bruger_navn}{' '}
-                    <span style={styles.postHandling}>lavede</span>
+                    <span style={styles.postHandling}>{t('hjem.likerDu')}</span>
                   </p>
-                  <p style={styles.postTid}>{relativTid(p.created_at)}</p>
+                  <p style={styles.postTid}>{relativTidLang(p.created_at, t)}</p>
                 </div>
-                <button style={styles.followBtn} onClick={() => navigate('/profil')}>+ Følg</button>
+                <button style={styles.followBtn} onClick={() => navigate('/profil')}>+ {t('pf.følger')}</button>
               </div>
               {p.foto_path ? (
                 <img
@@ -363,14 +352,14 @@ export default function Hjem() {
                     style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
                     onClick={() => navigate(`/opskrift/${p.opskrift_id}`)}
                   >
-                    Lav også →
+                    {t('bp.lavOgså')}
                   </button>
                 ) : (
                   <button
                     style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
                     onClick={() => navigate('/madmatch')}
                   >
-                    Lav også →
+                    {t('bp.lavOgså')}
                   </button>
                 )}
               </div>
@@ -380,27 +369,27 @@ export default function Hjem() {
             ? (
               <div style={styles.feedTom}>
                 <span style={{ fontSize: 40 }}>👨‍👩‍👧</span>
-                <p style={styles.feedTomTitel}>Dit fællesskab venter på dig</p>
-                <p style={styles.feedTomTekst}>Tilføj venner for at se hvad de laver i køkkenet — og lad dem følge med i dine retter.</p>
+                <p style={styles.feedTomTitel}>{t('hjem.ingenFeed')}</p>
+                <p style={styles.feedTomTekst}>{t('hjem.ingenFeedSub')}</p>
                 <div style={styles.feedTomKnapper}>
-                  <button style={styles.feedTomPrimær} onClick={() => navigate('/profil')}>+ Find venner</button>
-                  <button style={styles.feedTomSekundær} onClick={() => navigate('/opret')}>Del en ret</button>
+                  <button style={styles.feedTomPrimær} onClick={() => navigate('/profil')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
+                  <button style={styles.feedTomSekundær} onClick={() => navigate('/opret')}>{t('nav.opret')}</button>
                 </div>
               </div>
             )
             : (
               <div style={styles.feedTom}>
                 <span style={{ fontSize: 40 }}>🍳</span>
-                <p style={styles.feedTomTitel}>Ingen har postet endnu</p>
-                <p style={styles.feedTomTekst}>Vær den første til at dele en ret — dine venner vil se den her.</p>
-                <button style={styles.feedTomPrimær} onClick={() => navigate('/opret')}>Del din første ret</button>
+                <p style={styles.feedTomTitel}>{t('hjem.ingenFeed')}</p>
+                <p style={styles.feedTomTekst}>{t('hjem.ingenFeedSub')}</p>
+                <button style={styles.feedTomPrimær} onClick={() => navigate('/opret')}>{t('nav.opret')}</button>
               </div>
             )
         }
       </div>}
 
       {/* Mere til dig */}
-      {!søgerAktivt && <Section titel="Mere til dig" handling="Se alle" onHandling={() => navigate('/galleri')} />}
+      {!søgerAktivt && <Section titel={lang === 'en' ? 'More for you' : 'Mere til dig'} handling={lang === 'en' ? 'See all' : 'Se alle'} onHandling={() => navigate('/galleri')} />}
       {!søgerAktivt && <div style={styles.swipeRække}>
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
@@ -425,7 +414,7 @@ function FeaturedCard({ opskrift, onClick }) {
     <button style={styles.featured} onClick={onClick}>
       <div style={{ ...styles.featuredHero, background: grad(farve) }}>
         {imgUrl && <img src={imgUrl} alt={opskrift.title} style={styles.featuredImg} />}
-        <span style={styles.featuredBadge}>⭐ Anbefalet til dig</span>
+        <span style={styles.featuredBadge}>⭐ {lang === 'en' ? 'Recommended for you' : 'Anbefalet til dig'}</span>
       </div>
       <div style={styles.featuredBody}>
         <h3 style={styles.featuredTitel}>{opskrift.title}</h3>

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { colors, shadow, font } from '../data/theme'
+import { useLang } from '../lib/lang'
 
 // --- Ikoner (stroke-baserede SVG'er, arver currentColor) ---
 
@@ -57,19 +58,21 @@ function PersonIcon({ size = 24 }) {
   )
 }
 
-const tabs = [
-  { to: '/hjem', label: 'Hjem', Icon: HouseIcon },
-  { to: '/madmatch', label: 'Mad-match', Icon: SwipeIcon },
-  { to: '/opret', label: 'Opret', Icon: SparkleIcon, featured: true },
-  { to: '/lager', label: 'Lager', Icon: PantryIcon },
-  { to: '/profil', label: 'Profil', Icon: PersonIcon },
-]
-
 export default function BottomNav() {
+  const { t } = useLang()
+  const tabs = [
+    { to: '/hjem',     labelKey: 'nav.hjem',     Icon: HouseIcon },
+    { to: '/madmatch', labelKey: 'nav.madmatch',  Icon: SwipeIcon },
+    { to: '/opret',    labelKey: 'nav.opret',     Icon: SparkleIcon, featured: true },
+    { to: '/lager',    labelKey: 'nav.lager',     Icon: PantryIcon },
+    { to: '/profil',   labelKey: 'nav.profil',    Icon: PersonIcon },
+  ]
   return (
     <nav style={styles.nav}>
       <div style={styles.inner}>
-        {tabs.map(({ to, label, Icon, featured }) => (
+        {tabs.map(({ to, labelKey, Icon, featured }) => {
+          const label = t(labelKey)
+          return (
           <NavLink key={to} to={to} style={styles.link}>
             {({ isActive }) =>
               featured ? (
@@ -79,7 +82,7 @@ export default function BottomNav() {
               )
             }
           </NavLink>
-        ))}
+        )})}
       </div>
     </nav>
   )

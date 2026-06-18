@@ -8,6 +8,7 @@ import { gemLike, fjernLike } from '../data/likes'
 import { gemAfvist, rydOgHent } from '../data/afviste'
 import { colors, shadow, radius, font } from '../data/theme'
 import { hentAktivBruger } from '../data/auth'
+import { useLang } from '../lib/lang'
 
 const SWIPE_THRESHOLD = 110
 
@@ -22,6 +23,7 @@ function bland(liste) {
 
 export default function MadMatch() {
   const navigate = useNavigate()
+  const { t } = useLang()
   const [alleOpskrifter, setAlleOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
   const [brugLager, setBrugLager] = useState(true)
@@ -202,16 +204,22 @@ export default function MadMatch() {
   }
 
   const MEAL_FILTERS = [
-    { key: 'morgenmad', label: '🌅 Morgen' },
-    { key: 'frokost',   label: '🥗 Frokost' },
-    { key: 'aftensmad', label: '🍽️ Aftensmad' },
+    { key: 'morgenmad', label: t('mm.morgen') },
+    { key: 'frokost',   label: t('mm.frokost') },
+    { key: 'aftensmad', label: t('mm.aftensmad') },
   ]
+
+  const TAG_LABELS = {
+    vegetar: t('mm.vegetar'),
+    kød:     t('mm.kød'),
+    fisk:    t('mm.fisk'),
+  }
 
   return (
     <div style={styles.page}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Mad-match</h1>
-        <p style={styles.subtitle}>Swipe dig til aftensmaden</p>
+        <h1 style={styles.title}>{t('mm.titel')}</h1>
+        <p style={styles.subtitle}>{t('mm.subtitle')}</p>
       </header>
 
       {/* Filter-chips — række 1 */}
@@ -220,7 +228,7 @@ export default function MadMatch() {
           style={{ ...styles.filterChip, ...(brugLager ? styles.filterChipAktiv : null) }}
           onClick={skiftTilstand}
         >
-          🧺 Mit lager
+          {t('mm.mitLager')}
         </button>
         {['vegetar', 'kød', 'fisk'].map((tag) => (
           <button
@@ -228,14 +236,14 @@ export default function MadMatch() {
             style={{ ...styles.filterChip, ...(tagFilter === tag ? styles.filterChipAktiv : null) }}
             onClick={() => toggleTag(tag)}
           >
-            {tag.charAt(0).toUpperCase() + tag.slice(1)}
+            {TAG_LABELS[tag]}
           </button>
         ))}
         <button
           style={{ ...styles.filterChip, ...(under30 ? styles.filterChipAktiv : null) }}
           onClick={() => { setUnder30((v) => !v); nulstilStak() }}
         >
-          ⏱ Under 30 min
+          {t('mm.under30')}
         </button>
       </div>
 
@@ -257,10 +265,10 @@ export default function MadMatch() {
         {loading ? (
           <div style={styles.loadCard}>
             <span style={{ fontSize: 48 }}>🍳</span>
-            <p style={styles.loadTekst}>Henter opskrifter…</p>
+            <p style={styles.loadTekst}>{t('mm.henter')}</p>
           </div>
         ) : slut ? (
-          <TomStak brugLager={brugLager} antalGemte={gemte.length} onForfra={nulstilStak} />
+          <TomStak antalGemte={gemte.length} onForfra={nulstilStak} t={t} />
         ) : (
           synlige
             .map((opskrift, i) => {
@@ -333,13 +341,13 @@ export default function MadMatch() {
   )
 }
 
-function TomStak({ antalGemte, onForfra }) {
+function TomStak({ antalGemte, onForfra, t }) {
   return (
     <div style={styles.tom}>
       <div style={styles.tomEmoji}>{antalGemte > 0 ? '🎉' : '🤔'}</div>
-      <h2 style={styles.tomTitel}>Det var dem!</h2>
-      <p style={styles.tomTekst}>Du gemte {antalGemte} {antalGemte === 1 ? 'ret' : 'retter'}.</p>
-      <button onClick={onForfra} style={styles.forfraBtn}>Start forfra</button>
+      <h2 style={styles.tomTitel}>{t('mm.tomTitel')}</h2>
+      <p style={styles.tomTekst}>{t('mm.tomGemte')} {antalGemte} {antalGemte === 1 ? t('mm.tomRet') : t('mm.tomRetter')}.</p>
+      <button onClick={onForfra} style={styles.forfraBtn}>{t('mm.tomForfra')}</button>
     </div>
   )
 }

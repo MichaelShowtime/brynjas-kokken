@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { logInd } from '../data/auth'
 import { colors, shadow, radius, font } from '../data/theme'
+import { useLang } from '../lib/lang'
 
 export default function Login() {
   const navigate = useNavigate()
+  const { t } = useLang()
   const [visning, setVisning] = useState('login') // 'login' | 'glemt' | 'sendt' | 'nulstil'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,7 +30,6 @@ export default function Login() {
     e.preventDefault()
     setFejl('')
     setLoading(true)
-    // Med Supabase Auth: brug supabase.auth.resetPasswordForEmail() i produktion
     setLoading(false)
     setVisning('sendt')
   }
@@ -53,21 +54,21 @@ export default function Login() {
         {/* Login */}
         {visning === 'login' && (
           <>
-            <h1 style={s.overskrift}>Velkommen tilbage</h1>
-            <p style={s.underoverskrift}>Log ind på din konto</p>
+            <h1 style={s.overskrift}>{t('li.velkomst')}</h1>
+            <p style={s.underoverskrift}>{t('li.undertitel')}</p>
 
             {fejl && <div style={s.fejlboks}>{fejl}</div>}
 
             <form onSubmit={håndterLogin} style={s.form}>
-              <label style={s.label}>E-mail</label>
+              <label style={s.label}>{t('li.email')}</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="din@mail.dk" style={s.input} autoComplete="email" required />
 
-              <label style={s.label}>Adgangskode</label>
+              <label style={s.label}>{t('li.adgangskode')}</label>
               <div style={s.pwWrap}>
                 <input type={visPassword ? 'text' : 'password'} value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 6 tegn" style={{ ...s.input, marginBottom: 0 }}
+                  placeholder={t('li.nyAdgPh')} style={{ ...s.input, marginBottom: 0 }}
                   autoComplete="current-password" required />
                 <button type="button" style={s.visBtn} onClick={() => setVisPassword(!visPassword)}>
                   {visPassword ? '🙈' : '👁️'}
@@ -75,17 +76,17 @@ export default function Login() {
               </div>
 
               <button type="button" style={s.glemtLink} onClick={() => { setVisning('glemt'); setFejl('') }}>
-                Glemt adgangskode?
+                {t('li.glemt')}
               </button>
 
               <button type="submit" style={{ ...s.primærBtn, opacity: loading ? 0.7 : 1 }} disabled={loading}>
-                {loading ? 'Logger ind…' : 'Log ind'}
+                {loading ? t('li.loggerInd') : t('li.logInd')}
               </button>
             </form>
 
             <p style={s.skiftTekst}>
-              Ingen konto?{' '}
-              <Link to="/register" style={s.link}>Opret dig her</Link>
+              {t('li.ingenKonto')}{' '}
+              <Link to="/register" style={s.link}>{t('li.opretHer')}</Link>
             </p>
           </>
         )}
@@ -94,19 +95,19 @@ export default function Login() {
         {visning === 'glemt' && (
           <>
             <button style={s.tilbageBtn} onClick={() => { setVisning('login'); setFejl('') }}>
-              ‹ Tilbage
+              {t('li.tilbage')}
             </button>
-            <h1 style={s.overskrift}>Glemt adgangskode?</h1>
-            <p style={s.underoverskrift}>Indtast din e-mail, så sender vi et nulstillingslink.</p>
+            <h1 style={s.overskrift}>{t('li.glemtTitel')}</h1>
+            <p style={s.underoverskrift}>{t('li.glemtTekst')}</p>
 
             {fejl && <div style={s.fejlboks}>{fejl}</div>}
 
             <form onSubmit={håndterGlemt} style={s.form}>
-              <label style={s.label}>E-mail</label>
+              <label style={s.label}>{t('li.email')}</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="din@mail.dk" style={s.input} required />
               <button type="submit" style={{ ...s.primærBtn, opacity: loading ? 0.7 : 1 }} disabled={loading}>
-                {loading ? 'Sender…' : 'Send nulstillingslink'}
+                {loading ? t('li.sender') : t('li.sendLink')}
               </button>
             </form>
           </>
@@ -116,13 +117,13 @@ export default function Login() {
         {visning === 'sendt' && (
           <>
             <div style={s.ikonCirkel}>📬</div>
-            <h1 style={s.overskrift}>Tjek din mail</h1>
+            <h1 style={s.overskrift}>{t('li.tjekMail')}</h1>
             <p style={s.underoverskrift}>
-              Har vi en konto med <strong>{email}</strong>, sender vi et nulstillingslink om lidt.
+              {t('li.mailSendt1')} <strong>{email}</strong>{t('li.mailSendt2')}
             </p>
 
             <button style={s.sekundærBtn} onClick={() => { setVisning('login'); setFejl('') }}>
-              Tilbage til login
+              {t('li.tilbageLogin')}
             </button>
           </>
         )}
@@ -131,18 +132,18 @@ export default function Login() {
         {visning === 'nulstil' && (
           <>
             <div style={s.ikonCirkel}>🔐</div>
-            <h1 style={s.overskrift}>Ny adgangskode</h1>
+            <h1 style={s.overskrift}>{t('li.nyAdg')}</h1>
 
             {fejl && <div style={s.fejlboks}>{fejl}</div>}
 
             <form onSubmit={håndterNulstil} style={s.form}>
-              <label style={s.label}>Ny adgangskode</label>
+              <label style={s.label}>{t('li.nyAdg')}</label>
               <input type="password" value={nyPw} onChange={(e) => setNyPw(e.target.value)}
-                placeholder="Min. 6 tegn" style={s.input} required />
-              <label style={s.label}>Gentag adgangskode</label>
+                placeholder={t('li.nyAdgPh')} style={s.input} required />
+              <label style={s.label}>{t('li.gentagAdg')}</label>
               <input type="password" value={nyPw2} onChange={(e) => setNyPw2(e.target.value)}
-                placeholder="Samme adgangskode" style={s.input} required />
-              <button type="submit" style={s.primærBtn}>Gem ny adgangskode</button>
+                placeholder={t('li.gentagPh')} style={s.input} required />
+              <button type="submit" style={s.primærBtn}>{t('li.gemNy')}</button>
             </form>
           </>
         )}
@@ -182,8 +183,4 @@ const s = {
 
   tilbageBtn: { background: 'none', border: 'none', fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.green, padding: '0 0 16px', cursor: 'pointer' },
   ikonCirkel: { fontSize: 48, textAlign: 'center', margin: '0 0 16px' },
-
-  demoBox: { background: 'rgba(47,107,79,0.08)', borderRadius: 14, padding: '14px', marginBottom: 16 },
-  demoTitel: { fontFamily: font.body, fontWeight: 800, fontSize: 13, color: colors.green, margin: '0 0 4px' },
-  demoTekst: { fontFamily: font.body, fontSize: 13, color: colors.muted, margin: '0 0 12px', lineHeight: 1.4 },
 }
