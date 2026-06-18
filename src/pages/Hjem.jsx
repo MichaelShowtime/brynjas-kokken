@@ -404,6 +404,7 @@ export default function Hjem() {
 }
 
 function FeaturedCard({ opskrift, onClick }) {
+  const { lang } = useLang()
   const imgUrl = billedeUrl(opskrift.storage_image)
   const farve = opskriftFarve(opskrift.tags)
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
