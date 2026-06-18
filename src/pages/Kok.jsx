@@ -83,43 +83,41 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
   const [citat, setCitat] = useState('')
   const [del, setDel] = useState(false)
   const [uploader, setUploader] = useState(false)
-  const filRef = useRef(null)
+  const kameraRef  = useRef(null)
+  const galleriRef = useRef(null)
 
   function vælgFoto(e) {
     const fil = e.target.files?.[0]
     if (!fil) return
     setFoto(fil)
     setFotoUrl(URL.createObjectURL(fil))
-    setDel(true) // auto-aktivér deling når foto vælges
+    setDel(true)
   }
 
   async function gem() {
     setUploader(true)
-    let storagePath = null
-    let publicUrl   = null
-    if (foto) {
+    const bruger = hentAktivBruger()
+    let publicUrl = null
+    if (foto && bruger?.id) {
       const ext  = foto.name.split('.').pop() || 'jpg'
-      const navn = `kreationer/${Date.now()}.${ext}`
+      const navn = `avatarer/kreation_${bruger.id}_${Date.now()}.${ext}`
       const { data, error } = await supabase.storage
         .from('recipes').upload(navn, foto, { cacheControl: '3600', upsert: true })
       if (!error && data?.path) {
-        storagePath = data.path
         const { data: urlData } = supabase.storage.from('recipes').getPublicUrl(data.path)
         publicUrl = urlData?.publicUrl ?? null
       }
     }
-    const bruger = hentAktivBruger()
     gemKreation({
       id:         Date.now().toString(),
       titel:      opskrift.title,
       opskriftId: opskrift.id,
       tidBrugt,
       dato:       new Date().toISOString(),
-      foto:       publicUrl ?? storagePath,
+      foto:       publicUrl,
       bruger:     bruger?.navn ?? 'Anonym',
     })
 
-    // Del med fællesskabet → insert i posts-tabel
     if (del && bruger) {
       await supabase.from('posts').insert({
         user_id:        bruger.id,
@@ -128,7 +126,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
         bruger_avatar:  bruger.avatar ?? '🧑‍🍳',
         opskrift_id:    String(opskrift.id),
         opskrift_titel: opskrift.title,
-        foto_path:      publicUrl ?? storagePath,
+        foto_path:      publicUrl,
         citat:          citat.trim() || null,
       })
     }
@@ -146,17 +144,25 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt }) {
           Du brugte <strong>{tidBrugt}</strong> på {opskrift.title}.
         </p>
 
-        {/* Foto-upload */}
-        <button style={m.fotoKnap} onClick={() => filRef.current?.click()}>
-          {fotoUrl
-            ? <img src={fotoUrl} alt="Madfoto" style={m.fotoPreview} />
-            : <><span style={{ fontSize: 28 }}>📷</span><span style={m.fotoLabel}>Tilføj et foto</span></>
-          }
-        </button>
-        <input
-          ref={filRef} type="file" accept="image/*" capture="environment"
-          style={{ display: 'none' }} onChange={vælgFoto}
-        />
+        {/* Foto — preview eller to knapper */}
+        {fotoUrl ? (
+          <button style={m.fotoKnap} onClick={() => galleriRef.current?.click()}>
+            <img src={fotoUrl} alt="Madfoto" style={m.fotoPreview} />
+          </button>
+        ) : (
+          <div style={m.fotoValg}>
+            <button style={m.fotoValgKnap} onClick={() => kameraRef.current?.click()}>
+              <span style={{ fontSize: 22 }}>📷</span>
+              <span style={m.fotoValgLabel}>Tag foto</span>
+            </button>
+            <button style={m.fotoValgKnap} onClick={() => galleriRef.current?.click()}>
+              <span style={{ fontSize: 22 }}>🖼️</span>
+              <span style={m.fotoValgLabel}>Upload foto</span>
+            </button>
+          </div>
+        )}
+        <input ref={kameraRef}  type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={vælgFoto} />
+        <input ref={galleriRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={vælgFoto} />
 
         {/* Del med fællesskabet */}
         <div style={m.delRække}>
@@ -537,6 +543,13 @@ const m = {
   },
   fotoPreview: { width: '100%', height: '100%', objectFit: 'cover' },
   fotoLabel: { fontFamily: font.body, fontSize: 14, fontWeight: 600, color: colors.muted },
+  fotoValg: { display: 'flex', gap: 10, width: '100%' },
+  fotoValgKnap: {
+    flex: 1, height: 80, borderRadius: 16, border: `2px dashed ${colors.border}`,
+    background: colors.bg, display: 'flex', flexDirection: 'column', alignItems: 'center',
+    justifyContent: 'center', gap: 5, cursor: 'pointer', padding: 0,
+  },
+  fotoValgLabel: { fontFamily: font.body, fontSize: 13, fontWeight: 600, color: colors.muted },
   delRække: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '6px 0' },
   delLabel: { fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.text },
   toggle: { position: 'relative', width: 48, height: 26, borderRadius: 999, border: 'none', padding: 0, flexShrink: 0, transition: 'background 0.2s', cursor: 'pointer' },
