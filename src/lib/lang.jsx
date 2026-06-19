@@ -338,6 +338,18 @@ const T = {
     'bp.lavOgså':        'Lav også →',
     'bp.ikkeFundet':     'Bruger ikke fundet',
     'bp.tilbage':        '← Tilbage',
+
+    // Posts — kommentarer, rediger, slet
+    'post.menuRediger':  'Rediger',
+    'post.menuSlet':     'Slet opslag',
+    'post.sletBekræft':  'Er du sikker på, at du vil slette dette opslag?',
+    'post.sletJa':       'Ja, slet',
+    'post.fortryd':      'Nej, fortryd',
+    'post.redigerTitel': 'Rediger opslag',
+    'post.ingenKom':     'Ingen kommentarer endnu — vær den første!',
+    'post.skrivKom':     'Skriv en kommentar…',
+    'kok.modal.tagIgen':    '📷 Tag igen',
+    'kok.modal.skiftBill':  '🖼️ Skift billede',
   },
 
   en: {
@@ -673,6 +685,18 @@ const T = {
     'bp.lavOgså':        'Make it too →',
     'bp.ikkeFundet':     'User not found',
     'bp.tilbage':        '← Back',
+
+    // Posts — comments, edit, delete
+    'post.menuRediger':  'Edit',
+    'post.menuSlet':     'Delete post',
+    'post.sletBekræft':  'Are you sure you want to delete this post?',
+    'post.sletJa':       'Yes, delete',
+    'post.fortryd':      'No, keep it',
+    'post.redigerTitel': 'Edit post',
+    'post.ingenKom':     'No comments yet — be the first!',
+    'post.skrivKom':     'Write a comment…',
+    'kok.modal.tagIgen':    '📷 Retake',
+    'kok.modal.skiftBill':  '🖼️ Change photo',
   },
 }
 

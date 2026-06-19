@@ -156,9 +156,17 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
 
         {/* Foto — preview eller to knapper */}
         {fotoUrl ? (
-          <button style={m.fotoKnap} onClick={() => galleriRef.current?.click()}>
+          <div style={m.fotoPreviewWrap}>
             <img src={fotoUrl} alt="Madfoto" style={m.fotoPreview} />
-          </button>
+            <div style={m.fotoActions}>
+              <button style={m.fotoActionKnap} onClick={() => kameraRef.current?.click()}>
+                {t('kok.modal.tagIgen')}
+              </button>
+              <button style={m.fotoActionKnap} onClick={() => galleriRef.current?.click()}>
+                {t('kok.modal.skiftBill')}
+              </button>
+            </div>
+          </div>
         ) : (
           <div style={m.fotoValg}>
             <button style={m.fotoValgKnap} onClick={() => kameraRef.current?.click()}>
@@ -554,12 +562,14 @@ const m = {
     fontFamily: font.body, fontSize: 15, color: colors.muted, textAlign: 'center', margin: 0,
     lineHeight: 1.5,
   },
-  fotoKnap: {
-    width: '100%', height: 120, borderRadius: 16, border: `2px dashed ${colors.border}`,
-    background: colors.bg, display: 'flex', flexDirection: 'column', alignItems: 'center',
-    justifyContent: 'center', gap: 6, cursor: 'pointer', overflow: 'hidden', padding: 0,
+  fotoPreviewWrap: { width: '100%', display: 'flex', flexDirection: 'column', gap: 8 },
+  fotoPreview: { width: '100%', height: 140, objectFit: 'cover', borderRadius: 16, display: 'block' },
+  fotoActions: { display: 'flex', gap: 8 },
+  fotoActionKnap: {
+    flex: 1, padding: '9px 0', fontFamily: font.body, fontSize: 13, fontWeight: 600,
+    color: colors.muted, background: colors.bg, border: `1px solid ${colors.border}`,
+    borderRadius: 12, cursor: 'pointer',
   },
-  fotoPreview: { width: '100%', height: '100%', objectFit: 'cover' },
   fotoLabel: { fontFamily: font.body, fontSize: 14, fontWeight: 600, color: colors.muted },
   fotoValg: { display: 'flex', gap: 10, width: '100%' },
   fotoValgKnap: {
