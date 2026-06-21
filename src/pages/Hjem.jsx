@@ -630,6 +630,7 @@ function KommentarSektion({ postId, bruger, t }) {
   const [loading, setLoading] = useState(true)
   const [tekst, setTekst] = useState('')
   const [sender, setSender] = useState(false)
+  const [fejl, setFejl] = useState(null)
 
   useEffect(() => {
     supabase
@@ -643,15 +644,22 @@ function KommentarSektion({ postId, bruger, t }) {
   }, [postId])
 
   async function sendKommentar() {
-    if (!tekst.trim() || !bruger?.id) return
+    if (!tekst.trim()) return
+    setFejl(null)
+
+    // Brug rigtig Supabase auth session — ikke cachede localStorage-data
+    const { data: authData } = await supabase.auth.getUser()
+    const uid = authData?.user?.id ?? bruger?.id
+    if (!uid) { setFejl('Ikke logget ind'); return }
+
     const indhold = tekst.trim()
     const tempId = Date.now()
     const optimistisk = {
       id: tempId,
       post_id: postId,
-      user_id: bruger.id,
-      bruger_navn: bruger.navn ?? 'Anonym',
-      bruger_avatar: bruger.avatar ?? null,
+      user_id: uid,
+      bruger_navn: bruger?.navn ?? 'Anonym',
+      bruger_avatar: bruger?.avatar ?? null,
       tekst: indhold,
       created_at: new Date().toISOString(),
     }
@@ -662,13 +670,14 @@ function KommentarSektion({ postId, bruger, t }) {
       .from('post_kommentarer')
       .insert({
         post_id:       postId,
-        user_id:       bruger.id,
-        bruger_navn:   bruger.navn ?? 'Anonym',
-        bruger_avatar: bruger.avatar ?? null,
+        user_id:       uid,
+        bruger_navn:   bruger?.navn ?? 'Anonym',
+        bruger_avatar: bruger?.avatar ?? null,
         tekst:         indhold,
       })
     if (error) {
       console.error('Kommentar insert fejl:', error)
+      setFejl(error.message)
       setKommentarer(prev => prev.filter(k => k.id !== tempId))
     }
     setSender(false)
@@ -691,6 +700,11 @@ function KommentarSektion({ postId, bruger, t }) {
             ))}
           </div>
         )
+      )}
+      {fejl && (
+        <p style={{ fontFamily: font.body, fontSize: 11, color: colors.red, margin: '4px 12px', padding: '4px 8px', background: 'rgba(194,91,74,0.08)', borderRadius: 6 }}>
+          Fejl: {fejl}
+        </p>
       )}
       {bruger && (
         <div style={kom.inputRow}>
