@@ -56,6 +56,7 @@ export default function Opret() {
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
   const filInputRef = useRef(null)
+  const galleriInputRef = useRef(null)
   const navigate = useNavigate()
 
   useEffect(() => setHistorik(hentKreationer()), [])
@@ -211,6 +212,8 @@ export default function Opret() {
     <div style={styles.page}>
       <input ref={filInputRef} type="file" accept="image/*" capture="environment"
         onChange={onFilValgt} style={{ display: 'none' }} />
+      <input ref={galleriInputRef} type="file" accept="image/*"
+        onChange={onFilValgt} style={{ display: 'none' }} />
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       {view === 'intro' && (
@@ -218,7 +221,7 @@ export default function Opret() {
           fejl={fejl}
           historik={historik}
           onKamera={() => startKamera()}
-          onUpload={() => filInputRef.current?.click()}
+          onUpload={() => galleriInputRef.current?.click()}
           onÅbn={(k) => { setValgt(k); setView('detalje') }}
         />
       )}
