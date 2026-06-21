@@ -787,10 +787,12 @@ function RedigerModal({ citat, t, onGem, onLuk }) {
 // ── Øvrige subkomponenter ─────────────────────────────────────────────────────
 
 function getDagensRet(opskrifter) {
-  if (!opskrifter.length) return null
+  const aftensmad = opskrifter.filter(o => o.tags?.includes('aftensmad'))
+  const pulje = aftensmad.length > 0 ? aftensmad : opskrifter
+  if (!pulje.length) return null
   const dato = new Date().toISOString().split('T')[0]
   const seed = parseInt(dato.split('-').join(''), 10)
-  const stabil = [...opskrifter].sort((a, b) => (a.id < b.id ? -1 : 1))
+  const stabil = [...pulje].sort((a, b) => (a.id < b.id ? -1 : 1))
   return stabil[seed % stabil.length]
 }
 
