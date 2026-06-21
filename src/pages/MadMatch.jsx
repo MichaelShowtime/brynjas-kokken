@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Heart } from 'lucide-react'
 import SwipeCard from '../components/SwipeCard'
 import { supabase } from '../lib/supabase'
 import { tidMinutter } from '../lib/recipeUtils'
@@ -378,11 +379,7 @@ function CrossIcon() {
 }
 
 function HeartIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill={colors.green}>
-      <path d="M12 21s-7.5-4.6-10-9.2C.6 9 1.8 5.5 5 5.1c2-.3 3.4 1 4 2.1.6-1.1 2-2.4 4-2.1 3.2.4 4.4 3.9 3 6.7C19.5 16.4 12 21 12 21Z" />
-    </svg>
-  )
+  return <Heart size={26} fill={colors.green} color={colors.green} />
 }
 
 function UndoIcon() {
