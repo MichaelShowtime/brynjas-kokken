@@ -658,7 +658,7 @@ function KommentarSektion({ postId, bruger, t }) {
     setKommentarer(prev => [...prev, optimistisk])
     setTekst('')
     setSender(true)
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('post_kommentarer')
       .insert({
         post_id:       postId,
@@ -667,11 +667,8 @@ function KommentarSektion({ postId, bruger, t }) {
         bruger_avatar: bruger.avatar ?? null,
         tekst:         indhold,
       })
-      .select()
-      .single()
-    if (!error && data) {
-      setKommentarer(prev => prev.map(k => k.id === tempId ? data : k))
-    } else if (error) {
+    if (error) {
+      console.error('Kommentar insert fejl:', error)
       setKommentarer(prev => prev.filter(k => k.id !== tempId))
     }
     setSender(false)
