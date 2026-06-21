@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { billedeUrl, opskriftFarve, tidLabel, grad } from '../lib/recipeUtils'
 import { gemKreation } from '../data/kreationer'
+import { matchIngredienserMedLager, fjernFraLagerVedIds, hentAutoLager } from '../data/lager'
 import { hentAktivBruger } from '../data/auth'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
@@ -232,6 +233,7 @@ export default function Kok() {
   const [tjeklisteMarkeret, setTjeklisteMarkeret] = useState({})
   const [visAfslut, setVisAfslut] = useState(false)
   const [færdig, setFærdig] = useState(false)
+  const [lagerMatches, setLagerMatches] = useState(null)
   const { sekunder, kører, start, pause, stop, format } = useTimer()
 
   useWakeLock()
@@ -266,8 +268,21 @@ export default function Kok() {
 
   function handleGem(fotoUrl) {
     setVisAfslut(false)
-    setFærdig(true)
     stop()
+    const ingredienser = opskrift?.ingredients ?? []
+    if (ingredienser.length > 0) {
+      const matches = matchIngredienserMedLager(ingredienser)
+      if (matches.length > 0) {
+        if (hentAutoLager()) {
+          fjernFraLagerVedIds(matches.map((m) => m.lagerItem.id))
+          setFærdig(true)
+        } else {
+          setLagerMatches(matches)
+        }
+        return
+      }
+    }
+    setFærdig(true)
   }
 
   if (loading || !opskrift) {
@@ -395,6 +410,20 @@ export default function Kok() {
           t={t}
         />
       )}
+
+      {/* Lager-opdaterings-prompt */}
+      {lagerMatches && (
+        <LagerOpdateringsPrompt
+          matches={lagerMatches}
+          t={t}
+          onJa={(ids) => {
+            fjernFraLagerVedIds(ids)
+            setLagerMatches(null)
+            setFærdig(true)
+          }}
+          onNej={() => { setLagerMatches(null); setFærdig(true) }}
+        />
+      )}
     </div>
   )
 }
@@ -406,6 +435,73 @@ function CheckIcon() {
       <path d="M20 6L9 17l-5-5" />
     </svg>
   )
+}
+
+function LagerOpdateringsPrompt({ matches, t, onJa, onNej }) {
+  const [valgte, setValgte] = useState(() => new Set(matches.map((m) => m.lagerItem.id)))
+
+  function toggle(id) {
+    setValgte((prev) => {
+      const ny = new Set(prev)
+      ny.has(id) ? ny.delete(id) : ny.add(id)
+      return ny
+    })
+  }
+
+  return (
+    <div style={m.overlay}>
+      <div style={{ ...m.kort, gap: 14, alignItems: 'stretch' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 6 }}>🧺</div>
+          <h2 style={{ ...m.titel, fontSize: 20 }}>{t('kok.lager.titel')}</h2>
+          <p style={{ ...m.tekst, marginTop: 4 }}>{t('kok.lager.sub')}</p>
+        </div>
+
+        <div style={lp.liste}>
+          {matches.map(({ lagerItem, opskriftIng }) => {
+            const aktiv = valgte.has(lagerItem.id)
+            return (
+              <button
+                key={lagerItem.id}
+                style={{ ...lp.item, background: aktiv ? 'rgba(47,107,79,0.08)' : colors.bg, border: `1.5px solid ${aktiv ? colors.green : colors.border}` }}
+                onClick={() => toggle(lagerItem.id)}
+              >
+                <span style={{ fontSize: 22, flexShrink: 0 }}>{lagerItem.emoji}</span>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <p style={lp.navn}>{lagerItem.navn}</p>
+                  {opskriftIng.amount && (
+                    <p style={lp.meta}>{opskriftIng.amount} {opskriftIng.unit}</p>
+                  )}
+                </div>
+                <div style={{ ...lp.check, background: aktiv ? colors.green : 'transparent', border: `2px solid ${aktiv ? colors.green : colors.border}` }}>
+                  {aktiv && <CheckIcon />}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        <div style={{ ...m.knapper, marginTop: 4 }}>
+          <button style={m.sekundærKnap} onClick={onNej}>{t('kok.lager.nej')}</button>
+          <button
+            style={{ ...m.primærKnap, opacity: valgte.size === 0 ? 0.4 : 1 }}
+            disabled={valgte.size === 0}
+            onClick={() => onJa([...valgte])}
+          >
+            {t('kok.lager.ja')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const lp = {
+  liste: { display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' },
+  item: { display: 'flex', alignItems: 'center', gap: 12, borderRadius: 14, padding: '11px 14px', border: 'none', cursor: 'pointer', transition: 'all 0.15s' },
+  navn: { fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, margin: 0 },
+  meta: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, margin: '2px 0 0' },
+  check: { width: 22, height: 22, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' },
 }
 
 const s = {

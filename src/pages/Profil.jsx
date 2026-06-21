@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera } from 'lucide-react'
+import { Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera, ShoppingBasket } from 'lucide-react'
+import { hentAutoLager, gemAutoLager } from '../data/lager'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
 import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
@@ -152,6 +153,7 @@ export default function Profil() {
   const [antalFølgere, setAntalFølgere] = useState(0)
   const [logUdDialog, setLogUdDialog] = useState(false)
   const [tilføjVenÅben, setTilføjVenÅben] = useState(false)
+  const [autoLager, setAutoLagerState] = useState(hentAutoLager)
   const streak = beregnStreak(kreationer)
   const gnsTid = beregnGnsTid(kreationer)
 
@@ -432,6 +434,23 @@ export default function Profil() {
             <span style={s.indstPil}>›</span>
           </button>
         ))}
+
+        {/* Auto-opdater lager toggle */}
+        <div style={{ ...s.indstRække, cursor: 'default' }}>
+          <span style={s.indstEmoji}><ShoppingBasket size={20} /></span>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <p style={s.indstLabel}>{t('pf.autoLager')}</p>
+            <p style={s.indstSub}>{t('pf.autoLagerSub')}</p>
+          </div>
+          <Toggle
+            on={autoLager}
+            onToggle={() => {
+              const ny = !autoLager
+              setAutoLagerState(ny)
+              gemAutoLager(ny)
+            }}
+          />
+        </div>
       </div>
 
       <button style={s.logUdBtn} onClick={() => setLogUdDialog(true)}>{t('pf.logUd')}</button>

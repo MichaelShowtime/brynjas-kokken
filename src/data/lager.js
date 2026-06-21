@@ -40,6 +40,45 @@ export function opdaterVare(id, opdatering) {
   return liste
 }
 
+// ── Auto-lager indstilling ────────────────────────────────────────────────────
+const AUTO_KEY = 'simmer_auto_lager'
+
+export function hentAutoLager() {
+  try { return JSON.parse(localStorage.getItem(AUTO_KEY)) ?? false } catch { return false }
+}
+
+export function gemAutoLager(v) {
+  try { localStorage.setItem(AUTO_KEY, JSON.stringify(v)) } catch {}
+}
+
+// ── Match og fjern ingredienser ───────────────────────────────────────────────
+
+export function matchIngredienserMedLager(opskriftIngredienser) {
+  const lager = hentLager()
+  const set = new Set()
+  const matches = []
+  for (const ing of opskriftIngredienser) {
+    const søg = (ing.name ?? '').toLowerCase().trim()
+    if (!søg) continue
+    const match = lager.find((v) => {
+      const n = v.navn.toLowerCase().trim()
+      return n === søg || n.includes(søg) || søg.includes(n)
+    })
+    if (match && !set.has(match.id)) {
+      set.add(match.id)
+      matches.push({ lagerItem: match, opskriftIng: ing })
+    }
+  }
+  return matches
+}
+
+export function fjernFraLagerVedIds(ids) {
+  const idSet = new Set(ids.map(String))
+  const liste = hentLager().filter((v) => !idSet.has(String(v.id)))
+  gemLager(liste)
+  return liste
+}
+
 // ── Kategorier ────────────────────────────────────────────────────────────────
 export const KATEGORIER = [
   { id: 'køl',      label: 'Køl',                emoji: '❄️' },

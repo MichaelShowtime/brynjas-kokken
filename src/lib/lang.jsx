@@ -350,6 +350,16 @@ const T = {
     'post.skrivKom':     'Skriv en kommentar…',
     'kok.modal.tagIgen':    '📷 Tag igen',
     'kok.modal.skiftBill':  '🖼️ Skift billede',
+
+    // Lager-opdatering efter kreation
+    'kok.lager.titel':  'Opdater dit lager?',
+    'kok.lager.sub':    'Disse ingredienser fra retten fandtes i dit lager:',
+    'kok.lager.ja':     'Ja, fjern fra lager',
+    'kok.lager.nej':    'Nej tak',
+
+    // Profil — auto-lager
+    'pf.autoLager':    'Auto-opdater lager',
+    'pf.autoLagerSub': 'Fjerner automatisk ingredienser fra lageret når du afslutter en ret',
   },
 
   en: {
@@ -697,6 +707,16 @@ const T = {
     'post.skrivKom':     'Write a comment…',
     'kok.modal.tagIgen':    '📷 Retake',
     'kok.modal.skiftBill':  '🖼️ Change photo',
+
+    // Pantry update after creation
+    'kok.lager.titel':  'Update your pantry?',
+    'kok.lager.sub':    'These ingredients from the dish were found in your pantry:',
+    'kok.lager.ja':     'Yes, remove from pantry',
+    'kok.lager.nej':    'No thanks',
+
+    // Profile — auto-pantry
+    'pf.autoLager':    'Auto-update pantry',
+    'pf.autoLagerSub': 'Automatically removes ingredients from pantry when you finish a dish',
   },
 }
 
