@@ -35,6 +35,12 @@ const NAVNEFORSLAG = [
   'Hjemmelavet pasta al pomodoro',
 ]
 
+export function sletKreation(id) {
+  const liste = hentKreationer().filter((k) => String(k.id) !== String(id))
+  try { localStorage.setItem(KEY, JSON.stringify(liste)) } catch { /* opgiv */ }
+  return liste
+}
+
 export function genererNavn(undtagen) {
   const valg = NAVNEFORSLAG.filter((n) => n !== undtagen)
   return valg[Math.floor(Math.random() * valg.length)]

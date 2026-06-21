@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
 import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
-import { hentKreationer } from '../data/kreationer'
+import { hentKreationer, sletKreation } from '../data/kreationer'
 import { hentLikes, fjernLike } from '../data/likes'
 import { billedeUrl, opskriftFarve, grad, tidLabel } from '../lib/recipeUtils'
 import { hentVenner, hentVennerFraDB, tilføjVenDB, fjernVenDB, hentAntalFølgere, søgBrugere } from '../data/venner'
@@ -389,6 +389,13 @@ export default function Profil() {
                     <p style={s.kreationNavn}>{titel}</p>
                     <p style={s.kreationMeta}>{dato}{tidBrugt}</p>
                   </div>
+                  <button
+                    style={s.kreationSletBtn}
+                    onClick={() => setKreationer(sletKreation(k.id))}
+                    aria-label="Slet kreation"
+                  >
+                    🗑️
+                  </button>
                 </div>
               )
             })
@@ -880,6 +887,7 @@ const s = {
   kreationThumbTom: { background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 },
   kreationNavn: { fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   kreationMeta: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, margin: '3px 0 0' },
+  kreationSletBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: '0 4px', opacity: 0.5, flexShrink: 0 },
 
   grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 },
   badge: { background: colors.card, borderRadius: 16, boxShadow: shadow.card, padding: '16px 10px', textAlign: 'center' },
