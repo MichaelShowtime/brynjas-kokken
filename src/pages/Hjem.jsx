@@ -644,20 +644,36 @@ function KommentarSektion({ postId, bruger, t }) {
 
   async function sendKommentar() {
     if (!tekst.trim() || !bruger?.id) return
+    const indhold = tekst.trim()
+    const tempId = Date.now()
+    const optimistisk = {
+      id: tempId,
+      post_id: postId,
+      user_id: bruger.id,
+      bruger_navn: bruger.navn ?? 'Anonym',
+      bruger_avatar: bruger.avatar ?? null,
+      tekst: indhold,
+      created_at: new Date().toISOString(),
+    }
+    setKommentarer(prev => [...prev, optimistisk])
+    setTekst('')
     setSender(true)
     const { data, error } = await supabase
       .from('post_kommentarer')
       .insert({
-        post_id:      postId,
-        user_id:      bruger.id,
-        bruger_navn:  bruger.navn ?? 'Anonym',
+        post_id:       postId,
+        user_id:       bruger.id,
+        bruger_navn:   bruger.navn ?? 'Anonym',
         bruger_avatar: bruger.avatar ?? null,
-        tekst:        tekst.trim(),
+        tekst:         indhold,
       })
       .select()
       .single()
-    if (!error && data) setKommentarer(prev => [...prev, data])
-    setTekst('')
+    if (!error && data) {
+      setKommentarer(prev => prev.map(k => k.id === tempId ? data : k))
+    } else if (error) {
+      setKommentarer(prev => prev.filter(k => k.id !== tempId))
+    }
     setSender(false)
   }
 
