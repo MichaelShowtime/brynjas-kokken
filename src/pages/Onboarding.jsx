@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { opdaterBruger, hentAktivBruger } from '../data/auth'
 import { ONBOARDING_TRIN } from '../data/tags'
@@ -159,7 +159,7 @@ const s = {
   fremgangTekst: { fontFamily: font.body, fontSize: 12, fontWeight: 600, color: colors.mutedLight, margin: '0 0 28px', textAlign: 'right' },
 
   trinIkon: { fontSize: 52, textAlign: 'center', marginBottom: 18 },
-  spørgsmål: { fontFamily: font.display, fontWeight: 800, fontSize: 24, color: colors.text, margin: '0 0 8px', letterSpacing: -0.4, lineHeight: 1.25, textAlign: 'center' },
+  spørgsmål: { fontFamily: font.display, fontWeight: 600, fontSize: 24, color: colors.text, margin: '0 0 8px', letterSpacing: -0.4, lineHeight: 1.25, textAlign: 'center' },
   multiHint: { fontFamily: font.body, fontSize: 13, color: colors.mutedLight, textAlign: 'center', margin: '0 0 20px' },
 
   svarListe: { display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 },
@@ -182,7 +182,7 @@ const s = {
 
   // Afslut-skærm
   afslutCirkel: { fontSize: 64, textAlign: 'center', margin: '0 0 20px' },
-  afslutTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 28, color: colors.text, textAlign: 'center', margin: '0 0 10px', letterSpacing: -0.5 },
+  afslutTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 28, color: colors.text, textAlign: 'center', margin: '0 0 10px', letterSpacing: -0.5 },
   afslutTekst: { fontFamily: font.body, fontSize: 15, color: colors.muted, textAlign: 'center', lineHeight: 1.6, margin: '0 0 32px' },
   spinner: { width: 32, height: 32, border: `3px solid ${colors.border}`, borderTop: `3px solid ${colors.green}`, borderRadius: '50%', animation: 'simmer-spin 0.8s linear infinite', margin: '0 auto' },
 }

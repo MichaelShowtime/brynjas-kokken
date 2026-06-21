@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { logInd } from '../data/auth'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -159,9 +159,9 @@ const s = {
 
   brand: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 36, justifyContent: 'center' },
   brandEmoji: { fontSize: 32 },
-  brandNavn: { fontFamily: font.display, fontWeight: 800, fontSize: 30, color: colors.green, letterSpacing: -1 },
+  brandNavn: { fontFamily: font.display, fontWeight: 600, fontSize: 30, color: colors.green, letterSpacing: -1 },
 
-  overskrift: { fontFamily: font.display, fontWeight: 800, fontSize: 26, color: colors.text, margin: '0 0 6px', letterSpacing: -0.4 },
+  overskrift: { fontFamily: font.display, fontWeight: 600, fontSize: 26, color: colors.text, margin: '0 0 6px', letterSpacing: -0.4 },
   underoverskrift: { fontFamily: font.body, fontSize: 15, color: colors.muted, margin: '0 0 24px', lineHeight: 1.5 },
 
   fejlboks: { background: '#FDECEA', border: '1px solid #F5C9C4', borderRadius: 12, padding: '11px 14px', fontFamily: font.body, fontSize: 14, color: colors.red, marginBottom: 16 },

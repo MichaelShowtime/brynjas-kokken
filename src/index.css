@@ -21,7 +21,7 @@
   --shadow-card: 0 8px 24px rgba(31, 36, 33, 0.07);
 
   /* Skrifttyper */
-  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Hanken Grotesk', system-ui, sans-serif;
 }
 
@@ -43,6 +43,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+[style*="Fraunces"] {
+  font-optical-sizing: auto;
 }
 
 button {

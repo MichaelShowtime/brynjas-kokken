@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+﻿import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { hentKreationer, gemKreation, genererNavn } from '../data/kreationer'
@@ -463,7 +463,7 @@ const styles = {
   page: { maxWidth: 480, margin: '0 auto', padding: '24px 20px 120px', minHeight: '100%' },
 
   header: { marginBottom: 18, textAlign: 'center' },
-  title: { fontFamily: font.display, fontWeight: 800, fontSize: 28, lineHeight: 1.15, color: colors.text, margin: 0, letterSpacing: -0.5 },
+  title: { fontFamily: font.display, fontWeight: 600, fontSize: 28, lineHeight: 1.15, color: colors.text, margin: 0, letterSpacing: -0.5 },
   subtitle: { fontFamily: font.body, fontSize: 14.5, color: colors.muted, margin: '8px auto 0', lineHeight: 1.5, maxWidth: 320 },
 
   intro: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
@@ -476,7 +476,7 @@ const styles = {
   // Felter
   feltLabel: { display: 'block', fontFamily: font.body, fontSize: 12.5, fontWeight: 700, color: colors.mutedLight, margin: '0 0 7px', letterSpacing: 0.3 },
   navnRow: { display: 'flex', gap: 8, alignItems: 'stretch' },
-  navnInput: { flex: 1, padding: '11px 13px', fontFamily: font.display, fontWeight: 700, fontSize: 17, color: colors.text, background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12, outline: 'none' },
+  navnInput: { flex: 1, padding: '11px 13px', fontFamily: font.display, fontWeight: 500, fontSize: 17, color: colors.text, background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12, outline: 'none' },
   diceBtn: { width: 44, flexShrink: 0, fontSize: 18, background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12 },
 
   mentionInput: { width: '100%', padding: '11px 13px', fontFamily: font.body, fontSize: 15, color: colors.text, background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12, outline: 'none' },
@@ -509,7 +509,7 @@ const styles = {
 
   // Historik
   historik: { width: '100%', maxWidth: 360, marginTop: 28 },
-  historikTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: '0 0 12px', letterSpacing: -0.3 },
+  historikTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: '0 0 12px', letterSpacing: -0.3 },
   histItem: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, background: colors.card, border: 'none', borderRadius: 16, boxShadow: shadow.card, padding: 10, marginBottom: 10 },
   histThumb: { width: 52, height: 52, borderRadius: 12, objectFit: 'cover', flexShrink: 0 },
   histThumbTom: { background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 },

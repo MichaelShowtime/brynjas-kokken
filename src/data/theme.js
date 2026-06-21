@@ -25,6 +25,6 @@ export const radius = {
 }
 
 export const font = {
-  display: "'Bricolage Grotesque', system-ui, sans-serif",
+  display: "'Fraunces', Georgia, serif",
   body: "'Hanken Grotesk', system-ui, sans-serif",
 }

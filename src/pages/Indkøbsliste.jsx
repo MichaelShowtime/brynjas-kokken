@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   hentIndkøbsliste, gemIndkøbsliste,
@@ -240,7 +240,7 @@ const s = {
     color: colors.green, cursor: 'pointer', padding: '4px 6px', lineHeight: 1,
   },
   titel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 24,
+    fontFamily: font.display, fontWeight: 600, fontSize: 24,
     color: colors.text, margin: 0, letterSpacing: -0.4, flex: 1,
   },
   rydBtn: {
@@ -253,7 +253,7 @@ const s = {
     gap: 12, padding: '60px 32px', textAlign: 'center',
   },
   tomTitel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 19,
+    fontFamily: font.display, fontWeight: 600, fontSize: 19,
     color: colors.text, margin: 0, letterSpacing: -0.3,
   },
   tomSub: {

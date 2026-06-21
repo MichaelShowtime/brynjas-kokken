@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger } from '../data/auth'
@@ -186,7 +186,7 @@ const s = {
     lineHeight: 1,
   },
   titel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 24,
+    fontFamily: font.display, fontWeight: 600, fontSize: 24,
     color: colors.text, margin: 0, letterSpacing: -0.4,
   },
   center: {
@@ -196,7 +196,7 @@ const s = {
   },
   muted: { fontFamily: font.body, fontSize: 15, color: colors.muted, margin: 0 },
   tomTitel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 19,
+    fontFamily: font.display, fontWeight: 600, fontSize: 19,
     color: colors.text, margin: 0, letterSpacing: -0.3,
   },
   tomSub: {

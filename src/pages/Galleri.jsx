@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger } from '../data/auth'
@@ -162,7 +162,7 @@ const s = {
 
   header: { display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px 8px', position: 'sticky', top: 0, background: colors.bg, zIndex: 10 },
   tilbage: { background: 'none', border: 'none', fontSize: 28, color: colors.green, padding: '0 6px 0 0', cursor: 'pointer', fontWeight: 700, lineHeight: 1 },
-  titel: { fontFamily: font.display, fontWeight: 800, fontSize: 26, color: colors.text, margin: 0, letterSpacing: -0.5 },
+  titel: { fontFamily: font.display, fontWeight: 600, fontSize: 26, color: colors.text, margin: 0, letterSpacing: -0.5 },
 
   søgeWrap: { display: 'flex', alignItems: 'center', gap: 10, background: colors.card, borderRadius: 16, boxShadow: shadow.card, padding: '0 14px', margin: '4px 20px 12px', height: 48 },
   søgeIkon: { fontSize: 17, flexShrink: 0, opacity: 0.5 },
@@ -175,7 +175,7 @@ const s = {
 
   sektionHeader: { display: 'flex', alignItems: 'center', gap: 8, padding: '16px 20px 10px' },
   sektionEmoji: { fontSize: 20 },
-  sektionTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: 0, flex: 1 },
+  sektionTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: 0, flex: 1 },
   sektionAntal: { fontFamily: font.body, fontSize: 13, color: colors.mutedLight, fontWeight: 600 },
 
   søgeTitel: { fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.muted, padding: '12px 20px 6px', margin: 0 },
@@ -186,13 +186,13 @@ const s = {
   kortSkeleton: { height: 190, borderRadius: 18, background: colors.border },
   kortHero: { height: 120, overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   kortImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
-  kortInitial: { fontSize: 44, fontFamily: font.display, fontWeight: 800, color: 'rgba(255,255,255,0.9)' },
+  kortInitial: { fontSize: 44, fontFamily: font.display, fontWeight: 600, color: 'rgba(255,255,255,0.9)' },
   kortBadge: { position: 'absolute', bottom: 8, left: 8, fontFamily: font.body, fontSize: 11, fontWeight: 700, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)', color: '#fff', padding: '3px 8px', borderRadius: 999 },
   kortBody: { padding: '10px 12px 14px' },
   kortTitel: { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: colors.text, margin: '0 0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
   kortMeta: { fontFamily: font.body, fontSize: 12, color: colors.muted, margin: 0 },
 
   tom: { textAlign: 'center', padding: '60px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 },
-  tomTekst: { fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: 0 },
+  tomTekst: { fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: 0 },
   tomSub: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0, lineHeight: 1.5, maxWidth: 260 },
 }

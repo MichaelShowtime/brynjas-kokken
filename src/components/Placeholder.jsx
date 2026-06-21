@@ -35,7 +35,7 @@ const styles = {
   emoji: { fontSize: 48, lineHeight: 1 },
   title: {
     fontFamily: font.display,
-    fontWeight: 800,
+    fontWeight: 600,
     fontSize: 28,
     color: colors.text,
     margin: '16px 0 8px',

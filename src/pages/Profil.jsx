@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera, ShoppingBasket, UtensilsCrossed, Clock } from 'lucide-react'
 import { hentAutoLager, gemAutoLager } from '../data/lager'
@@ -855,11 +855,11 @@ const s = {
   avatarWrap: { position: 'relative', marginBottom: 14 },
   avatar: { width: 88, height: 88, borderRadius: 999, background: colors.bg, border: `3px solid ${colors.border}`, fontSize: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: shadow.card },
   streakBadge: { position: 'absolute', bottom: -6, right: -8, background: colors.card, border: `2px solid ${colors.border}`, borderRadius: 999, fontSize: 12, fontFamily: font.body, fontWeight: 800, color: colors.text, padding: '3px 8px', boxShadow: shadow.card },
-  navn: { fontFamily: font.display, fontWeight: 800, fontSize: 22, color: colors.text, margin: 0, letterSpacing: -0.4 },
+  navn: { fontFamily: font.display, fontWeight: 600, fontSize: 22, color: colors.text, margin: 0, letterSpacing: -0.4 },
   brugernavn: { fontFamily: font.body, fontSize: 13, fontWeight: 500, color: colors.mutedLight, margin: '3px 0 8px' },
   bio: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: '0 0 14px', textAlign: 'center', lineHeight: 1.5, maxWidth: 300 },
   statsRow: { display: 'flex', alignItems: 'center', gap: 24, marginBottom: 18 },
-  statTal: { fontFamily: font.display, fontWeight: 800, fontSize: 20, color: colors.text, margin: 0 },
+  statTal: { fontFamily: font.display, fontWeight: 600, fontSize: 20, color: colors.text, margin: 0 },
   statLabel: { fontFamily: font.body, fontSize: 12, color: colors.muted, margin: '2px 0 0', fontWeight: 500 },
   statDiv: { width: 1, height: 28, background: colors.border },
   btnRow: { display: 'flex', gap: 10 },
@@ -868,7 +868,7 @@ const s = {
 
   sektion: { padding: '20px 16px' },
   sektionHeader: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 },
-  sektionTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: 0, letterSpacing: -0.3 },
+  sektionTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: 0, letterSpacing: -0.3 },
   sektionHint: { fontFamily: font.body, fontSize: 13, color: colors.mutedLight, margin: '0 0 14px' },
   redigerTagsBtn: { fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green, background: 'none', border: 'none', padding: 0 },
   tilføjTagsBtn: { fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.green, background: 'rgba(47,107,79,0.08)', border: 'none', borderRadius: radius.pill, padding: '10px 16px' },
@@ -877,7 +877,7 @@ const s = {
 
   kort: { background: colors.card, borderRadius: radius.card, boxShadow: shadow.card, padding: 16, margin: '0 16px 12px' },
   kortHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 },
-  kortTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 16, color: colors.text, margin: 0 },
+  kortTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 16, color: colors.text, margin: 0 },
   seeAll: { fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green, background: 'none', border: 'none', padding: 0 },
   vennerRække: { display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none' },
   vennerItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 },
@@ -889,7 +889,7 @@ const s = {
   inviterKnap: { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: '#fff', background: colors.green, border: 'none', borderRadius: radius.pill, padding: '10px 20px', cursor: 'pointer' },
   statGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 },
   statBox: { background: colors.bg, borderRadius: 14, padding: '12px 8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
-  statBoxTal: { fontFamily: font.display, fontWeight: 800, fontSize: 22, color: colors.text },
+  statBoxTal: { fontFamily: font.display, fontWeight: 600, fontSize: 22, color: colors.text },
   statBoxLabel: { fontFamily: font.body, fontSize: 11.5, fontWeight: 600, color: colors.muted, lineHeight: 1.3 },
 
   tabs: { display: 'flex', borderBottom: `1px solid ${colors.border}`, margin: '0 16px', overflowX: 'auto', scrollbarWidth: 'none' },
@@ -931,17 +931,17 @@ const s = {
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(31,36,33,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200, padding: 16 },
   dialog: { background: colors.card, borderRadius: radius.card, width: '100%', maxWidth: 440, padding: '24px 20px 20px' },
-  dialogTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 20, color: colors.text, margin: '0 0 8px', textAlign: 'center' },
+  dialogTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 20, color: colors.text, margin: '0 0 8px', textAlign: 'center' },
   dialogTekst: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: '0 0 20px', textAlign: 'center', lineHeight: 1.5 },
   dialogBekræft: { width: '100%', padding: 14, fontFamily: font.body, fontWeight: 700, fontSize: 15, color: '#fff', background: colors.red, border: 'none', borderRadius: radius.button, marginBottom: 8 },
   dialogAnnuller: { width: '100%', padding: 13, fontFamily: font.body, fontWeight: 700, fontSize: 15, color: colors.muted, background: 'transparent', border: 'none', borderRadius: radius.button },
 
   subHeader: { background: colors.card, borderBottom: `1px solid ${colors.border}`, padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 10 },
   tilbageBtn: { fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.green, background: 'none', border: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 },
-  subTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: 0, letterSpacing: -0.3 },
+  subTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: 0, letterSpacing: -0.3 },
   subIndhold: { padding: '20px 16px 120px' },
   subBeskrivelse: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: '0 0 20px', lineHeight: 1.5 },
-  subSektionTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 16, color: colors.text, margin: '0 0 12px' },
+  subSektionTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 16, color: colors.text, margin: '0 0 12px' },
 
   toggleTrack: { position: 'relative', width: 48, height: 26, borderRadius: 999, border: 'none', padding: 0, flexShrink: 0, transition: 'background 0.2s' },
   toggleKnob: { position: 'absolute', top: 3, left: 3, width: 20, height: 20, borderRadius: 999, background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.2)', transition: 'transform 0.2s', display: 'block' },

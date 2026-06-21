@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -201,7 +201,7 @@ function RedigerModal({ citat, t, onGem, onLuk }) {
   return (
     <div style={ovl.overlay} onClick={onLuk}>
       <div style={{ ...ovl.sheet, padding: '20px 20px 24px', gap: 12, alignItems: 'stretch' }} onClick={e => e.stopPropagation()}>
-        <h3 style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: 0 }}>
+        <h3 style={{ fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: 0 }}>
           {t('post.redigerTitel')}
         </h3>
         <textarea
@@ -231,18 +231,18 @@ const s = {
   avatarRing: { width: 88, height: 88, borderRadius: 999, background: colors.bg, border: `3px solid ${colors.green}`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: shadow.card, marginBottom: 6 },
   avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
   avatarEmoji: { fontSize: 44 },
-  navn: { fontFamily: font.display, fontWeight: 800, fontSize: 24, color: colors.text, margin: 0, letterSpacing: -0.4 },
+  navn: { fontFamily: font.display, fontWeight: 600, fontSize: 24, color: colors.text, margin: 0, letterSpacing: -0.4 },
   username: { fontFamily: font.body, fontSize: 14, fontWeight: 600, color: colors.green, margin: 0 },
   bio: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: '4px 0 0', textAlign: 'center', lineHeight: 1.5, maxWidth: 280 },
   antalPosts: { fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.mutedLight, margin: '6px 0 0' },
   sektionHead: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '4px 20px 12px' },
-  sektionTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 19, color: colors.text, margin: 0, letterSpacing: -0.3 },
+  sektionTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 19, color: colors.text, margin: 0, letterSpacing: -0.3 },
   tom: { textAlign: 'center', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 },
   tomTekst: { fontFamily: font.body, fontSize: 15, color: colors.muted, margin: 0 },
   feed: { display: 'flex', flexDirection: 'column', gap: 16, padding: '0 20px' },
   post: { background: colors.card, borderRadius: radius.card, boxShadow: shadow.card, overflow: 'hidden' },
   postGradient: { height: 160, display: 'flex', alignItems: 'flex-end', padding: '0 14px 12px' },
-  postTitelOverlay: { fontFamily: font.display, fontWeight: 800, fontSize: 18, color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.3)' },
+  postTitelOverlay: { fontFamily: font.display, fontWeight: 600, fontSize: 18, color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.3)' },
   postBody: { padding: '12px 14px 14px' },
   postMeta: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4, gap: 8 },
   postRetNavn: { fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, margin: 0 },

@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
+﻿import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart } from 'lucide-react'
 import SwipeCard from '../components/SwipeCard'
@@ -397,7 +397,7 @@ const styles = {
 
   header: { marginBottom: 16 },
   title: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 32, lineHeight: 1.1,
+    fontFamily: font.display, fontWeight: 600, fontSize: 32, lineHeight: 1.1,
     color: colors.text, margin: 0, letterSpacing: -0.5,
   },
   subtitle: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: '6px 0 0' },
@@ -442,7 +442,7 @@ const styles = {
   },
   tomEmoji: { fontSize: 56 },
   tomTitel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 26,
+    fontFamily: font.display, fontWeight: 600, fontSize: 26,
     color: colors.text, margin: '14px 0 8px',
   },
   tomTekst: {

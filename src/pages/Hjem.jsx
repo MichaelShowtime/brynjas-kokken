@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, MessageCircle, Pencil, Trash2, Search, Bookmark, UtensilsCrossed } from 'lucide-react'
 import { hentVenner, hentVennerFraDB } from '../data/venner'
@@ -592,7 +592,7 @@ function RedigerModal({ citat, t, onGem, onLuk }) {
   return (
     <div style={ovl.overlay} onClick={onLuk}>
       <div style={{ ...ovl.sheet, padding: '20px 20px 24px', gap: 12, alignItems: 'stretch' }} onClick={e => e.stopPropagation()}>
-        <h3 style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: 0 }}>
+        <h3 style={{ fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: 0 }}>
           {t('post.redigerTitel')}
         </h3>
         <textarea
@@ -702,18 +702,18 @@ const styles = {
 
   topRow: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   eyebrow: { fontFamily: font.body, fontSize: 11, fontWeight: 700, letterSpacing: 1.2, color: colors.terracotta, margin: '0 0 6px' },
-  title: { fontFamily: font.display, fontWeight: 800, fontSize: 30, lineHeight: 1.1, color: colors.text, margin: 0, letterSpacing: -0.6 },
+  title: { fontFamily: font.display, fontWeight: 600, fontSize: 30, lineHeight: 1.1, color: colors.text, margin: 0, letterSpacing: -0.6 },
   avatar: { width: 48, height: 48, borderRadius: 999, background: colors.card, boxShadow: shadow.card, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 },
   klokkeBtn: { position: 'relative', width: 40, height: 40, borderRadius: 999, background: colors.card, boxShadow: shadow.card, border: 'none', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text },
   badge: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 999, background: colors.red, border: `2px solid ${colors.bg}` },
 
   stats: { display: 'flex', gap: 10, margin: '20px 0 4px' },
   stat: { flex: 1, background: colors.card, borderRadius: 16, boxShadow: shadow.card, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2 },
-  statTal: { fontFamily: font.display, fontWeight: 800, fontSize: 18 },
+  statTal: { fontFamily: font.display, fontWeight: 600, fontSize: 18 },
   statLabel: { fontFamily: font.body, fontSize: 11.5, fontWeight: 600 },
 
   sectionHead: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '26px 0 12px' },
-  sectionTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 19, color: colors.text, margin: 0, letterSpacing: -0.3 },
+  sectionTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 19, color: colors.text, margin: 0, letterSpacing: -0.3 },
   sectionLink: { fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green, background: 'none', border: 'none', padding: 0 },
 
   søgeWrap: { display: 'flex', alignItems: 'center', gap: 10, background: colors.card, borderRadius: 16, boxShadow: shadow.card, padding: '0 14px', margin: '16px 0 4px', height: 48 },
@@ -745,13 +745,13 @@ const styles = {
   featuredImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
   featuredBadge: { position: 'absolute', top: 14, left: 14, fontFamily: font.body, fontSize: 12, fontWeight: 700, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(6px)', color: '#fff', padding: '5px 11px', borderRadius: 999, zIndex: 1 },
   featuredBody: { padding: '16px 18px 20px' },
-  featuredTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 22, margin: '0 0 6px', letterSpacing: -0.4, color: colors.text },
+  featuredTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 22, margin: '0 0 6px', letterSpacing: -0.4, color: colors.text },
   featuredMeta: { fontFamily: font.body, fontSize: 13, fontWeight: 600, color: colors.muted, margin: '0 0 8px' },
   featuredTekst: { fontFamily: font.body, fontSize: 14, lineHeight: 1.45, color: colors.muted, margin: 0 },
 
   feed: { display: 'flex', flexDirection: 'column', gap: 16 },
   feedTom: { background: colors.card, borderRadius: radius.card, boxShadow: shadow.card, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' },
-  feedTomTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: 0, letterSpacing: -0.3 },
+  feedTomTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: 0, letterSpacing: -0.3 },
   feedTomTekst: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0, lineHeight: 1.55, maxWidth: 280 },
   feedTomKnapper: { display: 'flex', gap: 10, marginTop: 4 },
   feedTomPrimær: { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: '#fff', background: colors.green, border: 'none', borderRadius: radius.button, padding: '11px 20px', cursor: 'pointer' },
@@ -766,7 +766,7 @@ const styles = {
   followBtn: { fontFamily: font.body, fontSize: 12.5, fontWeight: 700, color: colors.green, background: 'rgba(47,107,79,0.10)', border: 'none', borderRadius: 999, padding: '7px 12px', flexShrink: 0, cursor: 'pointer' },
   menuBtn: { background: 'none', border: 'none', color: colors.muted, fontSize: 20, fontWeight: 800, letterSpacing: 1, cursor: 'pointer', padding: '0 4px', flexShrink: 0 },
   postImg: { height: 150, borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', color: '#fff' },
-  postRet: { position: 'absolute', bottom: 12, left: 14, fontFamily: font.display, fontWeight: 800, fontSize: 18, textShadow: '0 1px 6px rgba(0,0,0,0.3)' },
+  postRet: { position: 'absolute', bottom: 12, left: 14, fontFamily: font.display, fontWeight: 600, fontSize: 18, textShadow: '0 1px 6px rgba(0,0,0,0.3)' },
   postCitat: { fontFamily: font.body, fontSize: 14, color: colors.text, fontStyle: 'italic', margin: '12px 2px 0', lineHeight: 1.4 },
   postFooter: { display: 'flex', alignItems: 'center', gap: 0, marginTop: 12 },
   postStat: { fontFamily: font.body, fontSize: 14, fontWeight: 600, color: colors.muted },
@@ -775,7 +775,7 @@ const styles = {
   recipeCardSkeleton: { width: 160, height: 170, flexShrink: 0, borderRadius: 18, background: colors.border },
   recipeHero: { height: 110, overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   recipeImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
-  recipeInitial: { fontSize: 42, fontFamily: font.display, fontWeight: 800, color: 'rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.2))' },
+  recipeInitial: { fontSize: 42, fontFamily: font.display, fontWeight: 600, color: 'rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.2))' },
   recipeBody: { padding: '10px 12px 14px' },
   recipeTitel: { fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, margin: '0 0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
   recipeMeta: { fontFamily: font.body, fontSize: 12, color: colors.muted, margin: 0 },

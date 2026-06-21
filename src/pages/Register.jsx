@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { registrerBruger } from '../data/auth'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -183,13 +183,13 @@ const s = {
   inner: { width: '100%', maxWidth: 400 },
 
   brand: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, justifyContent: 'center' },
-  brandNavn: { fontFamily: font.display, fontWeight: 800, fontSize: 26, color: colors.green, letterSpacing: -1 },
+  brandNavn: { fontFamily: font.display, fontWeight: 600, fontSize: 26, color: colors.green, letterSpacing: -1 },
 
   fremgang: { height: 4, background: colors.border, borderRadius: 999, marginBottom: 6, overflow: 'hidden' },
   fremgangBar: { height: '100%', background: colors.green, borderRadius: 999, transition: 'width 0.3s ease' },
   fremgangTekst: { fontFamily: font.body, fontSize: 12, color: colors.mutedLight, margin: '0 0 20px', fontWeight: 600 },
 
-  overskrift: { fontFamily: font.display, fontWeight: 800, fontSize: 24, color: colors.text, margin: '0 0 6px', letterSpacing: -0.4 },
+  overskrift: { fontFamily: font.display, fontWeight: 600, fontSize: 24, color: colors.text, margin: '0 0 6px', letterSpacing: -0.4 },
   underoverskrift: { fontFamily: font.body, fontSize: 14.5, color: colors.muted, margin: '0 0 22px', lineHeight: 1.5 },
   fejlboks: { background: '#FDECEA', border: '1px solid #F5C9C4', borderRadius: 12, padding: '11px 14px', fontFamily: font.body, fontSize: 14, color: colors.red, marginBottom: 16 },
 

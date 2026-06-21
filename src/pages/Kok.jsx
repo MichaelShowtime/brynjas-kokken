@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { billedeUrl, opskriftFarve, tidLabel, grad } from '../lib/recipeUtils'
@@ -369,7 +369,7 @@ export default function Kok() {
                     onClick={() => toggleTrin(idx)}
                   >
                     <div style={{ ...s.trinNr, background: gjort ? colors.green : colors.bg }}>
-                      {gjort ? <CheckIcon /> : <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: colors.muted }}>{idx + 1}</span>}
+                      {gjort ? <CheckIcon /> : <span style={{ fontFamily: font.display, fontWeight: 600, fontSize: 14, color: colors.muted }}>{idx + 1}</span>}
                     </div>
                     <p style={{ ...s.trinTekst, opacity: gjort ? 0.45 : 1, textDecoration: gjort ? 'line-through' : 'none' }}>
                       {tekst}
@@ -531,7 +531,7 @@ const s = {
     position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 20px 16px', zIndex: 2,
   },
   heroTitel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 24, color: '#fff',
+    fontFamily: font.display, fontWeight: 600, fontSize: 24, color: '#fff',
     margin: 0, letterSpacing: -0.5, textShadow: '0 1px 6px rgba(0,0,0,0.3)',
   },
   heroTid: {
@@ -545,7 +545,7 @@ const s = {
     padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16,
   },
   timerDisplay: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 36, letterSpacing: 2,
+    fontFamily: font.display, fontWeight: 600, fontSize: 36, letterSpacing: 2,
     color: colors.text, flex: 1, fontVariantNumeric: 'tabular-nums',
   },
   timerKnapper: { display: 'flex', gap: 8 },
@@ -573,7 +573,7 @@ const s = {
 
   sektion: { marginBottom: 24 },
   sektionTitel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 18,
+    fontFamily: font.display, fontWeight: 600, fontSize: 18,
     color: colors.text, margin: '0 0 12px', letterSpacing: -0.3,
   },
 
@@ -629,7 +629,7 @@ const s = {
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
   },
   succesTekst: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text,
+    fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text,
   },
   tilbageKnap: {
     fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.green,
@@ -652,7 +652,7 @@ const m = {
   },
   emoji: { fontSize: 48 },
   titel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 24, color: colors.text, margin: 0,
+    fontFamily: font.display, fontWeight: 600, fontSize: 24, color: colors.text, margin: 0,
   },
   tekst: {
     fontFamily: font.body, fontSize: 15, color: colors.muted, textAlign: 'center', margin: 0,

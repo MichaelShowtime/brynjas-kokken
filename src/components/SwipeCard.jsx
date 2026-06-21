@@ -1,4 +1,4 @@
-import { billedeUrl, opskriftFarve, tidLabel, grad } from '../lib/recipeUtils'
+﻿import { billedeUrl, opskriftFarve, tidLabel, grad } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
 
 export default function SwipeCard({
@@ -81,7 +81,7 @@ const styles = {
   },
 
   stamp: {
-    position: 'absolute', top: 22, fontFamily: font.display, fontWeight: 800,
+    position: 'absolute', top: 22, fontFamily: font.display, fontWeight: 600,
     fontSize: 26, letterSpacing: 1, padding: '6px 14px', borderRadius: 12,
     border: '4px solid', zIndex: 5, pointerEvents: 'none',
   },
@@ -112,7 +112,7 @@ const styles = {
   },
 
   titel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 26, color: colors.text,
+    fontFamily: font.display, fontWeight: 600, fontSize: 26, color: colors.text,
     margin: '0 0 8px', letterSpacing: -0.5, lineHeight: 1.15,
   },
 

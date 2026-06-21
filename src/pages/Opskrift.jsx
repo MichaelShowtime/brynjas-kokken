@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+﻿import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Anthropic from '@anthropic-ai/sdk'
 import { supabase } from '../lib/supabase'
@@ -101,12 +101,12 @@ const pv = {
   },
   btn: {
     width: 36, height: 36, borderRadius: 999, border: 'none',
-    background: colors.bg, fontFamily: font.display, fontSize: 20, fontWeight: 700,
+    background: colors.bg, fontFamily: font.display, fontSize: 20, fontWeight: 500,
     color: colors.text, cursor: 'pointer', flexShrink: 0,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   tal: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 20, color: colors.text,
+    fontFamily: font.display, fontWeight: 600, fontSize: 20, color: colors.text,
     minWidth: 52, textAlign: 'center',
   },
   enhed: {
@@ -502,7 +502,7 @@ const s = {
   },
 
   titel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 28, letterSpacing: -0.5,
+    fontFamily: font.display, fontWeight: 600, fontSize: 28, letterSpacing: -0.5,
     color: colors.text, margin: '0 0 14px', lineHeight: 1.1,
   },
 
@@ -527,7 +527,7 @@ const s = {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14,
   },
   sektionTitel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 20,
+    fontFamily: font.display, fontWeight: 600, fontSize: 20,
     color: colors.text, margin: 0, letterSpacing: -0.3,
   },
   harAltBadge: {
@@ -581,7 +581,7 @@ const s = {
     width: 32, height: 32, borderRadius: 999, flexShrink: 0,
     background: colors.green, color: '#fff',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontFamily: font.display, fontWeight: 800, fontSize: 14,
+    fontFamily: font.display, fontWeight: 600, fontSize: 14,
   },
   trinTekst: {
     fontFamily: font.body, fontSize: 15, lineHeight: 1.55, color: colors.text, margin: '4px 0 0', flex: 1,
@@ -643,7 +643,7 @@ const s = {
     width: 36, height: 4, borderRadius: 999, background: colors.border,
   },
   chatTitel: {
-    fontFamily: font.display, fontWeight: 800, fontSize: 15.5,
+    fontFamily: font.display, fontWeight: 600, fontSize: 15.5,
     color: colors.text, flex: 1, textAlign: 'center', marginTop: 10,
   },
   chatLuk: {

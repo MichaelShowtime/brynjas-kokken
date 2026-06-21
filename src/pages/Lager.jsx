@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Camera, Mic, Search, Trash2 } from 'lucide-react'
 import {
@@ -635,7 +635,7 @@ const s = {
 
   // Header
   header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '28px 20px 12px' },
-  titel: { fontFamily: font.display, fontWeight: 800, fontSize: 32, color: colors.text, margin: 0, letterSpacing: -0.5 },
+  titel: { fontFamily: font.display, fontWeight: 600, fontSize: 32, color: colors.text, margin: 0, letterSpacing: -0.5 },
   tilføjBtn: { display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: '#fff', background: colors.green, border: 'none', borderRadius: 999, padding: '10px 18px', boxShadow: shadow.fab },
   indkøbsBtn: { position: 'relative', width: 40, height: 40, borderRadius: 999, background: colors.card, boxShadow: shadow.card, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, marginRight: 4 },
   indkøbsBadge: { position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: 999, background: colors.terracotta, border: `2px solid ${colors.bg}` },
@@ -671,7 +671,7 @@ const s = {
 
   // Tom
   tom: { textAlign: 'center', padding: '60px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 },
-  tomTekst: { fontFamily: font.display, fontWeight: 800, fontSize: 18, color: colors.text, margin: '0 0 8px' },
+  tomTekst: { fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: '0 0 8px' },
   tomSub:   { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: '0 0 20px', lineHeight: 1.6, maxWidth: 280, textAlign: 'center' },
   tomKnap:  { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: '#fff', background: colors.green, border: 'none', borderRadius: radius.button, padding: '12px 24px', cursor: 'pointer' },
 
@@ -679,7 +679,7 @@ const s = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(31,36,33,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 },
   sheet: { background: colors.card, borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, padding: '12px 20px 40px', maxHeight: '88vh', overflowY: 'auto' },
   greb: { width: 40, height: 4, background: colors.border, borderRadius: 999, margin: '0 auto 20px' },
-  sheetTitel: { fontFamily: font.display, fontWeight: 800, fontSize: 22, color: colors.text, margin: 0 },
+  sheetTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 22, color: colors.text, margin: 0 },
   lukBtn: { width: 32, height: 32, borderRadius: 999, background: colors.bg, border: 'none', fontSize: 14, color: colors.muted, display: 'flex', alignItems: 'center', justifyContent: 'center' },
 
   katalogTæller: { fontFamily: font.body, fontSize: 11.5, color: colors.mutedLight, margin: '-4px 0 10px', letterSpacing: 0.2 },
