@@ -298,7 +298,7 @@ export default function MadMatch() {
                     zIndex: 10,
                   }
                 : {
-                    transform: `translateY(${dybde * 12}px) scale(${1 - dybde * 0.05})`,
+                    transform: `translateY(${dybde * 12}px) scale(${1 - dybde * 0.05}) rotate(${dybde === 1 ? -2 : 2}deg)`,
                     transition: 'transform 0.28s ease-out',
                     zIndex: 10 - dybde,
                   }

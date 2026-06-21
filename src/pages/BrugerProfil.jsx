@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger } from '../data/auth'
 import { billedeUrl, opskriftFarve, grad } from '../lib/recipeUtils'
@@ -152,15 +153,15 @@ export default function BrugerProfil() {
           <div style={ovl.sheet} onClick={e => e.stopPropagation()}>
             {!bekræfterSlet ? (
               <>
-                <button style={ovl.item} onClick={() => {
+                <button style={{ ...ovl.item, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => {
                   setPostMenuId(null)
                   setRedigerPost({ id: aktivPostMenu.id, citat: aktivPostMenu.citat ?? '' })
                 }}>
-                  ✏️ {t('post.menuRediger')}
+                  <Pencil size={16} /> {t('post.menuRediger')}
                 </button>
                 <div style={ovl.divider} />
-                <button style={{ ...ovl.item, color: colors.red }} onClick={() => setBekræfterSlet(true)}>
-                  🗑️ {t('post.menuSlet')}
+                <button style={{ ...ovl.item, color: colors.red, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => setBekræfterSlet(true)}>
+                  <Trash2 size={16} /> {t('post.menuSlet')}
                 </button>
                 <div style={ovl.divider} />
                 <button style={{ ...ovl.item, color: colors.muted }} onClick={lukMenu}>

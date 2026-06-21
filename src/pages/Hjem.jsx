@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Heart, MessageCircle, Pencil, Trash2, Search, Bookmark, UtensilsCrossed } from 'lucide-react'
 import { hentVenner, hentVennerFraDB } from '../data/venner'
 import { hentAktivBruger } from '../data/auth'
 import { hentKreationer } from '../data/kreationer'
@@ -246,12 +247,12 @@ export default function Hjem() {
 
       <div style={styles.stats}>
         <Stat tal={streak > 0 ? streak : '—'} label={t('hjem.streakLabel')} ikon="🔥" fremhæv />
-        <Stat tal={kreationer.length || '—'} label={t('pf.retterLavet').replace('🍽️ ', '')} ikon="🍳" />
-        <Stat tal={likes.length || '—'} label="gemte" ikon="🔖" />
+        <Stat tal={kreationer.length || '—'} label={t('pf.retterLavet').replace('🍽️ ', '')} ikon={<UtensilsCrossed size={15} />} />
+        <Stat tal={likes.length || '—'} label="gemte" ikon={<Bookmark size={15} />} />
       </div>
 
       <div style={styles.søgeWrap}>
-        <span style={styles.søgeIkon}>🔍</span>
+        <Search size={17} color={colors.muted} style={{ opacity: 0.6, flexShrink: 0 }} />
         <input
           type="search"
           value={søgeTekst}
@@ -425,16 +426,16 @@ function PostKort({ post: p, bruger, likes, onLike, onSlet, onGemRedigering }) {
 
       <div style={styles.postFooter}>
         <button
-          style={{ ...styles.postStat, background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: likes?.likedByMe ? colors.red : colors.muted }}
+          style={{ ...styles.postStat, background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: likes?.likedByMe ? colors.red : colors.muted, display: 'flex', alignItems: 'center', gap: 5 }}
           onClick={() => onLike(p.id)}
         >
-          {likes?.likedByMe ? '❤️' : '🤍'} {likes?.count ?? 0}
+          <Heart size={17} fill={likes?.likedByMe ? colors.red : 'none'} color={likes?.likedByMe ? colors.red : colors.muted} /> {likes?.count ?? 0}
         </button>
         <button
-          style={{ ...styles.postStat, background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 8px', color: visKommentarer ? colors.green : colors.muted }}
+          style={{ ...styles.postStat, background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 8px', color: visKommentarer ? colors.green : colors.muted, display: 'flex', alignItems: 'center' }}
           onClick={() => setVisKommentarer(v => !v)}
         >
-          💬
+          <MessageCircle size={17} />
         </button>
         {p.opskrift_id ? (
           <button
@@ -560,10 +561,10 @@ function PostMenu({ t, onRediger, onSlet, onLuk }) {
       <div style={ovl.sheet} onClick={e => e.stopPropagation()}>
         {!bekræfter ? (
           <>
-            <button style={ovl.item} onClick={onRediger}>✏️ {t('post.menuRediger')}</button>
+            <button style={{ ...ovl.item, display: 'flex', alignItems: 'center', gap: 8 }} onClick={onRediger}><Pencil size={16} /> {t('post.menuRediger')}</button>
             <div style={ovl.divider} />
-            <button style={{ ...ovl.item, color: colors.red }} onClick={() => setBekræfter(true)}>
-              🗑️ {t('post.menuSlet')}
+            <button style={{ ...ovl.item, color: colors.red, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => setBekræfter(true)}>
+              <Trash2 size={16} /> {t('post.menuSlet')}
             </button>
             <div style={ovl.divider} />
             <button style={{ ...ovl.item, color: colors.muted }} onClick={onLuk}>{t('pf.annuller')}</button>
@@ -667,7 +668,9 @@ function RecipeCard({ opskrift, onClick }) {
 function Stat({ tal, label, ikon, fremhæv }) {
   return (
     <div style={{ ...styles.stat, ...(fremhæv ? { background: colors.green } : null) }}>
-      <span style={{ ...styles.statTal, color: fremhæv ? '#fff' : colors.text }}>{ikon} {tal}</span>
+      <span style={{ ...styles.statTal, color: fremhæv ? '#fff' : colors.text, display: 'flex', alignItems: 'center', gap: 4 }}>
+        {ikon}<span>{tal}</span>
+      </span>
       <span style={{ ...styles.statLabel, color: fremhæv ? 'rgba(255,255,255,0.85)' : colors.muted }}>{label}</span>
     </div>
   )
@@ -714,7 +717,6 @@ const styles = {
   sectionLink: { fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green, background: 'none', border: 'none', padding: 0 },
 
   søgeWrap: { display: 'flex', alignItems: 'center', gap: 10, background: colors.card, borderRadius: 16, boxShadow: shadow.card, padding: '0 14px', margin: '16px 0 4px', height: 48 },
-  søgeIkon: { fontSize: 17, flexShrink: 0, opacity: 0.5 },
   søgeInput: { flex: 1, fontFamily: font.body, fontSize: 15, color: colors.text, background: 'transparent', border: 'none', outline: 'none', padding: '0 4px' },
   søgeRyd: { background: 'none', border: 'none', color: colors.mutedLight, fontSize: 14, cursor: 'pointer', padding: '0 2px', flexShrink: 0 },
   søgePanel: { background: colors.card, borderRadius: 16, boxShadow: shadow.card, overflow: 'hidden', marginBottom: 8 },

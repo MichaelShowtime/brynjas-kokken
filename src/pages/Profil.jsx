@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
 import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
@@ -212,10 +213,10 @@ export default function Profil() {
 
   // Translated settings items (defined here so t() is in scope)
   const INDST = [
-    { emoji: '🔔', labelKey: 'pf.notif',    subKey: 'pf.notifSub',    side: 'notifikationer' },
-    { emoji: '🌍', labelKey: 'pf.sprog',    subKey: 'pf.sprogsub',    side: 'sprog' },
-    { emoji: '🛡️', labelKey: 'pf.privatliv', subKey: 'pf.privatlivSub', side: 'privatliv' },
-    { emoji: '❓', labelKey: 'pf.hjælp',    subKey: null,             side: 'hjælp' },
+    { icon: <Bell size={20} />,       labelKey: 'pf.notif',    subKey: 'pf.notifSub',    side: 'notifikationer' },
+    { icon: <Globe size={20} />,      labelKey: 'pf.sprog',    subKey: 'pf.sprogsub',    side: 'sprog' },
+    { icon: <Shield size={20} />,     labelKey: 'pf.privatliv', subKey: 'pf.privatlivSub', side: 'privatliv' },
+    { icon: <HelpCircle size={20} />, labelKey: 'pf.hjælp',    subKey: null,             side: 'hjælp' },
   ]
 
   // ── Hoved-profil ─────────────────────────────────────────────────────────
@@ -327,13 +328,13 @@ export default function Profil() {
       {/* Tabs */}
       <div style={s.tabs}>
         {[
-          { id: 'likes',      label: `❤️ ${t('pf.likes')} (${likes.length})` },
-          { id: 'kreationer', label: `${t('pf.kreationer')} (${kreationer.length})` },
-          { id: 'badges',     label: t('pf.badges') },
+          { id: 'likes',      children: <><Heart size={13} fill="currentColor" style={{ verticalAlign: '-2px' }} /> {t('pf.likes')} ({likes.length})</> },
+          { id: 'kreationer', children: <>{t('pf.kreationer')} ({kreationer.length})</> },
+          { id: 'badges',     children: <>{t('pf.badges')}</> },
         ].map((tab) => (
           <button key={tab.id} onClick={() => setAktivTab(tab.id)}
             style={{ ...s.tab, ...(aktivTab === tab.id ? s.tabAktiv : {}) }}>
-            {tab.label}
+            {tab.children}
           </button>
         ))}
       </div>
@@ -342,7 +343,7 @@ export default function Profil() {
       {aktivTab === 'likes' && (
         <div style={s.tabIndhold}>
           {likes.length === 0
-            ? <TomTab emoji="❤️" tekst={t('pf.swipeTip')} knap={t('pf.åbnMadMatch')} onKnap={() => navigate('/madmatch')} />
+            ? <TomTab icon={<Heart size={36} color={colors.mutedLight} />} tekst={t('pf.swipeTip')} knap={t('pf.åbnMadMatch')} onKnap={() => navigate('/madmatch')} />
             : (
               <div style={s.grid2}>
                 {likes.map((o) => {
@@ -372,7 +373,7 @@ export default function Profil() {
       {aktivTab === 'kreationer' && (
         <div style={s.tabIndhold}>
           {kreationer.length === 0
-            ? <TomTab emoji="📸" tekst={t('pf.tagBillede')} knap={t('pf.gåTilOpret')} onKnap={() => navigate('/opret')} />
+            ? <TomTab icon={<Camera size={36} color={colors.mutedLight} />} tekst={t('pf.tagBillede')} knap={t('pf.gåTilOpret')} onKnap={() => navigate('/opret')} />
             : kreationer.map((k) => {
               const fotoSrc = k.foto
                 ? (k.foto.startsWith('blob:') ? k.foto : billedeUrl(k.foto))
@@ -394,7 +395,7 @@ export default function Profil() {
                     onClick={() => setKreationer(sletKreation(k.id))}
                     aria-label="Slet kreation"
                   >
-                    🗑️
+                    <Trash2 size={18} />
                   </button>
                 </div>
               )
@@ -423,7 +424,7 @@ export default function Profil() {
         <h2 style={s.sektionTitel}>{t('pf.indstillinger')}</h2>
         {INDST.map((item) => (
           <button key={item.side} style={s.indstRække} onClick={() => setVisning(item.side)}>
-            <span style={s.indstEmoji}>{item.emoji}</span>
+            <span style={s.indstEmoji}>{item.icon}</span>
             <div style={{ flex: 1, textAlign: 'left' }}>
               <p style={s.indstLabel}>{t(item.labelKey)}</p>
               {item.subKey && <p style={s.indstSub}>{t(item.subKey)}</p>}
@@ -801,10 +802,10 @@ function Stat({ tal, label }) {
   )
 }
 
-function TomTab({ emoji, tekst, knap, onKnap }) {
+function TomTab({ icon, tekst, knap, onKnap }) {
   return (
     <div style={s.tomTab}>
-      <span style={{ fontSize: 36 }}>{emoji}</span>
+      {icon}
       <p style={s.tomTabTekst}>{tekst}</p>
       <button style={s.primærBtn} onClick={onKnap}>{knap}</button>
     </div>
@@ -887,7 +888,7 @@ const s = {
   kreationThumbTom: { background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 },
   kreationNavn: { fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   kreationMeta: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, margin: '3px 0 0' },
-  kreationSletBtn: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: '0 4px', opacity: 0.5, flexShrink: 0 },
+  kreationSletBtn: { background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', opacity: 0.5, flexShrink: 0, display: 'flex', alignItems: 'center', color: colors.muted },
 
   grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 },
   badge: { background: colors.card, borderRadius: 16, boxShadow: shadow.card, padding: '16px 10px', textAlign: 'center' },
@@ -899,7 +900,7 @@ const s = {
   tomTabTekst: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0, lineHeight: 1.5, maxWidth: 260 },
 
   indstRække: { width: '100%', display: 'flex', alignItems: 'center', gap: 14, background: colors.card, border: 'none', borderRadius: 14, boxShadow: shadow.card, padding: '13px 14px', marginBottom: 8 },
-  indstEmoji: { fontSize: 20, width: 28, textAlign: 'center', flexShrink: 0 },
+  indstEmoji: { width: 28, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.muted },
   indstLabel: { fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, margin: 0 },
   indstSub: { fontFamily: font.body, fontSize: 12.5, color: colors.mutedLight, margin: '2px 0 0' },
   indstPil: { fontSize: 22, color: colors.mutedLight, flexShrink: 0 },

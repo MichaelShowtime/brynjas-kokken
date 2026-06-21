@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AlertTriangle, Camera, Mic, Search, Trash2 } from 'lucide-react'
 import {
   hentLager, gemLager, sletFraLager, opdaterUdløb, opdaterVare,
   KATEGORIER, INGREDIENS_KATALOG, ENHEDER,
@@ -95,7 +96,7 @@ export default function Lager() {
         <>
           {udløberSnart > 0 && (
             <div style={s.advarsel}>
-              <span style={{ fontSize: 16 }}>⚠️</span>
+              <AlertTriangle size={16} color={colors.terracotta} style={{ flexShrink: 0, marginTop: 1 }} />
               <span style={s.advarselTekst}>
                 {udløberSnart} {udløberSnart === 1 ? t('lag.vare') : t('lag.varer')} {t('lag.udløberSnart')}{' '}
                 <span style={s.advarselLink} onClick={() => navigate('/madmatch')}>{t('lag.seRetter')}</span>
@@ -378,9 +379,11 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
         {/* Scanner + stemme-knapper */}
         {!valgt && !scanMode && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <button style={s.scanKnap} onClick={() => setScanMode(true)}>📸 Scan stregkode</button>
-            <button style={{ ...s.scanKnap, opacity: lytter ? 0.7 : 1 }} onClick={startStemme}>
-              {lytter ? '🎙️ Lytter…' : '🎤 Stemme'}
+            <button style={{ ...s.scanKnap, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => setScanMode(true)}>
+              <Camera size={15} /> Scan stregkode
+            </button>
+            <button style={{ ...s.scanKnap, opacity: lytter ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={startStemme}>
+              <Mic size={15} /> {lytter ? 'Lytter…' : 'Stemme'}
             </button>
           </div>
         )}
@@ -391,7 +394,7 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
         {/* Søgefelt + resultater — skjult under scanner */}
         {!scanMode && (<>
           <div style={s.søgeWrap}>
-            <span style={s.søgeIkon}>🔍</span>
+            <Search size={16} color={colors.muted} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.6 }} />
             <input
               ref={søgeRef}
               value={søgning}
@@ -557,9 +560,9 @@ function RedigerSheet({ vare, onGem, onSlet, onLuk, t }) {
             </button>
           </div>
         ) : (
-          <button style={{ ...s.ghostBtn, color: colors.red, marginTop: 6 }}
+          <button style={{ ...s.ghostBtn, color: colors.red, marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             onClick={() => setBekræftSlet(true)}>
-            🗑 {t('lag.slet')}
+            <Trash2 size={16} /> {t('lag.slet')}
           </button>
         )}
       </div>
@@ -683,7 +686,6 @@ const s = {
 
   // Søgefelt
   søgeWrap: { position: 'relative', marginBottom: 12 },
-  søgeIkon: { position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 16, pointerEvents: 'none' },
   søgeInput: { width: '100%', padding: '13px 42px 13px 42px', fontFamily: font.body, fontSize: 15, color: colors.text, background: colors.bg, border: `1.5px solid ${colors.border}`, borderRadius: 14, outline: 'none', boxSizing: 'border-box' },
   søgeRyd: { position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: 14, color: colors.mutedLight, padding: 4 },
 
