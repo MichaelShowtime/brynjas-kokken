@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Heart, MessageCircle, Pencil, Trash2, Search, Bookmark, UtensilsCrossed } from 'lucide-react'
+import { Heart, MessageCircle, Pencil, Trash2, Search, Bookmark, UtensilsCrossed, MoreHorizontal, ChefHat } from 'lucide-react'
 import { hentVenner, hentVennerFraDB } from '../data/venner'
 import { hentAktivBruger } from '../data/auth'
 import { hentKreationer } from '../data/kreationer'
@@ -404,67 +404,65 @@ function PostKort({ post: p, bruger, likes, onLike, onSlet, onGemRedigering }) {
     ? (p.user_id === bruger.id || (!p.user_id && p.bruger_email === bruger.email))
     : false
 
+  const likeCount = likes?.count ?? 0
+  const likedByMe = likes?.likedByMe ?? false
+
   return (
-    <article style={styles.post}>
-      <div style={styles.postHead}>
-        <div style={styles.postAvatar}>{p.bruger_avatar ?? '🧑‍🍳'}</div>
+    <article style={pk.kort}>
+
+      {/* ── Header ── */}
+      <div style={pk.header}>
+        <div style={pk.avatarWrap}>{p.bruger_avatar ?? '🧑‍🍳'}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={styles.postNavn}>
-            {p.bruger_navn}
-            {p.opskrift_titel && (
-              <span style={styles.postRetNavn}> — {p.opskrift_titel}</span>
-            )}
+          <p style={pk.navn}>{p.bruger_navn}</p>
+          <p style={pk.sub}>
+            {p.opskrift_titel ? `lavede ${p.opskrift_titel}` : 'delte et opslag'}
+            {' · '}{relativTidLang(p.created_at, t)}
           </p>
-          <p style={styles.postTid}>{relativTidLang(p.created_at, t)}</p>
         </div>
-        {erMin ? (
-          <button style={styles.menuBtn} onClick={() => setVisMenu(true)}>⋯</button>
+        <button style={pk.menuBtn} onClick={() => erMin && setVisMenu(true)}>
+          <MoreHorizontal size={20} color={colors.muted} />
+        </button>
+      </div>
+
+      {/* ── Billede (1:1) ── */}
+      <div style={pk.imgWrap}>
+        {p.foto_path ? (
+          <img src={billedeUrl(p.foto_path)} alt={p.opskrift_titel ?? ''} style={pk.img} />
         ) : (
-          <button style={styles.followBtn} onClick={() => navigate('/profil')}>+ {t('pf.følger')}</button>
+          <div style={{ ...pk.img, background: grad(opskriftFarve([])) }} />
+        )}
+        {p.opskrift_titel && <span style={pk.bildePill}>{p.opskrift_titel}</span>}
+      </div>
+
+      {/* ── Handlinger ── */}
+      <div style={pk.actions}>
+        <button style={pk.actionBtn} onClick={() => onLike(p.id)}>
+          <Heart size={22} fill={likedByMe ? colors.red : 'none'} color={likedByMe ? colors.red : colors.text} strokeWidth={2} />
+        </button>
+        <button style={pk.actionBtn} onClick={() => setVisKommentarer(v => !v)}>
+          <MessageCircle size={21} color={visKommentarer ? colors.green : colors.text} strokeWidth={2} />
+        </button>
+        <button style={pk.actionBtn} onClick={() => navigate(p.opskrift_id ? `/opskrift/${p.opskrift_id}` : '/madmatch')}>
+          <ChefHat size={21} color={colors.text} strokeWidth={2} />
+        </button>
+        {!erMin && (
+          <button style={pk.followPill} onClick={() => navigate('/profil')}>
+            + {t('pf.følger')}
+          </button>
         )}
       </div>
 
-      {p.foto_path ? (
-        <img
-          src={billedeUrl(p.foto_path)}
-          alt={p.opskrift_titel}
-          style={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 14 }}
-        />
-      ) : (
-        <div style={{ ...styles.postImg, background: grad(opskriftFarve([])) }}>
-          <span style={styles.postRet}>{p.opskrift_titel}</span>
-        </div>
-      )}
-
-      {p.citat && <p style={styles.postCitat}>"{p.citat}"</p>}
-
-      <div style={styles.postFooter}>
-        <button
-          style={{ ...styles.postStat, background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: likes?.likedByMe ? colors.red : colors.muted, display: 'flex', alignItems: 'center', gap: 5 }}
-          onClick={() => onLike(p.id)}
-        >
-          <Heart size={17} fill={likes?.likedByMe ? colors.red : 'none'} color={likes?.likedByMe ? colors.red : colors.muted} /> {likes?.count ?? 0}
-        </button>
-        <button
-          style={{ ...styles.postStat, background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 8px', color: visKommentarer ? colors.green : colors.muted, display: 'flex', alignItems: 'center' }}
-          onClick={() => setVisKommentarer(v => !v)}
-        >
-          <MessageCircle size={17} />
-        </button>
-        {p.opskrift_id ? (
-          <button
-            style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
-            onClick={() => navigate(`/opskrift/${p.opskrift_id}`)}
-          >
-            {t('bp.lavOgså')}
-          </button>
-        ) : (
-          <button
-            style={{ ...styles.postStat, marginLeft: 'auto', color: colors.green, background: 'none', border: 'none', fontFamily: font.body, fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: 0 }}
-            onClick={() => navigate('/madmatch')}
-          >
-            {t('bp.lavOgså')}
-          </button>
+      {/* ── Tekst ── */}
+      <div style={pk.tekst}>
+        {likeCount > 0 && (
+          <p style={pk.likesTekst}>{likeCount} synes godt om</p>
+        )}
+        {(p.bruger_navn || p.citat) && (
+          <p style={pk.caption}>
+            <span style={pk.captionNavn}>{p.bruger_navn} </span>
+            {p.citat && <span>{p.citat}</span>}
+          </p>
         )}
       </div>
 
@@ -489,6 +487,140 @@ function PostKort({ post: p, bruger, likes, onLike, onSlet, onGemRedigering }) {
       )}
     </article>
   )
+}
+
+// ── PostKort styles ───────────────────────────────────────────────────────────
+
+const pk = {
+  kort: {
+    background: colors.card,
+    borderRadius: radius.card,
+    boxShadow: shadow.card,
+    overflow: 'hidden',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '12px 14px 10px',
+  },
+  avatarWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 999,
+    background: colors.bg,
+    border: '2px solid #fff',
+    boxShadow: `0 0 0 2px ${colors.green}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 20,
+    flexShrink: 0,
+    overflow: 'hidden',
+  },
+  navn: {
+    fontFamily: font.body,
+    fontWeight: 700,
+    fontSize: 13,
+    color: colors.text,
+    margin: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  sub: {
+    fontFamily: font.body,
+    fontSize: 11,
+    color: colors.muted,
+    margin: '1px 0 0',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  menuBtn: {
+    background: 'none',
+    border: 'none',
+    padding: 4,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  imgWrap: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: '1 / 1',
+    overflow: 'hidden',
+  },
+  img: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  bildePill: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    background: 'rgba(31,36,33,0.55)',
+    color: '#fff',
+    fontFamily: font.body,
+    fontWeight: 600,
+    fontSize: 11,
+    padding: '4px 10px',
+    borderRadius: 999,
+    backdropFilter: 'blur(4px)',
+    WebkitBackdropFilter: 'blur(4px)',
+    maxWidth: 'calc(100% - 20px)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  actions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    padding: '10px 12px 4px',
+  },
+  actionBtn: {
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  followPill: {
+    marginLeft: 'auto',
+    fontFamily: font.body,
+    fontSize: 12,
+    fontWeight: 700,
+    color: colors.green,
+    background: '#EAF1EA',
+    border: 'none',
+    borderRadius: 999,
+    padding: '5px 12px',
+    cursor: 'pointer',
+  },
+  tekst: {
+    padding: '4px 12px 12px',
+  },
+  likesTekst: {
+    fontFamily: font.body,
+    fontWeight: 700,
+    fontSize: 12,
+    color: colors.text,
+    margin: '0 0 2px',
+  },
+  caption: {
+    fontFamily: font.body,
+    fontSize: 12,
+    color: colors.text,
+    margin: 0,
+    lineHeight: 1.45,
+  },
+  captionNavn: {
+    fontWeight: 700,
+  },
 }
 
 // ── KommentarSektion ──────────────────────────────────────────────────────────
