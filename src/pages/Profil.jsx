@@ -1,6 +1,47 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera, ShoppingBasket, UtensilsCrossed, Clock } from 'lucide-react'
+import {
+  Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera, ShoppingBasket, UtensilsCrossed, Clock,
+  Leaf, Sprout, Fish, Dumbbell, Flame, Wheat, Zap, Home, BookOpen, Recycle, CalendarDays,
+  Milk, ShieldCheck, PiggyBank, Apple, Utensils, Coffee, Salad, Bean, Beef, Sunrise,
+} from 'lucide-react'
+
+function tagIkon(id, size = 14) {
+  const p = { size, strokeWidth: 2 }
+  return {
+    vegetar:          <Leaf {...p} />,
+    veganer:          <Sprout {...p} />,
+    kød:              <Beef {...p} />,
+    fisk:             <Fish {...p} />,
+    'mere-grønt':     <Salad {...p} />,
+    bælgfrugter:      <Bean {...p} />,
+    'low-carb':       <Leaf {...p} />,
+    'protein-rig':    <Dumbbell {...p} />,
+    'kalorie-fattig': <Flame {...p} />,
+    fiberrig:         <Wheat {...p} />,
+    'anti-inflam':    <Shield {...p} />,
+    morgenmad:        <Coffee {...p} />,
+    frokost:          <Utensils {...p} />,
+    aftensmad:        <UtensilsCrossed {...p} />,
+    hurtig:           <Zap {...p} />,
+    'medium-tid':     <Clock {...p} />,
+    weekend:          <Home {...p} />,
+    'spise-sundere':  <Apple {...p} />,
+    'spare-penge':    <PiggyBank {...p} />,
+    'lær-nyt':        <BookOpen {...p} />,
+    'spild-mindre':   <Recycle {...p} />,
+    madplan:          <CalendarDays {...p} />,
+    italiensk:        <Globe {...p} />,
+    asiatisk:         <Globe {...p} />,
+    mexicansk:        <Globe {...p} />,
+    dansk:            <Globe {...p} />,
+    indisk:           <Globe {...p} />,
+    mellemøstlig:     <Globe {...p} />,
+    laktosefri:       <Milk {...p} />,
+    glutenfri:        <ShieldCheck {...p} />,
+    nøddefri:         <ShieldCheck {...p} />,
+  }[id] ?? <Leaf {...p} />
+}
 import { hentAutoLager, gemAutoLager } from '../data/lager'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
@@ -268,7 +309,7 @@ export default function Profil() {
               const tag = ALLE_TAGS.find((t) => t.id === id)
               return tag ? (
                 <div key={id} style={s.tagChip}>
-                  <span>{tag.emoji}</span> {tag.label}
+                  <span style={{ display: 'flex', alignItems: 'center' }}>{tagIkon(tag.id)}</span> {tag.label}
                 </div>
               ) : null
             })}
@@ -639,7 +680,7 @@ function TagsSide({ bruger, onGem, onTilbage }) {
                   return (
                     <button key={tag.id} onClick={() => toggle(tag.id)}
                       style={{ ...s.tagValgChip, ...(aktiv ? s.tagValgAktiv : {}) }}>
-                      <span>{tag.emoji}</span> {tag.label}
+                      <span style={{ display: 'flex', alignItems: 'center' }}>{tagIkon(tag.id)}</span> {tag.label}
                       {aktiv && <span style={{ marginLeft: 4, color: colors.green }}>✓</span>}
                     </button>
                   )

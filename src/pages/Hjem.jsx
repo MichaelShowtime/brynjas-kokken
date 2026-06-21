@@ -222,155 +222,169 @@ export default function Hjem() {
         </div>
       )}
 
-      <header style={styles.topRow}>
-        <div>
-          <p style={styles.eyebrow}>{datoLinjeLang(lang)}</p>
-          <h1 style={styles.title}>
-            {hilsen(t, time)},<br />{bruger?.navn ?? 'Kok'} 👋
-          </h1>
+      {/* ── Top-sektion (base creme) ─────────────────────────────────────────── */}
+      <div style={{ ...styles.sektionTop, ...(søgerAktivt ? { paddingBottom: 120 } : {}) }}>
+        <header style={styles.topRow}>
+          <div>
+            <p style={styles.eyebrow}>{datoLinjeLang(lang)}</p>
+            <h1 style={styles.title}>
+              {hilsen(t, time)},<br />{bruger?.navn ?? 'Kok'} 👋
+            </h1>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button style={styles.klokkeBtn} onClick={() => { setHarUlæste(false); navigate('/notifikationer') }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {harUlæste && <span style={styles.badge} />}
+            </button>
+            <button style={{ ...styles.avatar, border: 'none', cursor: 'pointer', padding: 0 }} onClick={() => navigate('/profil')}>
+              {bruger?.avatarUrl
+                ? <img src={bruger.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 999 }} />
+                : bruger?.avatar ?? '🧑‍🍳'}
+            </button>
+          </div>
+        </header>
+
+        <div style={styles.stats}>
+          <Stat tal={streak > 0 ? streak : '—'} label={t('hjem.streakLabel')} ikon="🔥" fremhæv />
+          <Stat tal={kreationer.length || '—'} label={t('pf.retterLavet')} ikon={<UtensilsCrossed size={15} />} />
+          <Stat tal={likes.length || '—'} label="gemte" ikon={<Bookmark size={15} />} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button style={styles.klokkeBtn} onClick={() => { setHarUlæste(false); navigate('/notifikationer') }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-            {harUlæste && <span style={styles.badge} />}
-          </button>
-          <button style={{ ...styles.avatar, border: 'none', cursor: 'pointer', padding: 0 }} onClick={() => navigate('/profil')}>
-            {bruger?.avatarUrl
-              ? <img src={bruger.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 999 }} />
-              : bruger?.avatar ?? '🧑‍🍳'}
-          </button>
+
+        <div style={styles.søgeWrap}>
+          <Search size={17} color={colors.muted} style={{ opacity: 0.6, flexShrink: 0 }} />
+          <input
+            type="search"
+            value={søgeTekst}
+            onChange={(e) => håndterSøg(e.target.value)}
+            placeholder={t('hjem.søgPlaceholder').replace('🔍 ', '')}
+            style={styles.søgeInput}
+          />
+          {søgeTekst && <button style={styles.søgeRyd} onClick={rydSøg}>✕</button>}
         </div>
-      </header>
 
-      <div style={styles.stats}>
-        <Stat tal={streak > 0 ? streak : '—'} label={t('hjem.streakLabel')} ikon="🔥" fremhæv />
-        <Stat tal={kreationer.length || '—'} label={t('pf.retterLavet')} ikon={<UtensilsCrossed size={15} />} />
-        <Stat tal={likes.length || '—'} label="gemte" ikon={<Bookmark size={15} />} />
-      </div>
+        {søgerAktivt && (
+          <div style={styles.søgePanel}>
+            {søgeResultater.length === 0 ? (
+              <p style={styles.søgeTom}>{t('hjem.søgIngen')} "{søgeTekst}"</p>
+            ) : (
+              søgeResultater.map((o) => {
+                const img = billedeUrl(o.storage_image)
+                const farve = opskriftFarve(o.tags)
+                const tid = tidLabel(o.prep_time, o.cook_time)
+                return (
+                  <button key={o.id} style={styles.søgeResultat} onClick={() => { rydSøg(); navigate(`/opskrift/${o.id}`) }}>
+                    <div style={{ ...styles.søgeThumb, background: grad(farve) }}>
+                      {img && <img src={img} alt="" style={styles.søgeThumbImg} />}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                      <p style={styles.søgeNavn}>{o.title}</p>
+                      {tid && <p style={styles.søgeMeta}>⏱ {tid}</p>}
+                    </div>
+                    <span style={{ color: colors.mutedLight, fontSize: 20 }}>›</span>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        )}
 
-      <div style={styles.søgeWrap}>
-        <Search size={17} color={colors.muted} style={{ opacity: 0.6, flexShrink: 0 }} />
-        <input
-          type="search"
-          value={søgeTekst}
-          onChange={(e) => håndterSøg(e.target.value)}
-          placeholder={t('hjem.søgPlaceholder').replace('🔍 ', '')}
-          style={styles.søgeInput}
-        />
-        {søgeTekst && <button style={styles.søgeRyd} onClick={rydSøg}>✕</button>}
-      </div>
-
-      {søgerAktivt && (
-        <div style={styles.søgePanel}>
-          {søgeResultater.length === 0 ? (
-            <p style={styles.søgeTom}>{t('hjem.søgIngen')} "{søgeTekst}"</p>
+        {!søgerAktivt && <Section titel={t('hjem.aktivNu')} handling={t('pf.tilføj')} onHandling={() => navigate('/profil')} />}
+        {!søgerAktivt && (
+          vennerListe.length === 0 ? (
+            <div style={styles.tomVenner}>
+              <span style={{ fontSize: 28 }}>👥</span>
+              <p style={styles.tomVennerTekst}>{t('hjem.ingenAktive')}</p>
+              <button style={styles.tilføjVenBtn} onClick={() => navigate('/profil')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
+            </div>
           ) : (
-            søgeResultater.map((o) => {
-              const img = billedeUrl(o.storage_image)
-              const farve = opskriftFarve(o.tags)
-              const tid = tidLabel(o.prep_time, o.cook_time)
-              return (
-                <button key={o.id} style={styles.søgeResultat} onClick={() => { rydSøg(); navigate(`/opskrift/${o.id}`) }}>
-                  <div style={{ ...styles.søgeThumb, background: grad(farve) }}>
-                    {img && <img src={img} alt="" style={styles.søgeThumbImg} />}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                    <p style={styles.søgeNavn}>{o.title}</p>
-                    {tid && <p style={styles.søgeMeta}>⏱ {tid}</p>}
-                  </div>
-                  <span style={{ color: colors.mutedLight, fontSize: 20 }}>›</span>
-                </button>
-              )
-            })
-          )}
+            <div style={styles.scrollRow}>
+              {vennerListe.map((v) => {
+                const erAktiv = recentPostEmails.has(v.email)
+                return (
+                  <button
+                    key={v.id}
+                    style={{ ...styles.story, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                    onClick={() => v.id && navigate(`/bruger/${v.id}`)}
+                  >
+                    <div style={{ ...styles.storyRing, background: erAktiv ? `linear-gradient(135deg, ${colors.terracotta}, ${colors.red})` : colors.border }}>
+                      <div style={styles.storyAvatar}>{v.emoji}</div>
+                    </div>
+                    <span style={styles.storyNavn}>{v.navn}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )
+        )}
+      </div>
+
+      {/* ── Ugens opskrift (blød grøn) ──────────────────────────────────────── */}
+      {!søgerAktivt && (
+        <div style={styles.sektionGrøn}>
+          <Section titel={lang === 'en' ? 'Recipe of the week' : 'Ugens opskrift'} />
+          {loading ? (
+            <div style={styles.featuredSkeleton} />
+          ) : featured ? (
+            <FeaturedCard opskrift={featured} onClick={() => navigate(`/opskrift/${featured.id}`)} />
+          ) : null}
         </div>
       )}
 
-      {!søgerAktivt && <Section titel={t('hjem.aktivNu')} handling={t('pf.tilføj')} onHandling={() => navigate('/profil')} />}
+      {/* ── Seneste retter (varm creme) ─────────────────────────────────────── */}
       {!søgerAktivt && (
-        vennerListe.length === 0 ? (
-          <div style={styles.tomVenner}>
-            <span style={{ fontSize: 28 }}>👥</span>
-            <p style={styles.tomVennerTekst}>{t('hjem.ingenAktive')}</p>
-            <button style={styles.tilføjVenBtn} onClick={() => navigate('/profil')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
-          </div>
-        ) : (
-          <div style={styles.scrollRow}>
-            {vennerListe.map((v) => {
-              const erAktiv = recentPostEmails.has(v.email)
-              return (
-                <button
-                  key={v.id}
-                  style={{ ...styles.story, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                  onClick={() => v.id && navigate(`/bruger/${v.id}`)}
-                >
-                  <div style={{ ...styles.storyRing, background: erAktiv ? `linear-gradient(135deg, ${colors.terracotta}, ${colors.red})` : colors.border }}>
-                    <div style={styles.storyAvatar}>{v.emoji}</div>
+        <div style={styles.sektionCreme}>
+          <Section titel={t('hjem.senesteFeed')} handling={lang === 'en' ? 'Follow more' : 'Følg flere'} onHandling={() => navigate('/profil')} />
+          <div style={styles.feed}>
+            {dbPosts.length > 0
+              ? dbPosts.map((p) => (
+                <PostKort
+                  key={p.id}
+                  post={p}
+                  bruger={bruger}
+                  likes={postLikes[p.id]}
+                  onLike={toggleLike}
+                  onSlet={sletPost}
+                  onGemRedigering={gemRedigering}
+                />
+              ))
+              : vennerListe.length === 0
+                ? (
+                  <div style={styles.feedTom}>
+                    <span style={{ fontSize: 40 }}>👨‍👩‍👧</span>
+                    <p style={styles.feedTomTitel}>{t('hjem.ingenFeed')}</p>
+                    <p style={styles.feedTomTekst}>{t('hjem.ingenFeedSub')}</p>
+                    <div style={styles.feedTomKnapper}>
+                      <button style={styles.feedTomPrimær} onClick={() => navigate('/profil')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
+                      <button style={styles.feedTomSekundær} onClick={() => navigate('/opret')}>{t('nav.opret')}</button>
+                    </div>
                   </div>
-                  <span style={styles.storyNavn}>{v.navn}</span>
-                </button>
-              )
-            })}
-          </div>
-        )
-      )}
-
-      {!søgerAktivt && <Section titel={lang === 'en' ? 'Recipe of the week' : 'Ugens opskrift'} />}
-      {!søgerAktivt && (loading ? (
-        <div style={styles.featuredSkeleton} />
-      ) : featured ? (
-        <FeaturedCard opskrift={featured} onClick={() => navigate(`/opskrift/${featured.id}`)} />
-      ) : null)}
-
-      {!søgerAktivt && <Section titel={t('hjem.senesteFeed')} handling={lang === 'en' ? 'Follow more' : 'Følg flere'} onHandling={() => navigate('/profil')} />}
-      {!søgerAktivt && (
-        <div style={styles.feed}>
-          {dbPosts.length > 0
-            ? dbPosts.map((p) => (
-              <PostKort
-                key={p.id}
-                post={p}
-                bruger={bruger}
-                likes={postLikes[p.id]}
-                onLike={toggleLike}
-                onSlet={sletPost}
-                onGemRedigering={gemRedigering}
-              />
-            ))
-            : vennerListe.length === 0
-              ? (
-                <div style={styles.feedTom}>
-                  <span style={{ fontSize: 40 }}>👨‍👩‍👧</span>
-                  <p style={styles.feedTomTitel}>{t('hjem.ingenFeed')}</p>
-                  <p style={styles.feedTomTekst}>{t('hjem.ingenFeedSub')}</p>
-                  <div style={styles.feedTomKnapper}>
-                    <button style={styles.feedTomPrimær} onClick={() => navigate('/profil')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
-                    <button style={styles.feedTomSekundær} onClick={() => navigate('/opret')}>{t('nav.opret')}</button>
+                )
+                : (
+                  <div style={styles.feedTom}>
+                    <span style={{ fontSize: 40 }}>🍳</span>
+                    <p style={styles.feedTomTitel}>{t('hjem.ingenFeed')}</p>
+                    <p style={styles.feedTomTekst}>{t('hjem.ingenFeedSub')}</p>
+                    <button style={styles.feedTomPrimær} onClick={() => navigate('/opret')}>{t('nav.opret')}</button>
                   </div>
-                </div>
-              )
-              : (
-                <div style={styles.feedTom}>
-                  <span style={{ fontSize: 40 }}>🍳</span>
-                  <p style={styles.feedTomTitel}>{t('hjem.ingenFeed')}</p>
-                  <p style={styles.feedTomTekst}>{t('hjem.ingenFeedSub')}</p>
-                  <button style={styles.feedTomPrimær} onClick={() => navigate('/opret')}>{t('nav.opret')}</button>
-                </div>
-              )
-          }
+                )
+            }
+          </div>
         </div>
       )}
 
-      {!søgerAktivt && <Section titel={lang === 'en' ? 'More for you' : 'Mere til dig'} handling={lang === 'en' ? 'See all' : 'Se alle'} onHandling={() => navigate('/galleri')} />}
+      {/* ── Mere til dig (base creme) ────────────────────────────────────────── */}
       {!søgerAktivt && (
-        <div style={styles.swipeRække}>
-          {loading
-            ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={styles.recipeCardSkeleton} />)
-            : anbefalet.map((o) => <RecipeCard key={o.id} opskrift={o} onClick={() => navigate(`/opskrift/${o.id}`)} />)
-          }
+        <div style={styles.sektionBund}>
+          <Section titel={lang === 'en' ? 'More for you' : 'Mere til dig'} handling={lang === 'en' ? 'See all' : 'Se alle'} onHandling={() => navigate('/galleri')} />
+          <div style={styles.swipeRække}>
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={styles.recipeCardSkeleton} />)
+              : anbefalet.map((o) => <RecipeCard key={o.id} opskrift={o} onClick={() => navigate(`/opskrift/${o.id}`)} />)
+            }
+          </div>
         </div>
       )}
     </div>
@@ -688,7 +702,11 @@ function Section({ titel, handling, onHandling }) {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = {
-  page: { maxWidth: 480, margin: '0 auto', padding: '20px 20px 120px', minHeight: '100%', position: 'relative' },
+  page: { maxWidth: 480, margin: '0 auto', minHeight: '100%', position: 'relative' },
+  sektionTop:  { background: '#FAF7F2', padding: '20px 20px 24px' },
+  sektionGrøn: { background: '#EAF1EA', padding: '8px 20px 28px' },
+  sektionCreme:{ background: '#FFF6EC', padding: '8px 20px 28px' },
+  sektionBund: { background: '#FAF7F2', padding: '8px 20px 120px' },
 
   toast: {
     position: 'fixed', top: 14, left: '50%', transform: 'translateX(-50%)',
@@ -712,7 +730,7 @@ const styles = {
   statTal: { fontFamily: font.display, fontWeight: 600, fontSize: 18 },
   statLabel: { fontFamily: font.body, fontSize: 11.5, fontWeight: 600 },
 
-  sectionHead: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '26px 0 12px' },
+  sectionHead: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '16px 0 12px' },
   sectionTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 19, color: colors.text, margin: 0, letterSpacing: -0.3 },
   sectionLink: { fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green, background: 'none', border: 'none', padding: 0 },
 

@@ -1,6 +1,10 @@
 ﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Camera, Mic, Search, Trash2 } from 'lucide-react'
+import {
+  AlertTriangle, Camera, Mic, Search, Trash2,
+  Egg, Milk, Carrot, Fish, Leaf, LeafyGreen, Wheat, Snowflake,
+  Beef, Drumstick, Package, Sparkles, Refrigerator, Apple, Bean,
+} from 'lucide-react'
 import {
   hentLager, gemLager, sletFraLager, opdaterUdløb, opdaterVare,
   KATEGORIER, INGREDIENS_KATALOG, ENHEDER,
@@ -13,6 +17,37 @@ import { hentIndkøbsliste } from '../data/indkøbsliste'
 
 // Module-level cache — survives re-renders, re-fetches only on hard reload
 let _katalogCache = null
+
+function VareIkon({ vare, size = 20 }) {
+  const props = { size, strokeWidth: 2, color: colors.muted }
+  const n = (vare?.navn ?? '').toLowerCase()
+  if (/æg/.test(n)) return <Egg {...props} />
+  if (/mælk|fløde|yoghurt|cremefraiche/.test(n)) return <Milk {...props} />
+  if (/gulerod/.test(n)) return <Carrot {...props} />
+  if (/laks|tun|torsk|rejer|fisk|skaldyr/.test(n)) return <Fish {...props} />
+  if (/smør/.test(n)) return <Milk {...props} />
+  if (/ost|mozzarella|feta|parmesan|cheddar/.test(n)) return <Egg {...props} />
+  if (/kylling/.test(n)) return <Drumstick {...props} />
+  if (/okse|hakket|bacon|pølse|svinekød/.test(n)) return <Beef {...props} />
+  if (/mel|pasta|ris|havregryn|bulgur|couscous|quinoa|brød|tortilla/.test(n)) return <Wheat {...props} />
+  if (/æble|banan|appelsin|citron|lime|mango|jordbær|hindbær|blåbær/.test(n)) return <Apple {...props} />
+  if (/tofu|bønner|linser/.test(n)) return <Bean {...props} />
+  if (/løg|hvidløg|porrer|tomat|peberfrugt|agurk|broccoli|blomkål|squash|champignon|spinat|avocado|selleri|koriander|basilikum|ingefær|kartof/.test(n)) return <LeafyGreen {...props} />
+  if (vare?.kategori === 'frys') return <Snowflake {...props} />
+  if (vare?.kategori === 'grønt') return <Leaf {...props} />
+  if (vare?.kategori === 'tørvarer') return <Package {...props} />
+  if (vare?.kategori === 'krydderier') return <Sparkles {...props} />
+  if (vare?.kategori === 'køl') return <Refrigerator {...props} />
+  return <Package {...props} />
+}
+
+const KATEGORI_IKONER = {
+  køl:        <Refrigerator size={12} strokeWidth={2} />,
+  grønt:      <LeafyGreen  size={12} strokeWidth={2} />,
+  tørvarer:   <Package     size={12} strokeWidth={2} />,
+  frys:       <Snowflake   size={12} strokeWidth={2} />,
+  krydderier: <Sparkles    size={12} strokeWidth={2} />,
+}
 
 // ── Udløbs-hjælper ────────────────────────────────────────────────────────────
 function udløbsInfo(udløbDato, t) {
@@ -107,7 +142,10 @@ export default function Lager() {
           {/* Varer per kategori */}
           {grupper.map((g) => (
             <div key={g.id} style={s.gruppe}>
-              <p style={s.gruppeLabel}>{(KATEGORI_LABELS[g.id] ?? g.label).toUpperCase()}</p>
+              <div style={{ ...s.gruppeLabel, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ color: 'inherit', display: 'flex' }}>{KATEGORI_IKONER[g.id]}</span>
+                <span>{(KATEGORI_LABELS[g.id] ?? g.label).toUpperCase()}</span>
+              </div>
               <div style={s.kortBoks}>
                 {g.varer.map((v, i) => {
                   const info = udløbsInfo(v.udløb, t)
@@ -117,7 +155,7 @@ export default function Lager() {
                     <div key={v.id}>
                       <div style={s.vareRække}>
                         {/* Thumbnail */}
-                        <div style={s.thumb}>{v.emoji}</div>
+                        <div style={s.thumb}><VareIkon vare={v} /></div>
 
                         {/* Navn + sub-labels */}
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -433,7 +471,7 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
             ) : (
               resultater.map((item, i) => (
                 <button key={i} style={s.resultatItem} onClick={() => vælgIngrediens(item)}>
-                  <span style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{item.emoji}</span>
+                  <span style={{ width: 30, display: 'flex', justifyContent: 'center', color: colors.muted }}><VareIkon vare={item} size={18} /></span>
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <p style={s.resultatNavn}>{fremhæv(item.navn, søgning)}</p>
                     <p style={s.resultatKategori}>{KATEGORI_LABELS[item.kategori]}</p>
@@ -450,7 +488,7 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
         {valgt && (
           <div style={s.detaljeFormular}>
             <div style={s.valgtHeader}>
-              <span style={{ fontSize: 28 }}>{valgt.emoji}</span>
+              <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: colors.muted }}><VareIkon vare={valgt} size={24} /></span>
               <div>
                 <p style={s.valgtNavn}>{valgt.navn}</p>
                 <p style={s.valgtKategori}>{KATEGORI_LABELS[valgt.kategori]}</p>
@@ -520,7 +558,7 @@ function RedigerSheet({ vare, onGem, onSlet, onLuk, t }) {
         <div style={s.greb} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 26 }}>{vare.emoji}</span>
+            <span style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.muted }}><VareIkon vare={vare} size={22} /></span>
             <h2 style={s.sheetTitel}>{vare.navn}</h2>
           </div>
           <button style={s.lukBtn} onClick={onLuk}>✕</button>
