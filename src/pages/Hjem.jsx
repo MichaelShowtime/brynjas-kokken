@@ -9,8 +9,7 @@ import { supabase } from '../lib/supabase'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
 import { useLang, relativTidLang, datoLinjeLang } from '../lib/lang'
 
-function hilsen(t) {
-  const h = new Date().getHours()
+function hilsen(t, h) {
   if (h < 10) return t('hjem.godmorgen')
   if (h < 14) return t('hjem.godFormiddag')
   if (h < 18) return t('hjem.godEftermiddag')
@@ -50,6 +49,12 @@ export default function Hjem() {
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
   const [harUlæste, setHarUlæste] = useState(false)
+  const [time, setTime] = useState(() => new Date().getHours())
+
+  useEffect(() => {
+    const interval = setInterval(() => setTime(new Date().getHours()), 30_000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     if (!bruger?.id) return
@@ -220,7 +225,7 @@ export default function Hjem() {
         <div>
           <p style={styles.eyebrow}>{datoLinjeLang(lang)}</p>
           <h1 style={styles.title}>
-            {hilsen(t)},<br />{bruger?.navn ?? 'Kok'} 👋
+            {hilsen(t, time)},<br />{bruger?.navn ?? 'Kok'} 👋
           </h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
