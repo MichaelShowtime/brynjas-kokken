@@ -75,16 +75,15 @@ export default function Hjem() {
     supabase
       .from('recipes')
       .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image')
-      .not('tags', 'is', null)
-      .neq('tags', '{}')
-      .limit(60)
+      .order('id', { ascending: true })
+      .limit(200)
       .then(({ data }) => {
         if (cancelled) return
-        const alle = (data ?? []).filter(r => r.tags?.length > 0)
+        const alle = data ?? []
         const sorteret = brugerTags.length > 0
           ? [...alle].sort((a, b) => {
-              const aMatch = a.tags.filter(tg => brugerTags.includes(tg)).length
-              const bMatch = b.tags.filter(tg => brugerTags.includes(tg)).length
+              const aMatch = (a.tags ?? []).filter(tg => brugerTags.includes(tg)).length
+              const bMatch = (b.tags ?? []).filter(tg => brugerTags.includes(tg)).length
               return bMatch - aMatch
             })
           : alle
@@ -208,8 +207,8 @@ export default function Hjem() {
     return new Set(dbPosts.filter((p) => new Date(p.created_at).getTime() > cutoff).map((p) => p.bruger_email))
   }, [dbPosts])
 
-  const featured = opskrifter[0] ?? null
-  const anbefalet = opskrifter.slice(1, 6)
+  const featured = getDagensRet(opskrifter)
+  const anbefalet = opskrifter.slice(0, 6).filter(o => o.id !== featured?.id)
 
   return (
     <div style={styles.page}>
@@ -321,10 +320,10 @@ export default function Hjem() {
         )}
       </div>
 
-      {/* ── Ugens opskrift (blød grøn) ──────────────────────────────────────── */}
+      {/* ── Dagens ret (blød grøn) ───────────────────────────────────────────── */}
       {!søgerAktivt && (
         <div style={styles.sektionGrøn}>
-          <Section titel={lang === 'en' ? 'Recipe of the week' : 'Ugens opskrift'} />
+          <Section titel={lang === 'en' ? "Today's dish" : 'Dagens ret'} />
           {loading ? (
             <div style={styles.featuredSkeleton} />
           ) : featured ? (
@@ -787,6 +786,14 @@ function RedigerModal({ citat, t, onGem, onLuk }) {
 
 // ── Øvrige subkomponenter ─────────────────────────────────────────────────────
 
+function getDagensRet(opskrifter) {
+  if (!opskrifter.length) return null
+  const dato = new Date().toISOString().split('T')[0]
+  const seed = parseInt(dato.split('-').join(''), 10)
+  const stabil = [...opskrifter].sort((a, b) => (a.id < b.id ? -1 : 1))
+  return stabil[seed % stabil.length]
+}
+
 function FeaturedCard({ opskrift, onClick }) {
   const { lang } = useLang()
   const imgUrl = billedeUrl(opskrift.storage_image)
@@ -794,12 +801,13 @@ function FeaturedCard({ opskrift, onClick }) {
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const sværhed = sværhedLabel(opskrift.difficulty)
   const meta = [tid && `⏱ ${tid}`, sværhed].filter(Boolean).join(' · ')
+  const datoLabel = new Date().toLocaleDateString(lang === 'en' ? 'en-GB' : 'da-DK', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
     <button style={styles.featured} onClick={onClick}>
       <div style={{ ...styles.featuredHero, background: grad(farve) }}>
         {imgUrl && <img src={imgUrl} alt={opskrift.title} style={styles.featuredImg} />}
-        <span style={styles.featuredBadge}>⭐ {lang === 'en' ? 'Recommended for you' : 'Anbefalet til dig'}</span>
+        <span style={styles.featuredBadge}>{datoLabel}</span>
       </div>
       <div style={styles.featuredBody}>
         <h3 style={styles.featuredTitel}>{opskrift.title}</h3>
