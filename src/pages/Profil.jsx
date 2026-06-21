@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera, ShoppingBasket } from 'lucide-react'
+import { Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera, ShoppingBasket, UtensilsCrossed, Clock } from 'lucide-react'
 import { hentAutoLager, gemAutoLager } from '../data/lager'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
@@ -318,11 +318,15 @@ export default function Profil() {
           </div>
           <div style={s.statBox}>
             <span style={s.statBoxTal}>{kreationer.length}</span>
-            <span style={s.statBoxLabel}>{t('pf.retterLavet')}</span>
+            <span style={{ ...s.statBoxLabel, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <UtensilsCrossed size={11} strokeWidth={2.5} /> {t('pf.retterLavet')}
+            </span>
           </div>
           <div style={s.statBox}>
             <span style={s.statBoxTal}>{gnsTid ? `${gnsTid}m` : '—'}</span>
-            <span style={s.statBoxLabel}>{t('pf.gnsTid')}</span>
+            <span style={{ ...s.statBoxLabel, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Clock size={11} strokeWidth={2.5} /> {t('pf.gnsTid')}
+            </span>
           </div>
         </div>
       </div>
