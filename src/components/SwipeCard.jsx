@@ -5,8 +5,6 @@ export default function SwipeCard({
   opskrift,
   analyse,
   cardStyle,
-  likeOpacity = 0,
-  nopeOpacity = 0,
   pointerHandlers = {},
   innerRef,
   onKlik = () => {},
@@ -22,9 +20,9 @@ export default function SwipeCard({
 
   return (
     <div ref={innerRef} style={{ ...styles.card, ...cardStyle }} {...pointerHandlers}>
-      {/* Stempler */}
-      <div style={{ ...styles.stamp, ...styles.likeStamp, opacity: likeOpacity }}>GEM</div>
-      <div style={{ ...styles.stamp, ...styles.nopeStamp, opacity: nopeOpacity }}>SPRING OVER</div>
+      {/* Stempler — opacity styres direkte af MadMatch via data-stamp */}
+      <div data-stamp="like" style={{ ...styles.stamp, ...styles.likeStamp, opacity: 0 }}>GEM</div>
+      <div data-stamp="nope" style={{ ...styles.stamp, ...styles.nopeStamp, opacity: 0 }}>SPRING OVER</div>
 
       {/* Hero — klikbar → navigerer til opskrift */}
       <button
@@ -78,6 +76,7 @@ const styles = {
     background: colors.card, borderRadius: radius.card,
     boxShadow: shadow.card, overflow: 'hidden',
     touchAction: 'none', userSelect: 'none',
+    willChange: 'transform',
   },
 
   stamp: {

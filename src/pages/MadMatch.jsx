@@ -33,9 +33,10 @@ export default function MadMatch() {
 
   const [index, setIndex] = useState(0)
   const [gemte, setGemte] = useState([])
-  const [drag, setDrag] = useState({ x: 0, y: 0 })
-  const [animer, setAnimer] = useState(false)
-  const startRef = useRef(null)
+  const [animating, setAnimating] = useState(false)
+  const topCardRef = useRef(null)
+  // { active, startX, startY, startTime, x, y }
+  const dragState = useRef({ active: false, startX: 0, startY: 0, startTime: 0, x: 0, y: 0 })
   // historik: [{opskrift, retning}] — bruges til fortryd
   const [historik, setHistorik] = useState([])
 
@@ -111,11 +112,25 @@ export default function MadMatch() {
     return liste
   }, [brugLager, kunKanLaves, shuffled, tagFilter, mealFilter, under30, analyser, afviste, brugerTags])
 
+  // Nulstil top-kortets inline transform når index skifter (inkl. fortryd)
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      const el = topCardRef.current
+      if (!el) return
+      el.style.transition = 'none'
+      el.style.transform = ''
+      const likeEl = el.querySelector('[data-stamp="like"]')
+      const nopeEl = el.querySelector('[data-stamp="nope"]')
+      if (likeEl) likeEl.style.opacity = '0'
+      if (nopeEl) nopeEl.style.opacity = '0'
+    })
+  }, [index])
+
   function nulstilStak() {
     setIndex(0)
     setGemte([])
-    setDrag({ x: 0, y: 0 })
-    setAnimer(false)
+    dragState.current = { active: false, startX: 0, startY: 0, startTime: 0, x: 0, y: 0 }
+    setAnimating(false)
     setHistorik([])
   }
 
@@ -130,6 +145,20 @@ export default function MadMatch() {
     (retning) => {
       const aktuel = kort[index]
       if (!aktuel) return
+      dragState.current.active = false
+      setAnimating(true)
+
+      // Animér kortet ud direkte på DOM — ingen React-re-render under flight
+      const el = topCardRef.current
+      if (el) {
+        el.style.transition = 'transform 0.28s ease-out'
+        el.style.transform = `translate(${retning === 'right' ? 700 : -700}px, 40px) rotate(${retning === 'right' ? 20 : -20}deg)`
+        const likeEl = el.querySelector('[data-stamp="like"]')
+        const nopeEl = el.querySelector('[data-stamp="nope"]')
+        if (retning === 'right' && likeEl) likeEl.style.opacity = '1'
+        if (retning === 'left' && nopeEl) nopeEl.style.opacity = '1'
+      }
+
       if (retning === 'right') {
         setGemte((g) => [...g, aktuel])
         gemLike(aktuel)
@@ -139,11 +168,9 @@ export default function MadMatch() {
         setAfviste((prev) => new Set([...prev, aktuel.id]))
       }
       setHistorik((h) => [...h, { opskrift: aktuel, retning }])
-      setAnimer(true)
-      setDrag({ x: retning === 'right' ? 600 : -600, y: 40 })
+
       window.setTimeout(() => {
-        setAnimer(false)
-        setDrag({ x: 0, y: 0 })
+        setAnimating(false)
         setIndex((i) => i + 1)
       }, 280)
     },
@@ -174,29 +201,63 @@ export default function MadMatch() {
   }
 
   function onPointerDown(e) {
-    if (animer) return
-    startRef.current = { x: e.clientX, y: e.clientY }
-    e.currentTarget.setPointerCapture?.(e.pointerId)
+    if (animating) return
+    const el = topCardRef.current
+    if (!el) return
+    dragState.current = { active: true, startX: e.clientX, startY: e.clientY, startTime: Date.now(), x: 0, y: 0 }
+    el.style.transition = 'none'
+    el.setPointerCapture?.(e.pointerId)
   }
 
   function onPointerMove(e) {
-    if (!startRef.current) return
-    setDrag({ x: e.clientX - startRef.current.x, y: e.clientY - startRef.current.y })
+    const d = dragState.current
+    if (!d.active) return
+    d.x = e.clientX - d.startX
+    d.y = e.clientY - d.startY
+    const rotate = Math.max(-15, Math.min(15, d.x / 20))
+    const el = topCardRef.current
+    if (!el) return
+    // Direkte DOM-opdatering — ingen setState, ingen re-render
+    el.style.transform = `translate(${d.x}px, ${d.y}px) rotate(${rotate}deg)`
+    const likeEl = el.querySelector('[data-stamp="like"]')
+    const nopeEl = el.querySelector('[data-stamp="nope"]')
+    if (likeEl) likeEl.style.opacity = Math.min(Math.max(d.x / SWIPE_THRESHOLD, 0), 1)
+    if (nopeEl) nopeEl.style.opacity = Math.min(Math.max(-d.x / SWIPE_THRESHOLD, 0), 1)
   }
 
   function onPointerUp() {
-    if (!startRef.current) return
-    startRef.current = null
-    if (drag.x > SWIPE_THRESHOLD) return fuldførSwipe('right')
-    if (drag.x < -SWIPE_THRESHOLD) return fuldførSwipe('left')
-    setAnimer(true)
-    setDrag({ x: 0, y: 0 })
+    const d = dragState.current
+    if (!d.active) return
+    d.active = false
+    const velocity = Math.abs(d.x) / Math.max(Date.now() - d.startTime, 1)
+    if (Math.abs(d.x) > SWIPE_THRESHOLD || velocity > 0.5) {
+      return fuldførSwipe(d.x > 0 ? 'right' : 'left')
+    }
+    // Ikke langt nok — animér tilbage til center
+    const el = topCardRef.current
+    if (el) {
+      el.style.transition = 'transform 0.25s ease-out'
+      el.style.transform = 'translate(0px, 0px) rotate(0deg)'
+      const likeEl = el.querySelector('[data-stamp="like"]')
+      const nopeEl = el.querySelector('[data-stamp="nope"]')
+      if (likeEl) likeEl.style.opacity = '0'
+      if (nopeEl) nopeEl.style.opacity = '0'
+    }
+  }
+
+  function onPointerCancel() {
+    const d = dragState.current
+    if (!d.active) return
+    d.active = false
+    const el = topCardRef.current
+    if (el) {
+      el.style.transition = 'transform 0.25s ease-out'
+      el.style.transform = 'translate(0px, 0px) rotate(0deg)'
+    }
   }
 
   const synlige = kort.slice(index, index + 3)
   const slut = !loading && index >= kort.length
-  const likeOpacity = Math.min(Math.max(drag.x / SWIPE_THRESHOLD, 0), 1)
-  const nopeOpacity = Math.min(Math.max(-drag.x / SWIPE_THRESHOLD, 0), 1)
 
   const toggleTag = (tag) => {
     setTagFilter((t) => (t === tag ? null : tag))
@@ -292,16 +353,13 @@ export default function MadMatch() {
               const isTop = i === 0
               const dybde = i
               const cardStyle = isTop
-                ? {
-                    transform: `translate(${drag.x}px, ${drag.y}px) rotate(${drag.x / 22}deg)`,
-                    transition: animer ? 'transform 0.28s ease-out' : 'none',
-                    cursor: 'grab',
-                    zIndex: 10,
-                  }
+                ? { willChange: 'transform', cursor: 'grab', zIndex: 10 }
                 : {
                     transform: `translateY(${dybde * 12}px) scale(${1 - dybde * 0.05}) rotate(${dybde === 1 ? -2 : 2}deg)`,
                     transition: 'transform 0.28s ease-out',
                     zIndex: 10 - dybde,
+                    pointerEvents: 'none',
+                    opacity: 0.85,
                   }
               return (
                 <SwipeCard
@@ -309,10 +367,9 @@ export default function MadMatch() {
                   opskrift={opskrift}
                   analyse={analyser(opskrift)}
                   cardStyle={cardStyle}
-                  likeOpacity={isTop ? likeOpacity : 0}
-                  nopeOpacity={isTop ? nopeOpacity : 0}
-                  pointerHandlers={isTop ? { onPointerDown, onPointerMove, onPointerUp } : {}}
-                  onKlik={isTop ? () => navigate(`/opskrift/${opskrift.id}`) : () => {}}
+                  innerRef={isTop ? topCardRef : null}
+                  pointerHandlers={isTop ? { onPointerDown, onPointerMove, onPointerUp, onPointerCancel } : {}}
+                  onKlik={isTop && !animating ? () => navigate(`/opskrift/${opskrift.id}`) : () => {}}
                 />
               )
             })
