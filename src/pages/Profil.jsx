@@ -49,6 +49,7 @@ import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
 import { hentKreationer, sletKreation } from '../data/kreationer'
 import { hentLikes, fjernLike } from '../data/likes'
 import { hentGemte, toggleGemt } from '../data/gemte'
+import { ALLE_BADGES, beregnOpnåedeBadges, synkBadges, hentBadgesDB } from '../data/badges'
 import { billedeUrl, opskriftFarve, grad, tidLabel } from '../lib/recipeUtils'
 import { hentVenner, hentVennerFraDB, tilføjVenDB, fjernVenDB, hentAntalFølgere, søgBrugere } from '../data/venner'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -77,14 +78,6 @@ function beregnGnsTid(kreationer) {
   return Math.round(tider.reduce((a, b) => a + b, 0) / tider.length)
 }
 
-const ACHIEVEMENTS = [
-  { emoji: '🔥', titel: '12 dages streak',  beskrivelse: 'Kogt 12 dage i træk',    opnået: true  },
-  { emoji: '👨‍🍳', titel: 'Første ret',       beskrivelse: 'Lavede din første ret',  opnået: true  },
-  { emoji: '⭐', titel: 'Madsniffer',        beskrivelse: 'Gemte 10+ opskrifter',   opnået: true  },
-  { emoji: '🌿', titel: 'Grøn uge',          beskrivelse: 'Kun vegetar i 7 dage',   opnået: false },
-  { emoji: '🍕', titel: 'Weekendkok',        beskrivelse: 'Lavet mad 4 lørdage',    opnået: false },
-  { emoji: '🏆', titel: 'Mesterkok',         beskrivelse: 'Lavet 100 retter',       opnået: false },
-]
 
 const TILFØJ_VEN_KEY = 'profil_tilfoej_ven'
 
@@ -199,6 +192,7 @@ export default function Profil() {
   const [tilføjVenÅben, setTilføjVenÅben] = useState(false)
   const [autoLager, setAutoLagerState] = useState(hentAutoLager)
   const [uploadLoader, setUploadLoader] = useState(false)
+  const [opnåedeBadges, setOpnåedeBadges] = useState(new Set())
   const avatarInputRef = useRef(null)
   const streak = beregnStreak(kreationer)
   const gnsTid = beregnGnsTid(kreationer)
@@ -229,6 +223,18 @@ export default function Profil() {
       hentAntalFølgere(bruger.id).then(setAntalFølgere)
     }
   }, [bruger?.id])
+
+  // Beregn + synk badges når data er klar
+  useEffect(() => {
+    if (!bruger?.id) return
+    const opnåede = beregnOpnåedeBadges({
+      kreationer,
+      gemteAntal: gemteIds.length,
+      vennerAntal: venner.length,
+      streak,
+    })
+    synkBadges(bruger.id, opnåede).then(setOpnåedeBadges)
+  }, [bruger?.id, kreationer.length, gemteIds.length, venner.length, streak])
 
   useEffect(() => {
     if (visning === 'hoved') {
@@ -501,13 +507,33 @@ export default function Profil() {
 
       {/* Badges-tab */}
       {aktivTab === 'badges' && (
-        <div style={{ ...s.tabIndhold, padding: 16 }}>
+        <div style={{ ...s.tabIndhold, padding: '12px 16px 16px' }}>
+          <p style={{ fontFamily: font.body, fontSize: 12.5, color: colors.muted, margin: '0 0 14px', textAlign: 'center' }}>
+            {opnåedeBadges.size} / {ALLE_BADGES.length} badges optjent
+          </p>
+          {/* Optjente badges først */}
+          {opnåedeBadges.size > 0 && (
+            <>
+              <p style={s.badgeGruppeLabel}>Optjent ✨</p>
+              <div style={s.grid3}>
+                {ALLE_BADGES.filter(b => opnåedeBadges.has(b.id)).map(b => (
+                  <div key={b.id} style={s.badge}>
+                    <span style={{ fontSize: 28 }}>{b.emoji}</span>
+                    <p style={s.badgeTitel}>{b.titel}</p>
+                    <p style={s.badgeDesc}>{b.beskrivelse}</p>
+                  </div>
+                ))}
+              </div>
+              <p style={{ ...s.badgeGruppeLabel, marginTop: 20 }}>Ikke optjent endnu 🔒</p>
+            </>
+          )}
+          {/* Låste badges */}
           <div style={s.grid3}>
-            {ACHIEVEMENTS.map((a, i) => (
-              <div key={i} style={{ ...s.badge, ...(a.opnået ? {} : s.badgeLocked) }}>
-                <span style={{ fontSize: 28 }}>{a.opnået ? a.emoji : '🔒'}</span>
-                <p style={s.badgeTitel}>{a.titel}</p>
-                <p style={s.badgeDesc}>{a.beskrivelse}</p>
+            {ALLE_BADGES.filter(b => !opnåedeBadges.has(b.id)).map(b => (
+              <div key={b.id} style={{ ...s.badge, ...s.badgeLocked }}>
+                <span style={{ fontSize: 28 }}>🔒</span>
+                <p style={s.badgeTitel}>{b.titel}</p>
+                <p style={s.badgeDesc}>{b.beskrivelse}</p>
               </div>
             ))}
           </div>
@@ -1005,9 +1031,10 @@ const s = {
 
   grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 },
   badge: { background: colors.card, borderRadius: 16, boxShadow: shadow.card, padding: '16px 10px', textAlign: 'center' },
-  badgeLocked: { opacity: 0.42 },
+  badgeLocked: { opacity: 0.38 },
   badgeTitel: { fontFamily: font.body, fontWeight: 700, fontSize: 12, color: colors.text, margin: '8px 0 3px', lineHeight: 1.2 },
   badgeDesc: { fontFamily: font.body, fontSize: 10.5, color: colors.muted, margin: 0, lineHeight: 1.3 },
+  badgeGruppeLabel: { fontFamily: font.body, fontWeight: 700, fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.8, margin: '0 0 10px' },
 
   tomTab: { textAlign: 'center', padding: '36px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 },
   tomTabTekst: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0, lineHeight: 1.5, maxWidth: 260 },
