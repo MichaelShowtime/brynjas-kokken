@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera, ShoppingBasket, UtensilsCrossed, Clock,
+  Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera, ShoppingBasket, UtensilsCrossed, Clock, ImagePlus,
   Leaf, Sprout, Fish, Dumbbell, Flame, Wheat, Zap, Home, BookOpen, Recycle, CalendarDays,
   Milk, ShieldCheck, PiggyBank, Apple, Utensils, Coffee, Salad, Bean, Beef, Sunrise,
 } from 'lucide-react'
@@ -195,6 +195,8 @@ export default function Profil() {
   const [logUdDialog, setLogUdDialog] = useState(false)
   const [tilføjVenÅben, setTilføjVenÅben] = useState(false)
   const [autoLager, setAutoLagerState] = useState(hentAutoLager)
+  const [uploadLoader, setUploadLoader] = useState(false)
+  const avatarInputRef = useRef(null)
   const streak = beregnStreak(kreationer)
   const gnsTid = beregnGnsTid(kreationer)
 
@@ -246,6 +248,19 @@ export default function Profil() {
     navigate('/login', { replace: true })
   }
 
+  async function håndterAvatarUpload(e) {
+    const fil = e.target.files?.[0]
+    if (!fil || !bruger?.id) return
+    setUploadLoader(true)
+    const ext = fil.name.split('.').pop() || 'jpg'
+    const sti = `${bruger.id}/avatar.${ext}`
+    const { error } = await supabase.storage.from('avatars').upload(sti, fil, { upsert: true })
+    if (error) { console.error('Avatar upload fejl:', error); setUploadLoader(false); return }
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(sti)
+    opdater({ avatarUrl: publicUrl })
+    setUploadLoader(false)
+  }
+
   // ── Sub-side routing ─────────────────────────────────────────────────────
   if (visning === 'rediger')         return <RedigerProfil bruger={bruger} onGem={(d) => { opdater(d); setVisning('hoved') }} onTilbage={() => setVisning('hoved')} />
   if (visning === 'tags')            return <TagsSide bruger={bruger} onGem={(d) => { opdater(d); setVisning('hoved') }} onTilbage={() => setVisning('hoved')} />
@@ -276,6 +291,15 @@ export default function Profil() {
               ? <img src={bruger.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 999 }} />
               : bruger.avatar}
           </div>
+          <button
+            style={s.avatarUploadBtn}
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={uploadLoader}
+            aria-label="Skift profilbillede"
+          >
+            {uploadLoader ? '…' : <ImagePlus size={13} color="#fff" />}
+          </button>
+          <input ref={avatarInputRef} type="file" accept="image/*" onChange={håndterAvatarUpload} style={{ display: 'none' }} />
           {streak > 0 && <div style={s.streakBadge}>🔥 {streak}</div>}
         </div>
         <h1 style={s.navn}>{bruger.navn} {bruger.efternavn}</h1>
@@ -894,7 +918,8 @@ const s = {
 
   hero: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 24px 24px', background: colors.card, boxShadow: shadow.card, marginBottom: 12 },
   avatarWrap: { position: 'relative', marginBottom: 14 },
-  avatar: { width: 88, height: 88, borderRadius: 999, background: colors.bg, border: `3px solid ${colors.border}`, fontSize: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: shadow.card },
+  avatar: { width: 88, height: 88, borderRadius: 999, background: colors.bg, border: `3px solid ${colors.border}`, fontSize: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: shadow.card, overflow: 'hidden' },
+  avatarUploadBtn: { position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: 999, background: colors.green, border: `2px solid ${colors.card}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: shadow.card },
   streakBadge: { position: 'absolute', bottom: -6, right: -8, background: colors.card, border: `2px solid ${colors.border}`, borderRadius: 999, fontSize: 12, fontFamily: font.body, fontWeight: 800, color: colors.text, padding: '3px 8px', boxShadow: shadow.card },
   navn: { fontFamily: font.display, fontWeight: 600, fontSize: 22, color: colors.text, margin: 0, letterSpacing: -0.4 },
   brugernavn: { fontFamily: font.body, fontSize: 13, fontWeight: 500, color: colors.mutedLight, margin: '3px 0 8px' },

@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Heart, UserPlus, MessageCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger } from '../data/auth'
 import { useLang, relativTidLang } from '../lib/lang'
@@ -49,27 +50,25 @@ export default function Notifikationer() {
 
       if (cancelled) return
 
-      // Hent likes på mine posts
+      // Hent likes og kommentarer på mine posts
       const minePostIds = minePosts.map((p) => p.id)
-      const { data: likes } = minePostIds.length
-        ? await supabase
-            .from('post_likes')
-            .select('post_id, user_id, created_at')
-            .in('post_id', minePostIds)
-            .neq('user_id', bruger.id)
-            .order('created_at', { ascending: false })
-            .limit(30)
-        : { data: [] }
+      const [likesRes, kommentarerRes] = await Promise.all([
+        minePostIds.length
+          ? supabase.from('post_likes').select('post_id, user_id, created_at').in('post_id', minePostIds).neq('user_id', bruger.id).order('created_at', { ascending: false }).limit(30)
+          : { data: [] },
+        minePostIds.length
+          ? supabase.from('post_kommentarer').select('post_id, user_id, bruger_navn, bruger_avatar, created_at').in('post_id', minePostIds).neq('user_id', bruger.id).order('created_at', { ascending: false }).limit(30)
+          : { data: [] },
+      ])
+      const likes = likesRes.data ?? []
+      const kommentarer = kommentarerRes.data ?? []
 
       if (cancelled) return
 
       // Hent likeres kundeinfo
-      const likerIds = [...new Set((likes ?? []).map((l) => l.user_id))]
+      const likerIds = [...new Set(likes.map((l) => l.user_id))]
       const { data: likerKunder } = likerIds.length
-        ? await supabase
-            .from('customers')
-            .select('user_id, first_name, avatar, username')
-            .in('user_id', likerIds)
+        ? await supabase.from('customers').select('user_id, first_name, avatar, username').in('user_id', likerIds)
         : { data: [] }
 
       if (cancelled) return
@@ -87,7 +86,7 @@ export default function Notifikationer() {
         }
       })
 
-      const nLikes = (likes ?? []).map((l) => {
+      const nLikes = likes.map((l) => {
         const k = (likerKunder ?? []).find((c) => c.user_id === l.user_id)
         const post = minePosts.find((p) => p.id === l.post_id)
         return {
@@ -101,7 +100,20 @@ export default function Notifikationer() {
         }
       })
 
-      const alle = [...nFølgere, ...nLikes].sort(
+      const nKommentarer = kommentarer.map((k) => {
+        const post = minePosts.find((p) => p.id === k.post_id)
+        return {
+          id: `kommentar-${k.user_id}-${k.post_id}-${k.created_at}`,
+          type: 'kommentar',
+          navn: k.bruger_navn ?? '?',
+          avatar: k.bruger_avatar ?? '🧑‍🍳',
+          userId: k.user_id,
+          opskrift: post?.opskrift_titel ?? '',
+          tid: k.created_at,
+        }
+      })
+
+      const alle = [...nFølgere, ...nLikes, ...nKommentarer].sort(
         (a, b) => new Date(b.tid) - new Date(a.tid)
       )
 
@@ -152,7 +164,15 @@ export default function Notifikationer() {
 function NotifRæk({ notif, t, onClick }) {
   const tekst = notif.type === 'følger'
     ? t('notif.følger')
-    : `${t('notif.likede')}${notif.opskrift ? ` · ${notif.opskrift}` : ''}`
+    : notif.type === 'kommentar'
+      ? `kommenterede${notif.opskrift ? ` · ${notif.opskrift}` : ''}`
+      : `${t('notif.likede')}${notif.opskrift ? ` · ${notif.opskrift}` : ''}`
+
+  const ikon = notif.type === 'følger'
+    ? <UserPlus size={16} color={colors.green} />
+    : notif.type === 'kommentar'
+      ? <MessageCircle size={16} color={colors.green} />
+      : <Heart size={16} color={colors.red} fill={colors.red} />
 
   return (
     <button style={s.ræk} onClick={onClick}>
@@ -164,7 +184,7 @@ function NotifRæk({ notif, t, onClick }) {
         </p>
         <p style={s.tid}>{relativTidLang(notif.tid, t)}</p>
       </div>
-      <span style={s.ikon}>{notif.type === 'følger' ? '👤' : '❤️'}</span>
+      <span style={{ ...s.ikon, display: 'flex', alignItems: 'center' }}>{ikon}</span>
     </button>
   )
 }

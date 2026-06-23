@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Heart, MessageCircle, Pencil, Trash2, Search, Bookmark, UtensilsCrossed, MoreHorizontal, ChefHat } from 'lucide-react'
+import { Heart, MessageCircle, Pencil, Trash2, Search, Bookmark, UtensilsCrossed, MoreHorizontal, ChefHat, BookmarkCheck } from 'lucide-react'
+import { hentGemte, toggleGemt } from '../data/gemte'
 import { hentVenner, hentVennerFraDB } from '../data/venner'
 import { hentAktivBruger } from '../data/auth'
 import { hentKreationer } from '../data/kreationer'
@@ -46,6 +47,7 @@ export default function Hjem() {
   const [søgeResultater, setSøgeResultater] = useState([])
   const [søgerAktivt, setSøgerAktivt] = useState(false)
   const søgeTimer = useRef(null)
+  const [gemte, setGemte] = useState(() => hentGemte())
 
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
@@ -154,12 +156,17 @@ export default function Hjem() {
     if (!tekst.trim()) { setSøgeResultater([]); setSøgerAktivt(false); return }
     setSøgerAktivt(true)
     søgeTimer.current = setTimeout(async () => {
-      const { data } = await supabase
-        .from('recipes')
-        .select('id, title, prep_time, cook_time, tags, storage_image')
-        .ilike('title', `%${tekst.trim()}%`)
-        .limit(12)
-      setSøgeResultater(data ?? [])
+      const q = tekst.trim()
+      const cols = 'id, title, prep_time, cook_time, tags, storage_image'
+      const [titlerRes, ingredienserRes] = await Promise.all([
+        supabase.from('recipes').select(cols).ilike('title', `%${q}%`).limit(10),
+        supabase.from('recipes').select(cols).filter('ingredients::text', 'ilike', `%${q}%`).limit(10),
+      ])
+      const set = new Map()
+      for (const r of [...(titlerRes.data ?? []), ...(ingredienserRes.data ?? [])]) {
+        if (!set.has(r.id)) set.set(r.id, r)
+      }
+      setSøgeResultater([...set.values()].slice(0, 12))
     }, 280)
   }
 
@@ -249,7 +256,7 @@ export default function Hjem() {
         <div style={styles.stats}>
           <Stat tal={streak > 0 ? streak : '—'} label={t('hjem.streakLabel')} ikon="🔥" fremhæv />
           <Stat tal={kreationer.length || '—'} label={t('pf.retterLavet')} ikon={<UtensilsCrossed size={15} />} />
-          <Stat tal={likes.length || '—'} label="gemte" ikon={<Bookmark size={15} />} />
+          <Stat tal={gemte.length || '—'} label="gemte" ikon={<Bookmark size={15} />} onClick={() => navigate('/gemte')} />
         </div>
 
         <div style={styles.søgeWrap}>
@@ -381,7 +388,18 @@ export default function Hjem() {
           <div style={styles.swipeRække}>
             {loading
               ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={styles.recipeCardSkeleton} />)
-              : anbefalet.map((o) => <RecipeCard key={o.id} opskrift={o} onClick={() => navigate(`/opskrift/${o.id}`)} />)
+              : anbefalet.map((o) => (
+                  <RecipeCard
+                    key={o.id}
+                    opskrift={o}
+                    onClick={() => navigate(`/opskrift/${o.id}`)}
+                    gemte={gemte}
+                    onToggleGem={(id) => {
+                      toggleGemt(id)
+                      setGemte(hentGemte())
+                    }}
+                  />
+                ))
             }
           </div>
         </div>
@@ -824,39 +842,56 @@ function FeaturedCard({ opskrift, onClick }) {
   )
 }
 
-function RecipeCard({ opskrift, onClick }) {
+function RecipeCard({ opskrift, onClick, gemte, onToggleGem }) {
   const imgUrl = billedeUrl(opskrift.storage_image)
   const farve = opskriftFarve(opskrift.tags)
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const sværhed = sværhedLabel(opskrift.difficulty)
   const meta = [tid, sværhed].filter(Boolean).join(' · ')
+  const erGemt = gemte?.includes(opskrift.id)
 
   return (
-    <button style={styles.recipeCard} onClick={onClick}>
-      <div style={{ ...styles.recipeHero, background: grad(farve) }}>
-        {imgUrl ? (
-          <img src={imgUrl} alt={opskrift.title} style={styles.recipeImg} />
-        ) : (
-          <span style={styles.recipeInitial}>{opskrift.title.charAt(0)}</span>
-        )}
-      </div>
-      <div style={styles.recipeBody}>
-        <p style={styles.recipeTitel}>{opskrift.title}</p>
-        {meta && <p style={styles.recipeMeta}>{meta}</p>}
-      </div>
-    </button>
+    <div style={{ ...styles.recipeCard, position: 'relative' }}>
+      <button style={{ ...styles.recipeCard, boxShadow: 'none', borderRadius: 0, padding: 0, width: '100%' }} onClick={onClick}>
+        <div style={{ ...styles.recipeHero, background: grad(farve) }}>
+          {imgUrl ? (
+            <img src={imgUrl} alt={opskrift.title} style={styles.recipeImg} />
+          ) : (
+            <span style={styles.recipeInitial}>{opskrift.title.charAt(0)}</span>
+          )}
+        </div>
+        <div style={styles.recipeBody}>
+          <p style={styles.recipeTitel}>{opskrift.title}</p>
+          {meta && <p style={styles.recipeMeta}>{meta}</p>}
+        </div>
+      </button>
+      {onToggleGem && (
+        <button
+          style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,255,255,0.85)', border: 'none', borderRadius: 999, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+          onClick={e => { e.stopPropagation(); onToggleGem(opskrift.id) }}
+        >
+          {erGemt
+            ? <BookmarkCheck size={15} color={colors.green} />
+            : <Bookmark size={15} color={colors.muted} />}
+        </button>
+      )}
+    </div>
   )
 }
 
-function Stat({ tal, label, ikon, fremhæv }) {
-  return (
-    <div style={{ ...styles.stat, ...(fremhæv ? { background: colors.green } : null) }}>
+function Stat({ tal, label, ikon, fremhæv, onClick }) {
+  const base = { ...styles.stat, ...(fremhæv ? { background: colors.green } : null), ...(onClick ? { cursor: 'pointer' } : null) }
+  const inner = (
+    <>
       <span style={{ ...styles.statTal, color: fremhæv ? '#fff' : colors.text, display: 'flex', alignItems: 'center', gap: 4 }}>
         {ikon}<span>{tal}</span>
       </span>
       <span style={{ ...styles.statLabel, color: fremhæv ? 'rgba(255,255,255,0.85)' : colors.muted }}>{label}</span>
-    </div>
+    </>
   )
+  return onClick
+    ? <button style={{ ...base, border: 'none', textAlign: 'left' }} onClick={onClick}>{inner}</button>
+    : <div style={base}>{inner}</div>
 }
 
 function Section({ titel, handling, onHandling }) {
