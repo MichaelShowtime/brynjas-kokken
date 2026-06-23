@@ -11,6 +11,12 @@ import { gætEmoji, gætKategori } from '../lib/ingrediensUtils'
 import { erGemt, toggleGemt } from '../data/gemte'
 import { Bookmark, BookmarkCheck } from 'lucide-react'
 
+// Splitter "Smør (kødsauce)" → ["Smør", "til kødsauce"]
+function splitNavn(navn) {
+  const m = (navn ?? '').match(/^(.*?)\s*\(([^)]+)\)\s*$/)
+  return m ? [m[1].trim(), m[2].trim()] : [navn, null]
+}
+
 // ── Mængde-skalering ──────────────────────────────────────────────────────────
 
 // Kendte brøk-tegn → decimalværdi
@@ -323,24 +329,36 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
             )}
 
             <div style={s.ingrediensListe}>
-              {har.map((i, idx) => (
-                <div key={idx} style={s.ingrediensItem}>
-                  <span style={s.harIkon}>✓</span>
-                  <span style={s.ingrediensNavn}>{i.name}</span>
-                  <span style={s.ingrediensMeta}>
-                    {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
-                  </span>
-                </div>
-              ))}
-              {mangler.map((i, idx) => (
-                <div key={idx} style={{ ...s.ingrediensItem, ...s.ingrediensMangler }}>
-                  <span style={s.manglerIkon}>+</span>
-                  <span style={s.ingrediensNavn}>{i.name}</span>
-                  <span style={s.ingrediensMeta}>
-                    {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
-                  </span>
-                </div>
-              ))}
+              {har.map((i, idx) => {
+                const [base, ctx] = splitNavn(i.name)
+                return (
+                  <div key={idx} style={s.ingrediensItem}>
+                    <span style={s.harIkon}>✓</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={s.ingrediensNavn}>{base}</span>
+                      {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
+                    </span>
+                    <span style={s.ingrediensMeta}>
+                      {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
+                    </span>
+                  </div>
+                )
+              })}
+              {mangler.map((i, idx) => {
+                const [base, ctx] = splitNavn(i.name)
+                return (
+                  <div key={idx} style={{ ...s.ingrediensItem, ...s.ingrediensMangler }}>
+                    <span style={s.manglerIkon}>+</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={s.ingrediensNavn}>{base}</span>
+                      {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
+                    </span>
+                    <span style={s.ingrediensMeta}>
+                      {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
 
             {/* Indkøbsliste-knap */}
@@ -573,6 +591,10 @@ const s = {
   },
   ingrediensMeta: {
     fontFamily: font.body, fontSize: 13, color: colors.muted, flexShrink: 0,
+  },
+  ingrediensKontekst: {
+    display: 'block', fontFamily: font.body, fontSize: 11.5,
+    color: colors.muted, fontStyle: 'italic', marginTop: 1,
   },
 
   indkøbsKnap: {
