@@ -129,6 +129,7 @@ export default function MadMatch() {
   function nulstilStak() {
     setIndex(0)
     setGemte([])
+    setAfviste(rydOgHent())
     dragState.current = { active: false, startX: 0, startY: 0, startTime: 0, x: 0, y: 0 }
     setAnimating(false)
     setHistorik([])
@@ -165,7 +166,10 @@ export default function MadMatch() {
       }
       if (retning === 'left') {
         gemAfvist(aktuel.id)
-        setAfviste((prev) => new Set([...prev, aktuel.id]))
+        // setAfviste udelades bevidst — det ville reberegne `kort` og forskyde
+        // index mens animationen kører, og dermed springe det næste kort over.
+        // Persistens sker via gemAfvist (localStorage); afviste state opdateres
+        // kun ved nulstilStak så `kort` forbliver stabilt under en session.
       }
       setHistorik((h) => [...h, { opskrift: aktuel, retning }])
 
