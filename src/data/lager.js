@@ -212,13 +212,78 @@ export function kanoniselér(navn) {
   return n
 }
 
-// Tjek om et lager-element er kerneordet i et ingrediensnavn via ordgrænse.
-// "smør" matcher "koldt smør i små tern" men IKKE "hvidløgssmør" (sammensætning).
+// ── Sammensatte ord — undtagelser ────────────────────────────────────────────
+// Disse sammensatte ingredienser må IKKE matche deres delord i lageret.
+// "hvidløgssmør" ≠ "smør", "forårsløg" ≠ "løg" osv.
+const UNDTAGELSER = new Map(
+  [
+    ['hvidløgssmør',  ['smør']],
+    ['jordnøddesmør', ['smør']],
+    ['mandelsmør',    ['smør']],
+    ['forårsløg',     ['løg']],
+    ['purløg',        ['løg']],
+    ['perleløg',      ['løg']],
+    ['hvedemel',      ['mel']],
+    ['rugmel',        ['mel']],
+    ['mandelmel',     ['mel']],
+    ['majsmel',       ['mel']],
+    ['olivenolie',    ['olie']],
+    ['rapsolie',      ['olie']],
+    ['sesamolie',     ['olie']],
+    ['kokosolie',     ['olie']],
+    ['kokosmælk',     ['mælk']],
+    ['kærnemælk',     ['mælk']],
+    ['mandelmælk',    ['mælk']],
+    ['havremælk',     ['mælk']],
+    ['hytteost',      ['ost']],
+    ['flødeost',      ['ost']],
+    ['mascarpone',    ['ost']],
+    ['peanutbutter',  ['smør']],
+  ].map(([k, v]) => [k, new Set(v)])
+)
+
+// ── Synonymer — varer der matcher på tværs ────────────────────────────────────
+// Ingredienser i samme gruppe kan dække hinanden i lageret.
+const SYNONYMER = [
+  ['creme fraiche', 'creme fraiche 18%', 'creme fraiche 38%'],
+  ['basilikum', 'frisk basilikum', 'tørret basilikum'],
+  ['hakket oksekød', 'oksefars', 'oksekød hakket'],
+  ['piskefløde', 'fløde', 'madlavningsfløde', 'sødmælksfløde'],
+  ['parmesan', 'parmesanost', 'revet parmesan'],
+  ['mozzarella', 'frisk mozzarella', 'buffelmozzarella'],
+  ['kyllingebryst', 'kyllingefilet', 'kylling filet'],
+]
+
+// Byg opslag: kanonisk navn → gruppeindeks
+const SYNONYM_OPSLAG = new Map()
+for (let i = 0; i < SYNONYMER.length; i++) {
+  for (const n of SYNONYMER[i]) {
+    SYNONYM_OPSLAG.set(n.toLowerCase(), i)
+    SYNONYM_OPSLAG.set(kanoniselér(n), i)
+  }
+}
+
+// Find lager-vare via synonym-gruppe
+function findSynonym(lager, ingNavn) {
+  const søg = ingNavn.toLowerCase().trim()
+  const idx = SYNONYM_OPSLAG.get(søg) ?? SYNONYM_OPSLAG.get(kanoniselér(søg))
+  if (idx === undefined) return undefined
+  const gruppe = new Set(SYNONYMER[idx].map(n => n.toLowerCase()))
+  return lager.find(v => gruppe.has(v.navn.toLowerCase()))
+}
+
+// ── Ordgrænse-matching med undtagelser ────────────────────────────────────────
+// "smør" matcher "koldt smør i små tern" ✓ men IKKE "hvidløgssmør" ✗
 function matcherKerne(lagerNavn, ingrediensNavn) {
-  const kerne = kanoniselér(lagerNavn).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  if (!kerne) return false
-  const mål = kanoniselér(ingrediensNavn)
-  return new RegExp(`\\b${kerne}\\b`, 'i').test(mål)
+  const kanonLager = kanoniselér(lagerNavn)
+  const kanonIng   = kanoniselér(ingrediensNavn)
+
+  // Tjek undtagelsesliste — sammensatte ord blokeres eksplicit
+  if (UNDTAGELSER.get(kanonIng)?.has(kanonLager)) return false
+
+  const escaped = kanonLager.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  if (!escaped) return false
+  return new RegExp(`\\b${escaped}\\b`, 'i').test(kanonIng)
 }
 
 // Byg et opslags-objekt fra lager-array (kald én gang, brug mange gange)
@@ -227,12 +292,13 @@ export function byggLagerOpslag(lager) {
   return {
     harNok(ingNavn, ingMængde, ingEnhed) {
       const navn = (ingNavn ?? '').toLowerCase()
-      // 1) eksakt match
-      // 2) strip parentes: "Smør (kødsauce)" → "smør"
-      // 3) ordgrænse-match: "koldt smør i små tern" → kerne "smør" → lager "Smør" ✓
-      //    men "hvidløgssmør" → ingen ordgrænse → ingen match ✗
+      // 1) Eksakt match
+      // 2) Strip parentes: "Smør (kødsauce)" → "smør"
+      // 3) Synonym-gruppe: "piskefløde" → matcher "fløde" i lageret
+      // 4) Ordgrænse + undtagelser: "koldt smør" → "smør" ✓, "hvidløgssmør" ✗
       const vare = map.get(navn)
         ?? map.get(navn.replace(/\s*\(.*?\)\s*$/, '').trim())
+        ?? findSynonym(lager, ingNavn)
         ?? lager.find(v => matcherKerne(v.navn, ingNavn))
       if (!vare) return { fundet: false, nok: false }
 
