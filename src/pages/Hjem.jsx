@@ -44,6 +44,7 @@ export default function Hjem() {
   const [toast, setToast] = useState(null)
   const toastTimer = useRef(null)
   const [gemte, setGemte] = useState(() => hentGemte())
+  const [søgeÅben, setSøgeÅben] = useState(false)
 
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
@@ -194,6 +195,13 @@ export default function Hjem() {
   return (
     <div style={styles.page}>
 
+      <SøgeModal
+        åben={søgeÅben}
+        onLuk={() => setSøgeÅben(false)}
+        opskrifter={opskrifter}
+        navigate={navigate}
+      />
+
       {toast && (
         <div style={styles.toast}>
           <span style={{ fontSize: 26, flexShrink: 0 }}>{toast.avatar}</span>
@@ -233,7 +241,7 @@ export default function Hjem() {
           <Stat tal={gemte.length || '—'} label="gemte" ikon={<Bookmark size={15} />} onClick={() => navigate('/gemte')} />
         </div>
 
-        <div style={{ ...styles.søgeWrap, cursor: 'pointer' }} onClick={() => navigate('/galleri?filter=alle')}>
+        <div style={{ ...styles.søgeWrap, cursor: 'pointer' }} onClick={() => setSøgeÅben(true)}>
           <Search size={17} color={colors.muted} style={{ opacity: 0.6, flexShrink: 0 }} />
           <span style={{ ...styles.søgeInput, color: colors.mutedLight, lineHeight: '1', display: 'flex', alignItems: 'center' }}>
             {t('hjem.søgPlaceholder').replace('🔍 ', '')}
@@ -736,6 +744,121 @@ function RedigerModal({ citat, t, onGem, onLuk }) {
         </div>
       </div>
     </div>
+  )
+}
+
+// ── SøgeModal ─────────────────────────────────────────────────────────────────
+
+function SøgeModal({ åben, onLuk, opskrifter, navigate }) {
+  const [tekst, setTekst] = useState('')
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (åben) {
+      const t = setTimeout(() => inputRef.current?.focus(), 80)
+      return () => clearTimeout(t)
+    } else {
+      setTekst('')
+    }
+  }, [åben])
+
+  const filtreret = tekst.trim()
+    ? opskrifter.filter(o =>
+        o.title.toLowerCase().includes(tekst.toLowerCase()) ||
+        (o.tags ?? []).some(tg => tg.toLowerCase().includes(tekst.toLowerCase()))
+      )
+    : opskrifter
+
+  return (
+    <>
+      <div
+        style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          zIndex: 200, opacity: åben ? 1 : 0,
+          pointerEvents: åben ? 'auto' : 'none',
+          transition: 'opacity 0.28s ease',
+        }}
+        onClick={onLuk}
+      />
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, height: '92vh',
+        background: colors.bg, borderRadius: '22px 22px 0 0',
+        zIndex: 201, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        transform: åben ? 'translateY(0)' : 'translateY(100%)',
+        transition: 'transform 0.36s cubic-bezier(0.32, 0.72, 0, 1)',
+        boxShadow: '0 -4px 40px rgba(0,0,0,0.18)',
+      }}>
+        {/* Drag-handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px' }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: colors.border }} />
+        </div>
+
+        {/* Søgefelt + luk */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 16px 10px' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: colors.card, borderRadius: 14, padding: '0 14px', height: 46, boxShadow: shadow.card }}>
+            <Search size={16} color={colors.muted} style={{ opacity: 0.6, flexShrink: 0 }} />
+            <input
+              ref={inputRef}
+              type="search"
+              value={tekst}
+              onChange={e => setTekst(e.target.value)}
+              placeholder="Søg i alle opskrifter…"
+              style={{ flex: 1, fontFamily: font.body, fontSize: 15, color: colors.text, background: 'transparent', border: 'none', outline: 'none' }}
+            />
+            {tekst && (
+              <button onClick={() => setTekst('')} style={{ background: 'none', border: 'none', color: colors.mutedLight, cursor: 'pointer', padding: 0, fontSize: 15 }}>✕</button>
+            )}
+          </div>
+          <button
+            onClick={onLuk}
+            style={{ fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.green, background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', whiteSpace: 'nowrap' }}
+          >
+            Luk
+          </button>
+        </div>
+
+        {/* Antal */}
+        <p style={{ fontFamily: font.body, fontSize: 12.5, fontWeight: 700, color: colors.muted, margin: '0 16px 6px', letterSpacing: 0.3 }}>
+          {filtreret.length} retter
+        </p>
+
+        {/* Grid */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 120px', WebkitOverflowScrolling: 'touch' }}>
+          {filtreret.length === 0 ? (
+            <div style={{ textAlign: 'center', paddingTop: 60 }}>
+              <span style={{ fontSize: 40 }}>🍽️</span>
+              <p style={{ fontFamily: font.body, fontWeight: 600, fontSize: 16, color: colors.text, margin: '12px 0 4px' }}>Ingen retter fundet</p>
+              <p style={{ fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0 }}>Prøv et andet søgeord</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {filtreret.map(o => {
+                const img = billedeUrl(o.storage_image)
+                const farve = opskriftFarve(o.tags)
+                const tid = tidLabel(o.prep_time, o.cook_time)
+                return (
+                  <button
+                    key={o.id}
+                    style={{ background: colors.card, borderRadius: 16, boxShadow: shadow.card, border: 'none', padding: 0, overflow: 'hidden', textAlign: 'left', cursor: 'pointer' }}
+                    onClick={() => { onLuk(); navigate(`/opskrift/${o.id}`) }}
+                  >
+                    <div style={{ height: 110, background: grad(farve), overflow: 'hidden', position: 'relative' }}>
+                      {img && <img src={img} alt={o.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                    </div>
+                    <div style={{ padding: '9px 11px 12px' }}>
+                      <p style={{ fontFamily: font.body, fontWeight: 700, fontSize: 13.5, color: colors.text, margin: '0 0 3px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
+                        {o.title}
+                      </p>
+                      {tid && <p style={{ fontFamily: font.body, fontSize: 11.5, color: colors.muted, margin: 0 }}>⏱ {tid}</p>}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   )
 }
 
