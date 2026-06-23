@@ -2,17 +2,16 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger } from '../data/auth'
-import { billedeUrl, opskriftFarve, grad, tidLabel, sværhedLabel } from '../lib/recipeUtils'
+import { billedeUrl, opskriftFarve, grad, tidLabel, tidMinutter, sværhedLabel } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
 import { hentGemte, toggleGemt } from '../data/gemte'
 import { Bookmark, BookmarkCheck } from 'lucide-react'
 
 const SEKTIONER = [
   { id: 'til-dig',       label: 'Tilpasset til dig',      emoji: '⭐', filter: (r, tags) => r.tags?.some(t => tags.includes(t)) },
-  { id: 'hurtige',       label: 'Hurtige hverdagsretter', emoji: '⚡', filter: (r) => r.tags?.includes('hurtig') || (r.prep_time ?? 0) + (r.cook_time ?? 0) <= 30 },
+  { id: 'hurtige',       label: 'Hurtige hverdagsretter', emoji: '⚡', filter: (r) => r.tags?.includes('hurtig') || tidMinutter(r.prep_time, r.cook_time) <= 30 },
   { id: 'vegetar',       label: 'Vegetarisk',             emoji: '🥦', filter: (r) => r.tags?.some(t => ['vegetar','veganer','mere-grønt'].includes(t)) },
   { id: 'internationalt',label: 'Internationalt køkken',  emoji: '🌍', filter: (r) => r.tags?.some(t => ['italiensk','asiatisk','mexicansk','indisk','mellemøstlig'].includes(t)) },
-  { id: 'familie',       label: 'Familiemad',             emoji: '👨‍👩‍👧', filter: (r) => r.tags?.includes('familievenlig') },
   { id: 'alle',          label: 'Alle opskrifter',        emoji: '📖', filter: () => true },
 ]
 
