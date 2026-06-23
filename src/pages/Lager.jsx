@@ -313,10 +313,29 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
       const ekstra = []
       for (const r of data ?? []) {
         for (const ing of r.ingredients ?? []) {
-          const navn = (ing.name ?? '').trim()
-          if (!navn || set.has(navn.toLowerCase())) continue
-          set.add(navn.toLowerCase())
-          ekstra.push({ navn, kategori: gætKategori(navn), emoji: gætEmoji(navn), standardEnhed: gætEnhed(navn) })
+          // Normaliser råt ingrediensnavn til et rent pantry-navn
+          const rå = (ing.name ?? '').trim()
+          if (!rå) continue
+
+          // Split "Mandelsmør eller peanutbutter" → to separate varer
+          const dele = rå.split(/\s+eller\s+/i)
+
+          for (const del of dele) {
+            let navn = del.trim()
+            // Strip parentetisk kontekst: "Smør (kødsauce)" → "Smør"
+            navn = navn.replace(/\s*\(.*?\)\s*/g, '').trim()
+            // Strip efter komma (tilberedning): "Smør, smeltet" → "Smør"
+            const ki = navn.indexOf(',')
+            if (ki > 0) navn = navn.slice(0, ki).trim()
+            // Strip efter " - " (tilberedning): "Smør - smeltet" → "Smør"
+            const di = navn.indexOf(' - ')
+            if (di > 0) navn = navn.slice(0, di).trim()
+
+            if (!navn || navn.length < 2) continue
+            if (set.has(navn.toLowerCase())) continue
+            set.add(navn.toLowerCase())
+            ekstra.push({ navn, kategori: gætKategori(navn), emoji: gætEmoji(navn), standardEnhed: gætEnhed(navn) })
+          }
         }
       }
       ekstra.sort((a, b) => a.navn.localeCompare(b.navn, 'da'))
