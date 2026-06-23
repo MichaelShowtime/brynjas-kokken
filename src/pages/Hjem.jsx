@@ -12,13 +12,11 @@ import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib
 import { useLang, relativTidLang, datoLinjeLang } from '../lib/lang'
 
 function hilsen(t, h) {
-  if (h < 6)  return t('hjem.godnat')
   if (h < 10) return t('hjem.godmorgen')
   if (h < 12) return t('hjem.godFormiddag')
-  if (h < 14) return t('hjem.godMiddag')
+  if (h < 14) return t('hjem.godDag')
   if (h < 18) return t('hjem.godEftermiddag')
-  if (h < 23) return t('hjem.godAftenen')
-  return t('hjem.godnat')
+  return t('hjem.godAftenen')
 }
 
 function beregnStreak(kreationer) {

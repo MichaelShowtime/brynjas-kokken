@@ -27,10 +27,9 @@ const T = {
     'sværhed.3': 'Svær',
 
     // Hjem
-    'hjem.godnat':          'Godnat',
     'hjem.godmorgen':       'Godmorgen',
     'hjem.godFormiddag':    'God formiddag',
-    'hjem.godMiddag':       'God middag',
+    'hjem.godDag':          'God dag',
     'hjem.godEftermiddag':  'God eftermiddag',
     'hjem.godAftenen':      'God aften',
     'hjem.klar':            'Klar til at lave mad?',
@@ -386,10 +385,9 @@ const T = {
     'sværhed.3': 'Hard',
 
     // Hjem
-    'hjem.godnat':          'Good night',
     'hjem.godmorgen':       'Good morning',
     'hjem.godFormiddag':    'Good morning',
-    'hjem.godMiddag':       'Good afternoon',
+    'hjem.godDag':          'Good day',
     'hjem.godEftermiddag':  'Good afternoon',
     'hjem.godAftenen':      'Good evening',
     'hjem.klar':            'Ready to cook?',
