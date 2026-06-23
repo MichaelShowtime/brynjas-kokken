@@ -119,6 +119,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
         publicUrl = urlData?.publicUrl ?? null
       }
     }
+    const noter = (() => { try { return localStorage.getItem(`brynjas_noter_${opskrift.id}`) ?? '' } catch { return '' } })()
     gemKreation({
       id:         Date.now().toString(),
       titel:      opskrift.title,
@@ -127,6 +128,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
       dato:       new Date().toISOString(),
       foto:       publicUrl,
       bruger:     bruger?.navn ?? 'Anonym',
+      noter:      noter || null,
     })
 
     if (del && bruger) {

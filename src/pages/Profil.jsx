@@ -490,6 +490,7 @@ export default function Profil() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={s.kreationNavn}>{titel}</p>
                     <p style={s.kreationMeta}>{dato}{tidBrugt}</p>
+                    {k.noter && <p style={s.kreationNoter}>📝 {k.noter}</p>}
                   </div>
                   <button
                     style={s.kreationSletBtn}
@@ -1027,6 +1028,7 @@ const s = {
   kreationThumbTom: { background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 },
   kreationNavn: { fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   kreationMeta: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, margin: '3px 0 0' },
+  kreationNoter: { fontFamily: font.body, fontSize: 12, color: colors.muted, margin: '5px 0 0', fontStyle: 'italic', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
   kreationSletBtn: { background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', opacity: 0.5, flexShrink: 0, display: 'flex', alignItems: 'center', color: colors.muted },
 
   grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 },
