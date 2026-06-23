@@ -259,9 +259,14 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
     return tal === null ? amount : String(tal * faktor)
   }
 
-  const tjek = (i) => lagerOpslag.harNok(i.name, skalértDecimal(i.amount), i.unit)
-  const har = ingredienser.filter((i) => { const r = tjek(i); return r.fundet && r.nok })
-  const mangler = ingredienser.filter((i) => { const r = tjek(i); return !r.fundet || !r.nok })
+  // Gruppe-check: summer mængder pr. lager-vare, sammenlign med lager
+  const skaleretIngredenser = ingredienser.map(i => ({
+    name: i.name, amount: skalértDecimal(i.amount), unit: i.unit,
+  }))
+  const lagerRes = lagerOpslag.tjekAlle(skaleretIngredenser)
+  const har     = ingredienser.filter((_, i) => lagerRes[i].fundet && lagerRes[i].nok)
+  const delvist = ingredienser.filter((_, i) => lagerRes[i].fundet && !lagerRes[i].nok && lagerRes[i].delvist)
+  const mangler = ingredienser.filter((_, i) => !lagerRes[i].fundet || (!lagerRes[i].nok && !lagerRes[i].delvist))
 
   return (
     <div style={s.page}>
@@ -312,9 +317,11 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
           <section style={s.sektion}>
             <div style={s.sektionHeader}>
               <h2 style={s.sektionTitel}>{t('op.ingredienser')}</h2>
-              {mangler.length === 0
+              {(mangler.length + delvist.length) === 0
                 ? <span style={s.harAltBadge}>{t('op.duHarAlt')}</span>
-                : <span style={s.manglerBadge}>{mangler.length} {t('op.mangler')}</span>
+                : delvist.length > 0 && mangler.length === 0
+                  ? <span style={s.delvistBadge}>⚠️ {delvist.length} {t('op.harDelvist')}</span>
+                  : <span style={s.manglerBadge}>{mangler.length + delvist.length} {t('op.mangler')}</span>
               }
             </div>
 
@@ -338,9 +345,20 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
                       <span style={s.ingrediensNavn}>{base}</span>
                       {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
                     </span>
-                    <span style={s.ingrediensMeta}>
-                      {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
+                    <span style={s.ingrediensMeta}>{[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}</span>
+                  </div>
+                )
+              })}
+              {delvist.map((i, idx) => {
+                const [base, ctx] = splitNavn(i.name)
+                return (
+                  <div key={idx} style={{ ...s.ingrediensItem, ...s.ingrediensDelvist }}>
+                    <span style={s.delvistIkon}>⚠</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={s.ingrediensNavn}>{base}</span>
+                      {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
                     </span>
+                    <span style={s.ingrediensMeta}>{[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}</span>
                   </div>
                 )
               })}
@@ -353,9 +371,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
                       <span style={s.ingrediensNavn}>{base}</span>
                       {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
                     </span>
-                    <span style={s.ingrediensMeta}>
-                      {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
-                    </span>
+                    <span style={s.ingrediensMeta}>{[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}</span>
                   </div>
                 )
               })}
@@ -366,7 +382,8 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
               <button
                 style={s.indkøbsKnap}
                 onClick={() => {
-                  const varer = (mangler.length > 0 ? mangler : ingredienser).map((i) => ({
+                  const køb = mangler.length + delvist.length > 0 ? [...delvist, ...mangler] : ingredienser
+                  const varer = køb.map((i) => ({
                     navn: i.name,
                     mængde: skalér(i.amount, faktor) ?? null,
                     enhed: i.unit ?? null,
@@ -381,7 +398,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
                   setTimeout(() => setIndkøbsToast(null), 3000)
                 }}
               >
-                {mangler.length > 0 ? t('op.tilføjIndkøb') : t('op.tilføjAlt')}
+                {(mangler.length + delvist.length) > 0 ? t('op.tilføjIndkøb') : t('op.tilføjAlt')}
               </button>
             )}
             {indkøbsToast && (
@@ -569,6 +586,10 @@ const s = {
     fontFamily: font.body, fontSize: 12.5, fontWeight: 700,
     color: colors.terracotta, background: 'rgba(224,138,91,0.12)', padding: '5px 12px', borderRadius: 999,
   },
+  delvistBadge: {
+    fontFamily: font.body, fontSize: 12.5, fontWeight: 700,
+    color: '#c97a00', background: 'rgba(201,122,0,0.10)', padding: '5px 12px', borderRadius: 999,
+  },
 
   ingrediensListe: {
     background: colors.card, borderRadius: radius.card, boxShadow: shadow.card, overflow: 'hidden',
@@ -578,8 +599,13 @@ const s = {
     borderBottom: `1px solid ${colors.border}`,
   },
   ingrediensMangler: { opacity: 0.72 },
+  ingrediensDelvist: { opacity: 0.85 },
   harIkon: {
     fontFamily: font.body, fontSize: 16, fontWeight: 700, color: colors.green,
+    width: 22, flexShrink: 0, textAlign: 'center',
+  },
+  delvistIkon: {
+    fontFamily: font.body, fontSize: 15, fontWeight: 700, color: '#c97a00',
     width: 22, flexShrink: 0, textAlign: 'center',
   },
   manglerIkon: {
