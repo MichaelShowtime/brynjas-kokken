@@ -212,16 +212,28 @@ export function kanoniselér(navn) {
   return n
 }
 
+// Tjek om et lager-element er kerneordet i et ingrediensnavn via ordgrænse.
+// "smør" matcher "koldt smør i små tern" men IKKE "hvidløgssmør" (sammensætning).
+function matcherKerne(lagerNavn, ingrediensNavn) {
+  const kerne = kanoniselér(lagerNavn).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  if (!kerne) return false
+  const mål = kanoniselér(ingrediensNavn)
+  return new RegExp(`\\b${kerne}\\b`, 'i').test(mål)
+}
+
 // Byg et opslags-objekt fra lager-array (kald én gang, brug mange gange)
 export function byggLagerOpslag(lager) {
   const map = new Map(lager.map((v) => [v.navn.toLowerCase(), v]))
   return {
     harNok(ingNavn, ingMængde, ingEnhed) {
       const navn = (ingNavn ?? '').toLowerCase()
-      // 1) eksakt  2) strip parentes  3) fuld kanonisering (adjektiv + præpositionsled)
+      // 1) eksakt match
+      // 2) strip parentes: "Smør (kødsauce)" → "smør"
+      // 3) ordgrænse-match: "koldt smør i små tern" → kerne "smør" → lager "Smør" ✓
+      //    men "hvidløgssmør" → ingen ordgrænse → ingen match ✗
       const vare = map.get(navn)
         ?? map.get(navn.replace(/\s*\(.*?\)\s*$/, '').trim())
-        ?? map.get(kanoniselér(navn))
+        ?? lager.find(v => matcherKerne(v.navn, ingNavn))
       if (!vare) return { fundet: false, nok: false }
 
       // Ingen mængde registreret i lageret → vi antager der er nok
