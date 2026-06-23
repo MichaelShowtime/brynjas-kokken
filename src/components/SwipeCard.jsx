@@ -13,7 +13,7 @@ export default function SwipeCard({
   const total = opskrift.ingredients?.length ?? 0
   const manglerTekst = mangler.length > 0 ? `${har.length}/${total} ingredienser` : 'Du har alt'
 
-  const imgUrl = billedeUrl(opskrift.storage_image)
+  const imgUrl = billedeUrl(opskrift.storage_image, opskrift.image_url)
   const farve = opskriftFarve(opskrift.tags)
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const visibleTags = (opskrift.tags ?? []).slice(0, 2)

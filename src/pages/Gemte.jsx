@@ -20,7 +20,7 @@ export default function Gemte() {
     if (!ids.length) { setLoading(false); return }
     supabase
       .from('recipes')
-      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image')
+      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image, image_url')
       .in('id', ids)
       .then(({ data }) => {
         const sorteret = (data ?? []).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
@@ -74,7 +74,7 @@ export default function Gemte() {
 }
 
 function GemtKort({ opskrift: o, onÅbn, onFjern, lang }) {
-  const imgUrl = billedeUrl(o.storage_image)
+  const imgUrl = billedeUrl(o.storage_image, o.image_url)
   const farve = opskriftFarve(o.tags)
   const tid = tidLabel(o.prep_time, o.cook_time)
   const sværhed = sværhedLabel(o.difficulty)

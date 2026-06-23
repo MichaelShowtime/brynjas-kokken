@@ -34,8 +34,8 @@ export default function Galleri() {
   useEffect(() => {
     supabase
       .from('recipes')
-      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image')
-      .limit(300)
+      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image, image_url')
+      .limit(1000)
       .then(({ data }) => { setOpskrifter(data ?? []); setLoading(false) })
   }, [])
 
@@ -145,7 +145,7 @@ export default function Galleri() {
 }
 
 function GalleriKort({ opskrift, onClick, erGemt, onToggleGem }) {
-  const imgUrl = billedeUrl(opskrift.storage_image)
+  const imgUrl = billedeUrl(opskrift.storage_image, opskrift.image_url)
   const farve  = opskriftFarve(opskrift.tags)
   const tid    = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const sværhed = sværhedLabel(opskrift.difficulty)

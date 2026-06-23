@@ -294,7 +294,7 @@ export default function Kok() {
     )
   }
 
-  const imgUrl = billedeUrl(opskrift.storage_image)
+  const imgUrl = billedeUrl(opskrift.storage_image, opskrift.image_url)
   const farve = opskriftFarve(opskrift.tags ?? [])
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const ingredienser = opskrift.ingredients ?? []

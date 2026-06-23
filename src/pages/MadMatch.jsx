@@ -51,7 +51,7 @@ export default function MadMatch() {
   useEffect(() => {
     supabase
       .from('recipes')
-      .select('id, title, difficulty, prep_time, cook_time, tags, storage_image, ingredients, source')
+      .select('id, title, difficulty, prep_time, cook_time, tags, storage_image, image_url, ingredients, source')
       .then(({ data }) => {
         const liste = data ?? []
         setAlleOpskrifter(liste)

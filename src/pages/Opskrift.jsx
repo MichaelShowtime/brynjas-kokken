@@ -235,7 +235,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
     )
   }
 
-  const imgUrl = billedeUrl(opskrift.storage_image)
+  const imgUrl = billedeUrl(opskrift.storage_image, opskrift.image_url)
   const farve = opskriftFarve(opskrift.tags)
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const sværhed = sværhedLabel(opskrift.difficulty)

@@ -74,9 +74,9 @@ export default function Hjem() {
     const brugerTags = bruger?.tags ?? []
     supabase
       .from('recipes')
-      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image')
+      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image, image_url')
       .order('id', { ascending: true })
-      .limit(200)
+      .limit(1000)
       .then(({ data }) => {
         if (cancelled) return
         const alle = data ?? []
@@ -831,7 +831,7 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef, gemte, onTog
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {filtreret.map(o => {
-                const img = billedeUrl(o.storage_image)
+                const img = billedeUrl(o.storage_image, o.image_url)
                 const farve = opskriftFarve(o.tags)
                 const tid = tidLabel(o.prep_time, o.cook_time)
                 return (
@@ -883,7 +883,7 @@ function getDagensRet(opskrifter) {
 
 function FeaturedCard({ opskrift, onClick }) {
   const { lang } = useLang()
-  const imgUrl = billedeUrl(opskrift.storage_image)
+  const imgUrl = billedeUrl(opskrift.storage_image, opskrift.image_url)
   const farve = opskriftFarve(opskrift.tags)
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const sværhed = sværhedLabel(opskrift.difficulty)
@@ -910,7 +910,7 @@ function FeaturedCard({ opskrift, onClick }) {
 }
 
 function RecipeCard({ opskrift, onClick, gemte, onToggleGem }) {
-  const imgUrl = billedeUrl(opskrift.storage_image)
+  const imgUrl = billedeUrl(opskrift.storage_image, opskrift.image_url)
   const farve = opskriftFarve(opskrift.tags)
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const sværhed = sværhedLabel(opskrift.difficulty)

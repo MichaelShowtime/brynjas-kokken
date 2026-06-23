@@ -208,7 +208,7 @@ export default function Profil() {
     setGemteIds(ids)
     if (!ids.length) { setGemteOpskrifter([]); return }
     supabase.from('recipes')
-      .select('id, title, prep_time, cook_time, tags, storage_image')
+      .select('id, title, prep_time, cook_time, tags, storage_image, image_url')
       .in('id', ids)
       .then(({ data }) => {
         const sorted = (data ?? []).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
@@ -437,7 +437,7 @@ export default function Profil() {
               <div style={s.grid2}>
                 {gemteOpskrifter.map((o) => {
                   const farve = opskriftFarve(o.tags ?? [])
-                  const imgUrl = billedeUrl(o.storage_image)
+                  const imgUrl = billedeUrl(o.storage_image, o.image_url)
                   const tid = tidLabel(o.prep_time, o.cook_time)
                   return (
                     <div key={o.id} style={s.opskriftKort} onClick={() => navigate(`/opskrift/${o.id}`)}>
