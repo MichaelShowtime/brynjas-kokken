@@ -336,34 +336,30 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
             )}
 
             <div style={s.ingrediensListe}>
-              {har.map((i, idx) => {
+              {ingredienser.map((i, idx) => {
+                const r = lagerRes[idx]
                 const [base, ctx] = splitNavn(i.name)
-                return (
+                const meta = [skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')
+                if (r.fundet && r.nok) return (
                   <div key={idx} style={s.ingrediensItem}>
                     <span style={s.harIkon}>✓</span>
                     <span style={{ flex: 1 }}>
                       <span style={s.ingrediensNavn}>{base}</span>
                       {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
                     </span>
-                    <span style={s.ingrediensMeta}>{[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}</span>
+                    <span style={s.ingrediensMeta}>{meta}</span>
                   </div>
                 )
-              })}
-              {delvist.map((i, idx) => {
-                const [base, ctx] = splitNavn(i.name)
-                return (
+                if (r.fundet && r.delvist) return (
                   <div key={idx} style={{ ...s.ingrediensItem, ...s.ingrediensDelvist }}>
                     <span style={s.delvistIkon}>⚠</span>
                     <span style={{ flex: 1 }}>
                       <span style={s.ingrediensNavn}>{base}</span>
                       {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
                     </span>
-                    <span style={s.ingrediensMeta}>{[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}</span>
+                    <span style={s.ingrediensMeta}>{meta}</span>
                   </div>
                 )
-              })}
-              {mangler.map((i, idx) => {
-                const [base, ctx] = splitNavn(i.name)
                 return (
                   <div key={idx} style={{ ...s.ingrediensItem, ...s.ingrediensMangler }}>
                     <span style={s.manglerIkon}>+</span>
@@ -371,7 +367,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
                       <span style={s.ingrediensNavn}>{base}</span>
                       {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
                     </span>
-                    <span style={s.ingrediensMeta}>{[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}</span>
+                    <span style={s.ingrediensMeta}>{meta}</span>
                   </div>
                 )
               })}
