@@ -755,7 +755,7 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate }) {
 
   useEffect(() => {
     if (åben) {
-      const t = setTimeout(() => inputRef.current?.focus(), 80)
+      const t = setTimeout(() => inputRef.current?.focus(), 100)
       return () => clearTimeout(t)
     } else {
       setTekst('')
@@ -802,6 +802,7 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate }) {
               type="search"
               value={tekst}
               onChange={e => setTekst(e.target.value)}
+              autoFocus
               placeholder="Søg i alle opskrifter…"
               style={{ flex: 1, fontFamily: font.body, fontSize: 15, color: colors.text, background: 'transparent', border: 'none', outline: 'none' }}
             />
