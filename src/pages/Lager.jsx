@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import {
   hentLager, gemLager, sletFraLager, opdaterUdløb, opdaterVare,
-  KATEGORIER, INGREDIENS_KATALOG, ENHEDER,
+  KATEGORIER, INGREDIENS_KATALOG, ENHEDER, kanoniselér,
 } from '../data/lager'
 import { supabase } from '../lib/supabase'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -321,17 +321,11 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
           const dele = rå.split(/\s+eller\s+/i)
 
           for (const del of dele) {
-            let navn = del.trim()
-            // Strip parentetisk kontekst: "Smør (kødsauce)" → "Smør"
-            navn = navn.replace(/\s*\(.*?\)\s*/g, '').trim()
-            // Strip efter komma (tilberedning): "Smør, smeltet" → "Smør"
-            const ki = navn.indexOf(',')
-            if (ki > 0) navn = navn.slice(0, ki).trim()
-            // Strip efter " - " (tilberedning): "Smør - smeltet" → "Smør"
-            const di = navn.indexOf(' - ')
-            if (di > 0) navn = navn.slice(0, di).trim()
-
-            if (!navn || navn.length < 2) continue
+            // Fuld kanonisering: strip parentes, komma/dash, adjektiver, præpositionsled
+            const raw = kanoniselér(del)
+            if (!raw || raw.length < 2) continue
+            // Kapitalisér til display (kanoniselér returnerer lowercase)
+            const navn = raw.charAt(0).toUpperCase() + raw.slice(1)
             if (set.has(navn.toLowerCase())) continue
             set.add(navn.toLowerCase())
             ekstra.push({ navn, kategori: gætKategori(navn), emoji: gætEmoji(navn), standardEnhed: gætEnhed(navn) })

@@ -197,12 +197,31 @@ function _tilBase(mængde, enhed) {
   return null
 }
 
+// Reducer et ingrediensnavn til dets kerne-vare ved at fjerne kontekst og adjektiver.
+// "Koldt smør i små tern" → "smør", "Hakket løg" → "løg", "Smør - smeltet" → "smør"
+export function kanoniselér(navn) {
+  let n = (navn ?? '').toLowerCase().trim()
+  // Strip parentetisk kontekst: "(kødsauce)"
+  n = n.replace(/\s*\(.*?\)\s*/g, '').trim()
+  // Strip efter komma eller dash: ", smeltet" / " - til stegning"
+  n = n.replace(/\s*[,]\s*.*$/, '').replace(/\s+-\s+.*$/, '').trim()
+  // Strip fælles adjektiv-præfikser
+  n = n.replace(/^(koldt?|blødt?|smeltet|frisk[et]?|tørt?|hakket|revet|kogt[et]?|rå[t]?|frossen?|tynd[et]?|groft?)\s+/i, '').trim()
+  // Strip præpositionsled til sidst: " til X", " i X", " med X", " uden X", " af X"
+  n = n.replace(/\s+(til|i|med|uden|af|på)\s+\S.*$/, '').trim()
+  return n
+}
+
 // Byg et opslags-objekt fra lager-array (kald én gang, brug mange gange)
 export function byggLagerOpslag(lager) {
   const map = new Map(lager.map((v) => [v.navn.toLowerCase(), v]))
   return {
     harNok(ingNavn, ingMængde, ingEnhed) {
-      const vare = map.get((ingNavn ?? '').toLowerCase())
+      const navn = (ingNavn ?? '').toLowerCase()
+      // 1) eksakt  2) strip parentes  3) fuld kanonisering (adjektiv + præpositionsled)
+      const vare = map.get(navn)
+        ?? map.get(navn.replace(/\s*\(.*?\)\s*$/, '').trim())
+        ?? map.get(kanoniselér(navn))
       if (!vare) return { fundet: false, nok: false }
 
       // Ingen mængde registreret i lageret → vi antager der er nok
