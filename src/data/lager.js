@@ -312,25 +312,22 @@ export function byggLagerOpslag(lager) {
   }
 
   return {
-    // Enkelt-ingrediens check (baglæns kompatibelt)
     harNok(ingNavn, ingMængde, ingEnhed) {
       const vare = findVare(ingNavn)
-      if (!vare) return { fundet: false, nok: false, delvist: false }
-      const { nok, delvist } = tjekMængde(vare, ingMængde, ingEnhed)
-      return { fundet: true, nok, delvist }
+      if (!vare) return { fundet: false, nok: false }
+      const { nok } = tjekMængde(vare, ingMængde, ingEnhed)
+      return { fundet: true, nok }
     },
 
-    // Gruppe-check: summer mængder for ingredienser der matcher samme lager-vare.
+    // Fordel lagerets mængde ned igennem ingredienserne i rækkefølge.
+    // 25g smør i lageret + tre × 25g smør i opskrift → første ✓, to næste +
     // ingredienser: [{name, amount, unit}] med allerede-skalerede mængder.
-    // Returnerer: [{fundet, nok, delvist}] i samme rækkefølge.
+    // Returnerer: [{fundet, nok}] i samme rækkefølge.
     tjekAlle(ingredienser) {
-      const res = ingredienser.map(() => ({ fundet: false, nok: false, delvist: false }))
-
-      // Find lager-match for hvert element
+      const res = ingredienser.map(() => ({ fundet: false, nok: false }))
       const matches = ingredienser.map(ing => findVare(ing.name))
 
-      // Gruppér indeks efter lager-vare (samme vare kan dække flere ingredienser)
-      const grupper = new Map() // vare.navn → { vare, idxs[] }
+      const grupper = new Map()
       for (let i = 0; i < ingredienser.length; i++) {
         const vare = matches[i]
         if (!vare) continue
@@ -340,35 +337,33 @@ export function byggLagerOpslag(lager) {
       }
 
       for (const { vare, idxs } of grupper.values()) {
-        // Ingen mængde i lageret → antag nok
         if (!vare.mængde || !String(vare.mængde).trim()) {
-          for (const i of idxs) res[i] = { fundet: true, nok: true, delvist: false }
+          for (const i of idxs) res[i] = { fundet: true, nok: true }
           continue
         }
         const lagerBase = _tilBase(vare.mængde, vare.enhed)
         if (!lagerBase) {
-          for (const i of idxs) res[i] = { fundet: true, nok: true, delvist: false }
+          for (const i of idxs) res[i] = { fundet: true, nok: true }
           continue
         }
-        // Summer alle sammenlignelige mængder for denne lager-vare
-        const vals = idxs.map(i => {
+        // Fordel lagerets mængde i rækkefølge
+        let rest = lagerBase.val
+        for (const i of idxs) {
           const b = _tilBase(ingredienser[i].amount, ingredienser[i].unit)
-          return (b && b.type === lagerBase.type) ? b.val : null
-        })
-        const sammenlignbare = vals.filter(v => v !== null)
-        if (sammenlignbare.length === 0) {
-          // Ingen sammenlignelige mængder → antag nok
-          for (const i of idxs) res[i] = { fundet: true, nok: true, delvist: false }
-          continue
+          if (!b || b.type !== lagerBase.type) {
+            res[i] = { fundet: true, nok: true } // usammenlignelig enhed → antag nok
+            continue
+          }
+          if (rest >= b.val) {
+            res[i] = { fundet: true, nok: true }
+            rest -= b.val
+          } else {
+            res[i] = { fundet: true, nok: false }
+          }
         }
-        const total = sammenlignbare.reduce((s, v) => s + v, 0)
-        const nok = lagerBase.val >= total
-        const delvist = !nok && lagerBase.val > 0
-        for (const i of idxs) res[i] = { fundet: true, nok, delvist }
       }
 
       return res
     },
-
   }
 }

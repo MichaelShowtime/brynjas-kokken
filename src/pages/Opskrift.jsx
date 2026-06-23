@@ -265,8 +265,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
   }))
   const lagerRes = lagerOpslag.tjekAlle(skaleretIngredenser)
   const har     = ingredienser.filter((_, i) => lagerRes[i].fundet && lagerRes[i].nok)
-  const delvist = ingredienser.filter((_, i) => lagerRes[i].fundet && !lagerRes[i].nok && lagerRes[i].delvist)
-  const mangler = ingredienser.filter((_, i) => !lagerRes[i].fundet || (!lagerRes[i].nok && !lagerRes[i].delvist))
+  const mangler = ingredienser.filter((_, i) => !lagerRes[i].fundet || !lagerRes[i].nok)
 
   return (
     <div style={s.page}>
@@ -317,11 +316,9 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
           <section style={s.sektion}>
             <div style={s.sektionHeader}>
               <h2 style={s.sektionTitel}>{t('op.ingredienser')}</h2>
-              {(mangler.length + delvist.length) === 0
+              {mangler.length === 0
                 ? <span style={s.harAltBadge}>{t('op.duHarAlt')}</span>
-                : delvist.length > 0 && mangler.length === 0
-                  ? <span style={s.delvistBadge}>⚠️ {delvist.length} {t('op.harDelvist')}</span>
-                  : <span style={s.manglerBadge}>{mangler.length + delvist.length} {t('op.mangler')}</span>
+                : <span style={s.manglerBadge}>{mangler.length} {t('op.mangler')}</span>
               }
             </div>
 
@@ -338,31 +335,12 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
             <div style={s.ingrediensListe}>
               {ingredienser.map((i, idx) => {
                 const r = lagerRes[idx]
+                const nok = r.fundet && r.nok
                 const [base, ctx] = splitNavn(i.name)
                 const meta = [skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')
-                if (r.fundet && r.nok) return (
-                  <div key={idx} style={s.ingrediensItem}>
-                    <span style={s.harIkon}>✓</span>
-                    <span style={{ flex: 1 }}>
-                      <span style={s.ingrediensNavn}>{base}</span>
-                      {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
-                    </span>
-                    <span style={s.ingrediensMeta}>{meta}</span>
-                  </div>
-                )
-                if (r.fundet && r.delvist) return (
-                  <div key={idx} style={{ ...s.ingrediensItem, ...s.ingrediensDelvist }}>
-                    <span style={s.delvistIkon}>⚠</span>
-                    <span style={{ flex: 1 }}>
-                      <span style={s.ingrediensNavn}>{base}</span>
-                      {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
-                    </span>
-                    <span style={s.ingrediensMeta}>{meta}</span>
-                  </div>
-                )
                 return (
-                  <div key={idx} style={{ ...s.ingrediensItem, ...s.ingrediensMangler }}>
-                    <span style={s.manglerIkon}>+</span>
+                  <div key={idx} style={nok ? s.ingrediensItem : { ...s.ingrediensItem, ...s.ingrediensMangler }}>
+                    <span style={nok ? s.harIkon : s.manglerIkon}>{nok ? '✓' : '+'}</span>
                     <span style={{ flex: 1 }}>
                       <span style={s.ingrediensNavn}>{base}</span>
                       {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
@@ -378,7 +356,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
               <button
                 style={s.indkøbsKnap}
                 onClick={() => {
-                  const køb = mangler.length + delvist.length > 0 ? [...delvist, ...mangler] : ingredienser
+                  const køb = mangler.length > 0 ? mangler : ingredienser
                   const varer = køb.map((i) => ({
                     navn: i.name,
                     mængde: skalér(i.amount, faktor) ?? null,
@@ -394,7 +372,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
                   setTimeout(() => setIndkøbsToast(null), 3000)
                 }}
               >
-                {(mangler.length + delvist.length) > 0 ? t('op.tilføjIndkøb') : t('op.tilføjAlt')}
+                {mangler.length > 0 ? t('op.tilføjIndkøb') : t('op.tilføjAlt')}
               </button>
             )}
             {indkøbsToast && (
@@ -582,10 +560,7 @@ const s = {
     fontFamily: font.body, fontSize: 12.5, fontWeight: 700,
     color: colors.terracotta, background: 'rgba(224,138,91,0.12)', padding: '5px 12px', borderRadius: 999,
   },
-  delvistBadge: {
-    fontFamily: font.body, fontSize: 12.5, fontWeight: 700,
-    color: '#c97a00', background: 'rgba(201,122,0,0.10)', padding: '5px 12px', borderRadius: 999,
-  },
+
 
   ingrediensListe: {
     background: colors.card, borderRadius: radius.card, boxShadow: shadow.card, overflow: 'hidden',
@@ -595,13 +570,8 @@ const s = {
     borderBottom: `1px solid ${colors.border}`,
   },
   ingrediensMangler: { opacity: 0.72 },
-  ingrediensDelvist: { opacity: 0.85 },
   harIkon: {
     fontFamily: font.body, fontSize: 16, fontWeight: 700, color: colors.green,
-    width: 22, flexShrink: 0, textAlign: 'center',
-  },
-  delvistIkon: {
-    fontFamily: font.body, fontSize: 15, fontWeight: 700, color: '#c97a00',
     width: 22, flexShrink: 0, textAlign: 'center',
   },
   manglerIkon: {
