@@ -11,6 +11,12 @@ import { gætEmoji, gætKategori } from '../lib/ingrediensUtils'
 import { erGemt, toggleGemt } from '../data/gemte'
 import { Bookmark, BookmarkCheck } from 'lucide-react'
 
+// Splitter "Smør (kødsauce)" → ["Smør", "til kødsauce"]
+function splitNavn(navn) {
+  const m = navn.match(/^(.*?)\s*\(([^)]+)\)\s*$/)
+  return m ? [m[1].trim(), `til ${m[2].trim()}`] : [navn, null]
+}
+
 // ── Mængde-skalering ──────────────────────────────────────────────────────────
 
 // Kendte brøk-tegn → decimalværdi
@@ -257,6 +263,29 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
   const har = ingredienser.filter((i) => { const r = tjek(i); return r.fundet && r.nok })
   const mangler = ingredienser.filter((i) => { const r = tjek(i); return !r.fundet || !r.nok })
 
+  // Beregn hvilke ingredienser der hører til hvert trin (basisnavn-match i trinstekst)
+  const trinIngredenser = useMemo(() => {
+    const baseGrupper = {}
+    for (const ing of ingredienser) {
+      const base = ing.name.replace(/\s*\(.*?\)\s*$/, '').trim().toLowerCase()
+      if (base.length < 3) continue
+      if (!baseGrupper[base]) baseGrupper[base] = []
+      baseGrupper[base].push(ing)
+    }
+    const tæller = {}
+    return (opskrift.steps ?? []).map(trin => {
+      const trinLow = trin.toLowerCase()
+      const hits = []
+      for (const [base, liste] of Object.entries(baseGrupper)) {
+        if (!trinLow.includes(base)) continue
+        const idx = tæller[base] ?? 0
+        hits.push(liste[Math.min(idx, liste.length - 1)])
+        tæller[base] = idx + 1
+      }
+      return hits
+    })
+  }, [ingredienser, opskrift.steps])
+
   return (
     <div style={s.page}>
       {/* Hero */}
@@ -323,24 +352,36 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
             )}
 
             <div style={s.ingrediensListe}>
-              {har.map((i, idx) => (
-                <div key={idx} style={s.ingrediensItem}>
-                  <span style={s.harIkon}>✓</span>
-                  <span style={s.ingrediensNavn}>{i.name}</span>
-                  <span style={s.ingrediensMeta}>
-                    {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
-                  </span>
-                </div>
-              ))}
-              {mangler.map((i, idx) => (
-                <div key={idx} style={{ ...s.ingrediensItem, ...s.ingrediensMangler }}>
-                  <span style={s.manglerIkon}>+</span>
-                  <span style={s.ingrediensNavn}>{i.name}</span>
-                  <span style={s.ingrediensMeta}>
-                    {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
-                  </span>
-                </div>
-              ))}
+              {har.map((i, idx) => {
+                const [base, ctx] = splitNavn(i.name)
+                return (
+                  <div key={idx} style={s.ingrediensItem}>
+                    <span style={s.harIkon}>✓</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={s.ingrediensNavn}>{base}</span>
+                      {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
+                    </span>
+                    <span style={s.ingrediensMeta}>
+                      {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
+                    </span>
+                  </div>
+                )
+              })}
+              {mangler.map((i, idx) => {
+                const [base, ctx] = splitNavn(i.name)
+                return (
+                  <div key={idx} style={{ ...s.ingrediensItem, ...s.ingrediensMangler }}>
+                    <span style={s.manglerIkon}>+</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={s.ingrediensNavn}>{base}</span>
+                      {ctx && <span style={s.ingrediensKontekst}>{ctx}</span>}
+                    </span>
+                    <span style={s.ingrediensMeta}>
+                      {[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
 
             {/* Indkøbsliste-knap */}
@@ -380,7 +421,22 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
               {opskrift.steps.map((trin, idx) => (
                 <div key={idx} style={s.trin}>
                   <div style={s.trinNr}>{idx + 1}</div>
-                  <p style={s.trinTekst}>{trin}</p>
+                  <div style={{ flex: 1 }}>
+                    <p style={s.trinTekst}>{trin}</p>
+                    {trinIngredenser[idx]?.length > 0 && (
+                      <div style={s.trinChips}>
+                        {trinIngredenser[idx].map((ing, i) => {
+                          const [base] = splitNavn(ing.name)
+                          const mængde = [skalér(ing.amount, faktor), ing.unit].filter(Boolean).join(' ')
+                          return (
+                            <span key={i} style={s.trinChip}>
+                              {base}{mængde ? ` · ${mængde}` : ''}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -571,6 +627,18 @@ const s = {
   },
   ingrediensMeta: {
     fontFamily: font.body, fontSize: 13, color: colors.muted, flexShrink: 0,
+  },
+  ingrediensKontekst: {
+    fontFamily: font.body, fontSize: 12, color: colors.muted, fontStyle: 'italic',
+    marginTop: 1, display: 'block',
+  },
+
+  trinChips: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  trinChip: {
+    fontFamily: font.body, fontSize: 12.5, fontWeight: 600,
+    color: colors.green, background: 'rgba(47,107,79,0.1)',
+    border: `1px solid rgba(47,107,79,0.2)`,
+    borderRadius: 20, padding: '3px 10px',
   },
 
   indkøbsKnap: {
