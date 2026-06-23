@@ -152,7 +152,10 @@ function GalleriKort({ opskrift, onClick, erGemt, onToggleGem }) {
 
   return (
     <div style={{ ...s.kort, position: 'relative' }}>
-      <button style={{ ...s.kort, boxShadow: 'none', margin: 0 }} onClick={onClick}>
+      <button
+        style={{ display: 'block', width: '100%', border: 'none', padding: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+        onClick={onClick}
+      >
         <div style={{ ...s.kortHero, background: grad(farve) }}>
           {imgUrl
             ? <img src={imgUrl} alt={opskrift.title} style={s.kortImg} />
