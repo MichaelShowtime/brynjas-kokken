@@ -233,7 +233,7 @@ const s = {
   header: {
     display: 'flex', alignItems: 'center', gap: 10,
     padding: '20px 20px 16px',
-    position: 'sticky', top: 0, background: colors.bg, zIndex: 10,
+    position: 'sticky', top: 'env(safe-area-inset-top, 0px)', background: colors.bg, zIndex: 10,
   },
   backBtn: {
     background: 'none', border: 'none', fontSize: 22,

@@ -117,7 +117,8 @@ const styles = {
     bottom: 0,
     background: colors.card,
     borderTop: `1px solid ${colors.border}`,
-    padding: '8px 0 20px',
+    paddingTop: 8,
+    paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
     zIndex: 50,
   },
   inner: {

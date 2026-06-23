@@ -55,7 +55,7 @@ export default function App() {
 
   return (
     <LangProvider>
-    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100%', background: 'var(--bg)', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       <Routes>
         <Route path="/login"      element={<GæsteRoute><Login /></GæsteRoute>} />
         <Route path="/register"   element={<GæsteRoute><Register /></GæsteRoute>} />

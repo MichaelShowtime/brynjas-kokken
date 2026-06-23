@@ -160,7 +160,7 @@ function GalleriKort({ opskrift, onClick }) {
 const s = {
   page: { maxWidth: 480, margin: '0 auto', padding: '0 0 120px', minHeight: '100%', background: colors.bg },
 
-  header: { display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px 8px', position: 'sticky', top: 0, background: colors.bg, zIndex: 10 },
+  header: { display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px 8px', position: 'sticky', top: 'env(safe-area-inset-top, 0px)', background: colors.bg, zIndex: 10 },
   tilbage: { background: 'none', border: 'none', fontSize: 28, color: colors.green, padding: '0 6px 0 0', cursor: 'pointer', fontWeight: 700, lineHeight: 1 },
   titel: { fontFamily: font.display, fontWeight: 600, fontSize: 26, color: colors.text, margin: 0, letterSpacing: -0.5 },
 

@@ -1002,7 +1002,7 @@ const s = {
   dialogBekræft: { width: '100%', padding: 14, fontFamily: font.body, fontWeight: 700, fontSize: 15, color: '#fff', background: colors.red, border: 'none', borderRadius: radius.button, marginBottom: 8 },
   dialogAnnuller: { width: '100%', padding: 13, fontFamily: font.body, fontWeight: 700, fontSize: 15, color: colors.muted, background: 'transparent', border: 'none', borderRadius: radius.button },
 
-  subHeader: { background: colors.card, borderBottom: `1px solid ${colors.border}`, padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 10 },
+  subHeader: { background: colors.card, borderBottom: `1px solid ${colors.border}`, padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 'env(safe-area-inset-top, 0px)', zIndex: 10 },
   tilbageBtn: { fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.green, background: 'none', border: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 },
   subTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: 0, letterSpacing: -0.3 },
   subIndhold: { padding: '20px 16px 120px' },

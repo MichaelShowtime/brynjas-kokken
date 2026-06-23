@@ -105,7 +105,7 @@ function GemtKort({ opskrift: o, onÅbn, onFjern, lang }) {
 
 const s = {
   page: { maxWidth: 480, margin: '0 auto', padding: '0 0 120px', minHeight: '100%', background: colors.bg },
-  header: { display: 'flex', alignItems: 'center', gap: 12, padding: '20px 20px 16px', position: 'sticky', top: 0, background: colors.bg, zIndex: 10 },
+  header: { display: 'flex', alignItems: 'center', gap: 12, padding: '20px 20px 16px', position: 'sticky', top: 'env(safe-area-inset-top, 0px)', background: colors.bg, zIndex: 10 },
   backBtn: { background: 'none', border: 'none', fontSize: 22, color: colors.green, cursor: 'pointer', padding: '4px 6px', lineHeight: 1 },
   titel: { fontFamily: font.display, fontWeight: 600, fontSize: 24, color: colors.text, margin: 0, letterSpacing: -0.4 },
   liste: { display: 'flex', flexDirection: 'column', gap: 12, padding: '4px 16px' },
