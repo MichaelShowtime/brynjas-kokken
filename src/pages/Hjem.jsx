@@ -45,6 +45,7 @@ export default function Hjem() {
   const toastTimer = useRef(null)
   const [gemte, setGemte] = useState(() => hentGemte())
   const [søgeÅben, setSøgeÅben] = useState(false)
+  const søgeInputRef = useRef(null)
 
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
@@ -200,6 +201,7 @@ export default function Hjem() {
         onLuk={() => setSøgeÅben(false)}
         opskrifter={opskrifter}
         navigate={navigate}
+        inputRef={søgeInputRef}
       />
 
       {toast && (
@@ -241,7 +243,7 @@ export default function Hjem() {
           <Stat tal={gemte.length || '—'} label="gemte" ikon={<Bookmark size={15} />} onClick={() => navigate('/gemte')} />
         </div>
 
-        <div style={{ ...styles.søgeWrap, cursor: 'pointer' }} onClick={() => setSøgeÅben(true)}>
+        <div style={{ ...styles.søgeWrap, cursor: 'pointer' }} onClick={() => { setSøgeÅben(true); søgeInputRef.current?.focus() }}>
           <Search size={17} color={colors.muted} style={{ opacity: 0.6, flexShrink: 0 }} />
           <span style={{ ...styles.søgeInput, color: colors.mutedLight, lineHeight: '1', display: 'flex', alignItems: 'center' }}>
             {t('hjem.søgPlaceholder').replace('🔍 ', '')}
@@ -749,17 +751,11 @@ function RedigerModal({ citat, t, onGem, onLuk }) {
 
 // ── SøgeModal ─────────────────────────────────────────────────────────────────
 
-function SøgeModal({ åben, onLuk, opskrifter, navigate }) {
+function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef }) {
   const [tekst, setTekst] = useState('')
-  const inputRef = useRef(null)
 
   useEffect(() => {
-    if (åben) {
-      const t = setTimeout(() => inputRef.current?.focus(), 100)
-      return () => clearTimeout(t)
-    } else {
-      setTekst('')
-    }
+    if (!åben) setTekst('')
   }, [åben])
 
   const filtreret = tekst.trim()
@@ -802,7 +798,6 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate }) {
               type="search"
               value={tekst}
               onChange={e => setTekst(e.target.value)}
-              autoFocus
               placeholder="Søg i alle opskrifter…"
               style={{ flex: 1, fontFamily: font.body, fontSize: 15, color: colors.text, background: 'transparent', border: 'none', outline: 'none' }}
             />
