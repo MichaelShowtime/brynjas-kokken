@@ -202,6 +202,8 @@ export default function Hjem() {
         opskrifter={opskrifter}
         navigate={navigate}
         inputRef={søgeInputRef}
+        gemte={gemte}
+        onToggleGem={(id) => { toggleGemt(id); setGemte(hentGemte()) }}
       />
 
       {toast && (
@@ -751,7 +753,7 @@ function RedigerModal({ citat, t, onGem, onLuk }) {
 
 // ── SøgeModal ─────────────────────────────────────────────────────────────────
 
-function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef }) {
+function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef, gemte, onToggleGem }) {
   const [tekst, setTekst] = useState('')
 
   useEffect(() => {
@@ -833,21 +835,30 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef }) {
                 const farve = opskriftFarve(o.tags)
                 const tid = tidLabel(o.prep_time, o.cook_time)
                 return (
-                  <button
-                    key={o.id}
-                    style={{ background: colors.card, borderRadius: 16, boxShadow: shadow.card, border: 'none', padding: 0, overflow: 'hidden', textAlign: 'left', cursor: 'pointer' }}
-                    onClick={() => { onLuk(); navigate(`/opskrift/${o.id}`) }}
-                  >
-                    <div style={{ height: 110, background: grad(farve), overflow: 'hidden', position: 'relative' }}>
-                      {img && <img src={img} alt={o.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    </div>
-                    <div style={{ padding: '9px 11px 12px' }}>
-                      <p style={{ fontFamily: font.body, fontWeight: 700, fontSize: 13.5, color: colors.text, margin: '0 0 3px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
-                        {o.title}
-                      </p>
-                      {tid && <p style={{ fontFamily: font.body, fontSize: 11.5, color: colors.muted, margin: 0 }}>⏱ {tid}</p>}
-                    </div>
-                  </button>
+                  <div key={o.id} style={{ background: colors.card, borderRadius: 16, boxShadow: shadow.card, overflow: 'hidden', position: 'relative' }}>
+                    <button
+                      style={{ display: 'block', width: '100%', border: 'none', padding: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                      onClick={() => { onLuk(); navigate(`/opskrift/${o.id}`) }}
+                    >
+                      <div style={{ height: 110, background: grad(farve), overflow: 'hidden', position: 'relative' }}>
+                        {img && <img src={img} alt={o.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      </div>
+                      <div style={{ padding: '9px 11px 12px' }}>
+                        <p style={{ fontFamily: font.body, fontWeight: 700, fontSize: 13.5, color: colors.text, margin: '0 0 3px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
+                          {o.title}
+                        </p>
+                        {tid && <p style={{ fontFamily: font.body, fontSize: 11.5, color: colors.muted, margin: 0 }}>⏱ {tid}</p>}
+                      </div>
+                    </button>
+                    <button
+                      style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,0.88)', border: 'none', borderRadius: 999, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+                      onClick={e => { e.stopPropagation(); onToggleGem(o.id) }}
+                    >
+                      {gemte?.includes(o.id)
+                        ? <BookmarkCheck size={14} color={colors.green} />
+                        : <Bookmark size={14} color={colors.muted} />}
+                    </button>
+                  </div>
                 )
               })}
             </div>

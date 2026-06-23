@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 import { hentAktivBruger } from '../data/auth'
 import { billedeUrl, opskriftFarve, grad, tidLabel, sværhedLabel } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
+import { hentGemte, toggleGemt } from '../data/gemte'
+import { Bookmark, BookmarkCheck } from 'lucide-react'
 
 const SEKTIONER = [
   { id: 'til-dig',       label: 'Tilpasset til dig',      emoji: '⭐', filter: (r, tags) => r.tags?.some(t => tags.includes(t)) },
@@ -23,6 +25,7 @@ export default function Galleri() {
   const [opskrifter, setOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
   const [aktivSektion, setAktivSektion] = useState(() => searchParams.get('filter') ?? 'til-dig')
+  const [gemte, setGemte] = useState(() => hentGemte())
   const [søgeTekst, setSøgeTekst] = useState('')
   const søgeTimer = useRef(null)
   const [søgeResultater, setSøgeResultater] = useState([])
@@ -126,7 +129,13 @@ export default function Galleri() {
       ) : (
         <div style={s.grid}>
           {visteListe.map(o => (
-            <GalleriKort key={o.id} opskrift={o} onClick={() => navigate(`/opskrift/${o.id}`)} />
+            <GalleriKort
+              key={o.id}
+              opskrift={o}
+              onClick={() => navigate(`/opskrift/${o.id}`)}
+              erGemt={gemte.includes(o.id)}
+              onToggleGem={() => { toggleGemt(o.id); setGemte(hentGemte()) }}
+            />
           ))}
         </div>
       )}
@@ -135,26 +144,36 @@ export default function Galleri() {
   )
 }
 
-function GalleriKort({ opskrift, onClick }) {
+function GalleriKort({ opskrift, onClick, erGemt, onToggleGem }) {
   const imgUrl = billedeUrl(opskrift.storage_image)
   const farve  = opskriftFarve(opskrift.tags)
   const tid    = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const sværhed = sværhedLabel(opskrift.difficulty)
 
   return (
-    <button style={s.kort} onClick={onClick}>
-      <div style={{ ...s.kortHero, background: grad(farve) }}>
-        {imgUrl
-          ? <img src={imgUrl} alt={opskrift.title} style={s.kortImg} />
-          : <span style={s.kortInitial}>{opskrift.title.charAt(0)}</span>
-        }
-        {sværhed && <span style={s.kortBadge}>{sværhed}</span>}
-      </div>
-      <div style={s.kortBody}>
-        <p style={s.kortTitel}>{opskrift.title}</p>
-        {tid && <p style={s.kortMeta}>⏱ {tid}</p>}
-      </div>
-    </button>
+    <div style={{ ...s.kort, position: 'relative' }}>
+      <button style={{ ...s.kort, boxShadow: 'none', margin: 0 }} onClick={onClick}>
+        <div style={{ ...s.kortHero, background: grad(farve) }}>
+          {imgUrl
+            ? <img src={imgUrl} alt={opskrift.title} style={s.kortImg} />
+            : <span style={s.kortInitial}>{opskrift.title.charAt(0)}</span>
+          }
+          {sværhed && <span style={s.kortBadge}>{sværhed}</span>}
+        </div>
+        <div style={s.kortBody}>
+          <p style={s.kortTitel}>{opskrift.title}</p>
+          {tid && <p style={s.kortMeta}>⏱ {tid}</p>}
+        </div>
+      </button>
+      <button
+        style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,255,255,0.88)', border: 'none', borderRadius: 999, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)', zIndex: 1 }}
+        onClick={e => { e.stopPropagation(); onToggleGem() }}
+      >
+        {erGemt
+          ? <BookmarkCheck size={14} color={colors.green} />
+          : <Bookmark size={14} color={colors.muted} />}
+      </button>
+    </div>
   )
 }
 

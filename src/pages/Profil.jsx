@@ -48,6 +48,7 @@ import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
 import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
 import { hentKreationer, sletKreation } from '../data/kreationer'
 import { hentLikes, fjernLike } from '../data/likes'
+import { hentGemte, toggleGemt } from '../data/gemte'
 import { billedeUrl, opskriftFarve, grad, tidLabel } from '../lib/recipeUtils'
 import { hentVenner, hentVennerFraDB, tilføjVenDB, fjernVenDB, hentAntalFølgere, søgBrugere } from '../data/venner'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -190,6 +191,8 @@ export default function Profil() {
   const [aktivTab, setAktivTab] = useState('likes')
   const [kreationer, setKreationer] = useState([])
   const [likes, setLikes] = useState([])
+  const [gemteIds, setGemteIds] = useState(() => hentGemte())
+  const [gemteOpskrifter, setGemteOpskrifter] = useState([])
   const [venner, setVenner] = useState(() => hentVenner())
   const [antalFølgere, setAntalFølgere] = useState(0)
   const [logUdDialog, setLogUdDialog] = useState(false)
@@ -200,9 +203,23 @@ export default function Profil() {
   const streak = beregnStreak(kreationer)
   const gnsTid = beregnGnsTid(kreationer)
 
+  function loadGemte() {
+    const ids = hentGemte()
+    setGemteIds(ids)
+    if (!ids.length) { setGemteOpskrifter([]); return }
+    supabase.from('recipes')
+      .select('id, title, prep_time, cook_time, tags, storage_image')
+      .in('id', ids)
+      .then(({ data }) => {
+        const sorted = (data ?? []).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
+        setGemteOpskrifter(sorted)
+      })
+  }
+
   useEffect(() => {
     setKreationer(hentKreationer())
     setLikes(hentLikes())
+    loadGemte()
   }, [])
 
   // Hent rigtige venner + følgere fra Supabase
@@ -218,6 +235,7 @@ export default function Profil() {
       setBruger(hentAktivBruger())
       setLikes(hentLikes())
       setKreationer(hentKreationer())
+      loadGemte()
     }
   }, [visning])
 
@@ -399,7 +417,7 @@ export default function Profil() {
       {/* Tabs */}
       <div style={s.tabs}>
         {[
-          { id: 'likes',      children: <><Heart size={13} fill="currentColor" style={{ verticalAlign: '-2px' }} /> {t('pf.likes')} ({likes.length})</> },
+          { id: 'likes',      children: <><Heart size={13} fill="currentColor" style={{ verticalAlign: '-2px' }} /> Gemte ({gemteIds.length})</> },
           { id: 'kreationer', children: <>{t('pf.kreationer')} ({kreationer.length})</> },
           { id: 'badges',     children: <>{t('pf.badges')}</> },
         ].map((tab) => (
@@ -410,14 +428,14 @@ export default function Profil() {
         ))}
       </div>
 
-      {/* Likes-tab */}
+      {/* Gemte-tab */}
       {aktivTab === 'likes' && (
         <div style={s.tabIndhold}>
-          {likes.length === 0
-            ? <TomTab icon={<Heart size={36} color={colors.mutedLight} />} tekst={t('pf.swipeTip')} knap={t('pf.åbnMadMatch')} onKnap={() => navigate('/madmatch')} />
+          {gemteOpskrifter.length === 0
+            ? <TomTab icon={<Heart size={36} color={colors.mutedLight} />} tekst="Tryk 🔖 på en opskrift for at gemme den her" knap="Se opskrifter" onKnap={() => navigate('/galleri')} />
             : (
               <div style={s.grid2}>
-                {likes.map((o) => {
+                {gemteOpskrifter.map((o) => {
                   const farve = opskriftFarve(o.tags ?? [])
                   const imgUrl = billedeUrl(o.storage_image)
                   const tid = tidLabel(o.prep_time, o.cook_time)
@@ -425,7 +443,13 @@ export default function Profil() {
                     <div key={o.id} style={s.opskriftKort} onClick={() => navigate(`/opskrift/${o.id}`)}>
                       <div style={{ ...s.opskriftHero, background: grad(farve), position: 'relative', overflow: 'hidden' }}>
                         {imgUrl && <img src={imgUrl} alt={o.title} style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover' }} />}
-                        <button style={s.fjernBtn} onClick={(e) => { e.stopPropagation(); setLikes(fjernLike(o.id)) }}>✕</button>
+                        <button style={s.fjernBtn} onClick={(e) => {
+                          e.stopPropagation()
+                          toggleGemt(o.id)
+                          const nyIds = hentGemte()
+                          setGemteIds(nyIds)
+                          setGemteOpskrifter(prev => prev.filter(x => x.id !== o.id))
+                        }}>✕</button>
                       </div>
                       <div style={s.opskriftBody}>
                         <p style={s.opskriftTitel}>{o.title}</p>
