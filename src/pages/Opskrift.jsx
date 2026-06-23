@@ -223,6 +223,32 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
     }
   }
 
+  // Beregn hvilke ingredienser der hører til hvert trin (basisnavn-match i trinstekst)
+  // Skal stå FØR early returns for at overholde Rules of Hooks
+  const trinIngredenser = useMemo(() => {
+    const ings = opskrift?.ingredients ?? []
+    const steps = opskrift?.steps ?? []
+    const baseGrupper = {}
+    for (const ing of ings) {
+      const base = ing.name.replace(/\s*\(.*?\)\s*$/, '').trim().toLowerCase()
+      if (base.length < 3) continue
+      if (!baseGrupper[base]) baseGrupper[base] = []
+      baseGrupper[base].push(ing)
+    }
+    const tæller = {}
+    return steps.map(trin => {
+      const trinLow = trin.toLowerCase()
+      const hits = []
+      for (const [base, liste] of Object.entries(baseGrupper)) {
+        if (!trinLow.includes(base)) continue
+        const idx = tæller[base] ?? 0
+        hits.push(liste[Math.min(idx, liste.length - 1)])
+        tæller[base] = idx + 1
+      }
+      return hits
+    })
+  }, [opskrift])
+
   if (loading) {
     return (
       <div style={s.loadPage}>
@@ -262,29 +288,6 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
   const tjek = (i) => lagerOpslag.harNok(i.name, skalértDecimal(i.amount), i.unit)
   const har = ingredienser.filter((i) => { const r = tjek(i); return r.fundet && r.nok })
   const mangler = ingredienser.filter((i) => { const r = tjek(i); return !r.fundet || !r.nok })
-
-  // Beregn hvilke ingredienser der hører til hvert trin (basisnavn-match i trinstekst)
-  const trinIngredenser = useMemo(() => {
-    const baseGrupper = {}
-    for (const ing of ingredienser) {
-      const base = ing.name.replace(/\s*\(.*?\)\s*$/, '').trim().toLowerCase()
-      if (base.length < 3) continue
-      if (!baseGrupper[base]) baseGrupper[base] = []
-      baseGrupper[base].push(ing)
-    }
-    const tæller = {}
-    return (opskrift.steps ?? []).map(trin => {
-      const trinLow = trin.toLowerCase()
-      const hits = []
-      for (const [base, liste] of Object.entries(baseGrupper)) {
-        if (!trinLow.includes(base)) continue
-        const idx = tæller[base] ?? 0
-        hits.push(liste[Math.min(idx, liste.length - 1)])
-        tæller[base] = idx + 1
-      }
-      return hits
-    })
-  }, [ingredienser, opskrift.steps])
 
   return (
     <div style={s.page}>
