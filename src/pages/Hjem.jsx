@@ -43,10 +43,6 @@ export default function Hjem() {
   const [postLikes, setPostLikes] = useState({})
   const [toast, setToast] = useState(null)
   const toastTimer = useRef(null)
-  const [søgeTekst, setSøgeTekst] = useState('')
-  const [søgeResultater, setSøgeResultater] = useState([])
-  const [søgerAktivt, setSøgerAktivt] = useState(false)
-  const søgeTimer = useRef(null)
   const [gemte, setGemte] = useState(() => hentGemte())
 
   const bruger = hentAktivBruger()
@@ -150,28 +146,6 @@ export default function Hjem() {
     }
   }, [bruger?.id])
 
-  function håndterSøg(tekst) {
-    setSøgeTekst(tekst)
-    if (søgeTimer.current) clearTimeout(søgeTimer.current)
-    if (!tekst.trim()) { setSøgeResultater([]); setSøgerAktivt(false); return }
-    setSøgerAktivt(true)
-    søgeTimer.current = setTimeout(async () => {
-      const q = tekst.trim()
-      const cols = 'id, title, prep_time, cook_time, tags, storage_image'
-      const [titlerRes, ingredienserRes] = await Promise.all([
-        supabase.from('recipes').select(cols).ilike('title', `%${q}%`).limit(10),
-        supabase.from('recipes').select(cols).filter('ingredients::text', 'ilike', `%${q}%`).limit(10),
-      ])
-      const set = new Map()
-      for (const r of [...(titlerRes.data ?? []), ...(ingredienserRes.data ?? [])]) {
-        if (!set.has(r.id)) set.set(r.id, r)
-      }
-      setSøgeResultater([...set.values()].slice(0, 12))
-    }, 280)
-  }
-
-  function rydSøg() { setSøgeTekst(''); setSøgeResultater([]); setSøgerAktivt(false) }
-
   useEffect(() => {
     if (!dbPosts.length || !bruger?.id) return
     const ids = dbPosts.map((p) => p.id)
@@ -229,7 +203,7 @@ export default function Hjem() {
       )}
 
       {/* ── Top-sektion (base creme) ─────────────────────────────────────────── */}
-      <div style={{ ...styles.sektionTop, ...(søgerAktivt ? { paddingBottom: 120 } : {}) }}>
+      <div style={styles.sektionTop}>
         <header style={styles.topRow}>
           <div>
             <p style={styles.eyebrow}>{datoLinjeLang(lang)}</p>
@@ -259,46 +233,15 @@ export default function Hjem() {
           <Stat tal={gemte.length || '—'} label="gemte" ikon={<Bookmark size={15} />} onClick={() => navigate('/gemte')} />
         </div>
 
-        <div style={styles.søgeWrap}>
+        <div style={{ ...styles.søgeWrap, cursor: 'pointer' }} onClick={() => navigate('/galleri?filter=alle')}>
           <Search size={17} color={colors.muted} style={{ opacity: 0.6, flexShrink: 0 }} />
-          <input
-            type="search"
-            value={søgeTekst}
-            onChange={(e) => håndterSøg(e.target.value)}
-            placeholder={t('hjem.søgPlaceholder').replace('🔍 ', '')}
-            style={styles.søgeInput}
-          />
-          {søgeTekst && <button style={styles.søgeRyd} onClick={rydSøg}>✕</button>}
+          <span style={{ ...styles.søgeInput, color: colors.mutedLight, lineHeight: '1', display: 'flex', alignItems: 'center' }}>
+            {t('hjem.søgPlaceholder').replace('🔍 ', '')}
+          </span>
         </div>
 
-        {søgerAktivt && (
-          <div style={styles.søgePanel}>
-            {søgeResultater.length === 0 ? (
-              <p style={styles.søgeTom}>{t('hjem.søgIngen')} "{søgeTekst}"</p>
-            ) : (
-              søgeResultater.map((o) => {
-                const img = billedeUrl(o.storage_image)
-                const farve = opskriftFarve(o.tags)
-                const tid = tidLabel(o.prep_time, o.cook_time)
-                return (
-                  <button key={o.id} style={styles.søgeResultat} onClick={() => { rydSøg(); navigate(`/opskrift/${o.id}`) }}>
-                    <div style={{ ...styles.søgeThumb, background: grad(farve) }}>
-                      {img && <img src={img} alt="" style={styles.søgeThumbImg} />}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                      <p style={styles.søgeNavn}>{o.title}</p>
-                      {tid && <p style={styles.søgeMeta}>⏱ {tid}</p>}
-                    </div>
-                    <span style={{ color: colors.mutedLight, fontSize: 20 }}>›</span>
-                  </button>
-                )
-              })
-            )}
-          </div>
-        )}
-
-        {!søgerAktivt && <Section titel={t('hjem.aktivNu')} handling={t('pf.tilføj')} onHandling={() => navigate('/profil')} />}
-        {!søgerAktivt && (
+        <Section titel={t('hjem.aktivNu')} handling={t('pf.tilføj')} onHandling={() => navigate('/profil')} />
+        {(
           vennerListe.length === 0 ? (
             <div style={styles.tomVenner}>
               <span style={{ fontSize: 28 }}>👥</span>
@@ -328,20 +271,17 @@ export default function Hjem() {
       </div>
 
       {/* ── Dagens ret (blød grøn) ───────────────────────────────────────────── */}
-      {!søgerAktivt && (
-        <div style={styles.sektionGrøn}>
-          <Section titel={lang === 'en' ? "Today's dish" : 'Dagens ret'} />
-          {loading ? (
-            <div style={styles.featuredSkeleton} />
-          ) : featured ? (
-            <FeaturedCard opskrift={featured} onClick={() => navigate(`/opskrift/${featured.id}`)} />
-          ) : null}
-        </div>
-      )}
+      <div style={styles.sektionGrøn}>
+        <Section titel={lang === 'en' ? "Today's dish" : 'Dagens ret'} />
+        {loading ? (
+          <div style={styles.featuredSkeleton} />
+        ) : featured ? (
+          <FeaturedCard opskrift={featured} onClick={() => navigate(`/opskrift/${featured.id}`)} />
+        ) : null}
+      </div>
 
       {/* ── Seneste retter (varm creme) ─────────────────────────────────────── */}
-      {!søgerAktivt && (
-        <div style={styles.sektionCreme}>
+      <div style={styles.sektionCreme}>
           <Section titel={t('hjem.senesteFeed')} handling={lang === 'en' ? 'Follow more' : 'Følg flere'} onHandling={() => navigate('/profil')} />
           <div style={styles.feed}>
             {dbPosts.length > 0
@@ -379,31 +319,28 @@ export default function Hjem() {
             }
           </div>
         </div>
-      )}
 
       {/* ── Mere til dig (base creme) ────────────────────────────────────────── */}
-      {!søgerAktivt && (
-        <div style={styles.sektionBund}>
-          <Section titel={lang === 'en' ? 'More for you' : 'Mere til dig'} handling={lang === 'en' ? 'See all' : 'Se alle'} onHandling={() => navigate('/galleri')} />
-          <div style={styles.swipeRække}>
-            {loading
-              ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={styles.recipeCardSkeleton} />)
-              : anbefalet.map((o) => (
-                  <RecipeCard
-                    key={o.id}
-                    opskrift={o}
-                    onClick={() => navigate(`/opskrift/${o.id}`)}
-                    gemte={gemte}
-                    onToggleGem={(id) => {
-                      toggleGemt(id)
-                      setGemte(hentGemte())
-                    }}
-                  />
-                ))
-            }
-          </div>
+      <div style={styles.sektionBund}>
+        <Section titel={lang === 'en' ? 'More for you' : 'Mere til dig'} handling={lang === 'en' ? 'See all' : 'Se alle'} onHandling={() => navigate('/galleri')} />
+        <div style={styles.swipeRække}>
+          {loading
+            ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={styles.recipeCardSkeleton} />)
+            : anbefalet.map((o) => (
+                <RecipeCard
+                  key={o.id}
+                  opskrift={o}
+                  onClick={() => navigate(`/opskrift/${o.id}`)}
+                  gemte={gemte}
+                  onToggleGem={(id) => {
+                    toggleGemt(id)
+                    setGemte(hentGemte())
+                  }}
+                />
+              ))
+          }
         </div>
-      )}
+      </div>
     </div>
   )
 }

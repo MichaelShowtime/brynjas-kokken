@@ -1,27 +1,28 @@
 ﻿import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { hentAktivBruger } from '../data/auth'
 import { billedeUrl, opskriftFarve, grad, tidLabel, sværhedLabel } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
 
 const SEKTIONER = [
-  { id: 'til-dig',    label: 'Tilpasset til dig',    emoji: '⭐', filter: (r, tags) => r.tags?.some(t => tags.includes(t)) },
-  { id: 'hurtige',    label: 'Hurtige hverdagsretter', emoji: '⚡', filter: (r) => (r.prep_time ?? 99) + (r.cook_time ?? 0) <= 30 },
-  { id: 'vegetar',    label: 'Vegetarisk & plantebaseret', emoji: '🥦', filter: (r) => r.tags?.some(t => ['vegetar','veganer','mere-grønt','bælgfrugter'].includes(t)) },
-  { id: 'internationalt', label: 'Internationalt køkken', emoji: '🌍', filter: (r) => r.tags?.some(t => ['italiensk','asiatisk','mexicansk','indisk','mellemøstlig'].includes(t)) },
-  { id: 'weekend',    label: 'Weekendprojekter',     emoji: '🏠', filter: (r) => r.tags?.some(t => ['weekend'].includes(t)) },
-  { id: 'alle',       label: 'Alle opskrifter',      emoji: '📖', filter: () => true },
+  { id: 'til-dig',       label: 'Tilpasset til dig',      emoji: '⭐', filter: (r, tags) => r.tags?.some(t => tags.includes(t)) },
+  { id: 'hurtige',       label: 'Hurtige hverdagsretter', emoji: '⚡', filter: (r) => r.tags?.includes('hurtig') || (r.prep_time ?? 0) + (r.cook_time ?? 0) <= 30 },
+  { id: 'vegetar',       label: 'Vegetarisk',             emoji: '🥦', filter: (r) => r.tags?.some(t => ['vegetar','veganer','mere-grønt'].includes(t)) },
+  { id: 'internationalt',label: 'Internationalt køkken',  emoji: '🌍', filter: (r) => r.tags?.some(t => ['italiensk','asiatisk','mexicansk','indisk','mellemøstlig'].includes(t)) },
+  { id: 'familie',       label: 'Familiemad',             emoji: '👨‍👩‍👧', filter: (r) => r.tags?.includes('familievenlig') },
+  { id: 'alle',          label: 'Alle opskrifter',        emoji: '📖', filter: () => true },
 ]
 
 export default function Galleri() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const bruger = hentAktivBruger()
   const brugerTags = bruger?.tags ?? []
 
   const [opskrifter, setOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
-  const [aktivSektion, setAktivSektion] = useState('til-dig')
+  const [aktivSektion, setAktivSektion] = useState(() => searchParams.get('filter') ?? 'til-dig')
   const [søgeTekst, setSøgeTekst] = useState('')
   const søgeTimer = useRef(null)
   const [søgeResultater, setSøgeResultater] = useState([])
@@ -31,7 +32,7 @@ export default function Galleri() {
     supabase
       .from('recipes')
       .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image')
-      .limit(100)
+      .limit(300)
       .then(({ data }) => { setOpskrifter(data ?? []); setLoading(false) })
   }, [])
 
