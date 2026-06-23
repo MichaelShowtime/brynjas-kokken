@@ -120,6 +120,7 @@ const T = {
     // Lager
     'lag.titel':      'Lager',
     'lag.tilføj':     '+ Tilføj',
+    'lag.autoSlået':  'Slået fra — lager opdateres ikke automatisk',
     'lag.tom':        'Dit lager er tomt',
     'lag.tomSub':     'Tilføj råvarer for at se hvilke opskrifter du kan lave.',
     'lag.søgPh':      'Søg eller skriv navn…',
@@ -479,6 +480,7 @@ const T = {
     // Lager / Pantry
     'lag.titel':      'Pantry',
     'lag.tilføj':     '+ Add',
+    'lag.autoSlået':  'Off — pantry won\'t update automatically',
     'lag.tom':        'Your pantry is empty',
     'lag.tomSub':     'Add ingredients to see which recipes you can make.',
     'lag.søgPh':      'Search or type a name…',

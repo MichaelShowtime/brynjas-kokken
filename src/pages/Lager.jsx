@@ -8,6 +8,7 @@ import {
 import {
   hentLager, gemLager, sletFraLager, opdaterUdløb, opdaterVare,
   KATEGORIER, INGREDIENS_KATALOG, ENHEDER, kanoniselér,
+  hentAutoLager, gemAutoLager,
 } from '../data/lager'
 import { supabase } from '../lib/supabase'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -69,6 +70,7 @@ export default function Lager() {
   const [tilføjOpen, setTilføjOpen] = useState(false)
   const [udløbEdit, setUdløbEdit]   = useState(null)
   const [redigerVare, setRedigerVare] = useState(null)
+  const [autoLager, setAutoLager]   = useState(hentAutoLager)
   const indkøbsAntal = hentIndkøbsliste().length
 
   // Opdatér state + localStorage
@@ -210,6 +212,44 @@ export default function Lager() {
           )}
         </>
       )}
+
+      {/* Auto-opdater lager */}
+      <div
+        style={{
+          margin: '20px 16px 8px',
+          background: autoLager ? colors.card : '#FEF3EC',
+          border: `1.5px solid ${autoLager ? colors.border : '#F5C9A7'}`,
+          borderRadius: 16,
+          padding: '14px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <span style={{ fontSize: 22 }}>🛒</span>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontFamily: font.body, fontWeight: 700, fontSize: 14, color: colors.text, margin: 0 }}>
+            {t('pf.autoLager')}
+          </p>
+          <p style={{ fontFamily: font.body, fontSize: 12.5, color: autoLager ? colors.muted : colors.terracotta, margin: '2px 0 0', lineHeight: 1.4 }}>
+            {autoLager ? t('pf.autoLagerSub') : t('lag.autoSlået')}
+          </p>
+        </div>
+        <button
+          onClick={() => { const ny = !autoLager; setAutoLager(ny); gemAutoLager(ny) }}
+          style={{
+            width: 44, height: 26, borderRadius: 999, border: 'none', cursor: 'pointer', flexShrink: 0,
+            background: autoLager ? colors.green : '#ddd',
+            position: 'relative', transition: 'background 0.2s',
+          }}
+        >
+          <span style={{
+            position: 'absolute', top: 3, left: autoLager ? 21 : 3,
+            width: 20, height: 20, borderRadius: 999, background: '#fff',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.2)', transition: 'left 0.2s',
+          }} />
+        </button>
+      </div>
 
       {/* Tilføj-sheet */}
       {tilføjOpen && (
