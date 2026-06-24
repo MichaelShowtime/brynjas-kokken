@@ -271,6 +271,15 @@ export default function MadMatch() {
 
   const synlige = kort.slice(index, index + 3)
   const slut = !loading && index >= kort.length
+  const harAktiveFiltre = !!(tagFilter || mealFilter || under30 || kunKanLaves)
+
+  function fjernAlleFiltre() {
+    setTagFilter(null)
+    setMealFilter(null)
+    setUnder30(false)
+    setKunKanLaves(false)
+    nulstilStak()
+  }
 
   const toggleTag = (tag) => {
     setTagFilter((t) => (t === tag ? null : tag))
@@ -359,7 +368,7 @@ export default function MadMatch() {
             <p style={styles.loadTekst}>{t('mm.henter')}</p>
           </div>
         ) : slut ? (
-          <TomStak antalGemte={gemte.length} onForfra={nulstilStak} t={t} />
+          <TomStak antalGemte={gemte.length} onForfra={nulstilStak} onFjernFiltre={fjernAlleFiltre} harFiltre={harAktiveFiltre} t={t} />
         ) : (
           synlige
             .map((opskrift, i) => {
@@ -430,7 +439,17 @@ export default function MadMatch() {
   )
 }
 
-function TomStak({ antalGemte, onForfra, t }) {
+function TomStak({ antalGemte, onForfra, onFjernFiltre, harFiltre, t }) {
+  if (harFiltre) {
+    return (
+      <div style={styles.tom}>
+        <div style={styles.tomEmoji}>🔍</div>
+        <h2 style={styles.tomTitel}>Ingen retter matcher dine filtre</h2>
+        <p style={styles.tomTekst}>Prøv at fjerne et eller flere filtre for at se flere retter.</p>
+        <button onClick={onFjernFiltre} style={styles.forfraBtn}>Fjern filtre og start forfra</button>
+      </div>
+    )
+  }
   return (
     <div style={styles.tom}>
       <div style={styles.tomEmoji}>{antalGemte > 0 ? '🎉' : '🤔'}</div>

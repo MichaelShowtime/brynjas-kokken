@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { logInd } from '../data/auth'
+import { supabase } from '../lib/supabase'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
 
@@ -29,8 +30,13 @@ export default function Login() {
   async function håndterGlemt(e) {
     e.preventDefault()
     setFejl('')
+    if (!email.trim()) { setFejl('Indtast din e-mailadresse'); return }
     setLoading(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin + '/login',
+    })
     setLoading(false)
+    if (error) { setFejl(error.message); return }
     setVisning('sendt')
   }
 

@@ -9,6 +9,7 @@ import { useLang } from '../lib/lang'
 import { tilføjTilIndkøbsliste } from '../data/indkøbsliste'
 import { gætEmoji, gætKategori } from '../lib/ingrediensUtils'
 import { erGemt, toggleGemt } from '../data/gemte'
+import { hentAktivBruger } from '../data/auth'
 import { Bookmark, BookmarkCheck } from 'lucide-react'
 
 // Splitter "Smør (kødsauce)" → ["Smør", "til kødsauce"]
@@ -163,7 +164,8 @@ export default function Opskrift() {
       .then(({ data }) => {
         if (!cancelled) {
           setOpskrift(data)
-          setPortioner(data?.servings ?? 4)
+          const stdPortioner = hentAktivBruger()?.standardPortioner
+          setPortioner(stdPortioner ?? data?.servings ?? 4)
           setNoter(hentNoter(id))
           setLoading(false)
         }
@@ -225,9 +227,20 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
 
   if (loading) {
     return (
-      <div style={s.loadPage}>
-        <div style={s.loadSpinner}>🍳</div>
-        <p style={s.loadTekst}>{t('op.henter')}</p>
+      <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 120 }}>
+        <div style={{ height: 260, background: colors.border, borderRadius: '0 0 24px 24px' }} />
+        <div style={{ padding: '20px 20px 0' }}>
+          <div style={{ height: 28, width: '65%', background: colors.border, borderRadius: 8, marginBottom: 12 }} />
+          <div style={{ height: 16, width: '40%', background: colors.border, borderRadius: 6, marginBottom: 20 }} />
+          <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+            {[80, 90, 70].map((w, i) => (
+              <div key={i} style={{ height: 30, width: w, background: colors.border, borderRadius: 999 }} />
+            ))}
+          </div>
+          {[1,2,3,4,5].map((i) => (
+            <div key={i} style={{ height: 14, background: colors.border, borderRadius: 6, marginBottom: 10, width: i % 2 === 0 ? '80%' : '100%' }} />
+          ))}
+        </div>
       </div>
     )
   }

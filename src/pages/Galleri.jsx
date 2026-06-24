@@ -23,6 +23,8 @@ export default function Galleri() {
 
   const [opskrifter, setOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
+  const [harFler, setHarFler] = useState(false)
+  const [lasterFler, setLasterFler] = useState(false)
   const [aktivSektion, setAktivSektion] = useState(() => searchParams.get('filter') ?? 'til-dig')
   const [gemte, setGemte] = useState(() => hentGemte())
   const [søgeTekst, setSøgeTekst] = useState('')
@@ -30,27 +32,44 @@ export default function Galleri() {
   const [søgeResultater, setSøgeResultater] = useState([])
   const [søgerAktivt, setSøgerAktivt] = useState(false)
 
+  const PAGE = 300
+
   useEffect(() => {
     supabase
       .from('recipes')
       .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image, image_url')
-      .limit(1000)
-      .then(({ data }) => { setOpskrifter(data ?? []); setLoading(false) })
+      .range(0, PAGE - 1)
+      .then(({ data }) => {
+        setOpskrifter(data ?? [])
+        setHarFler((data?.length ?? 0) >= PAGE)
+        setLoading(false)
+      })
   }, [])
+
+  async function hentFler() {
+    setLasterFler(true)
+    const { data } = await supabase
+      .from('recipes')
+      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image, image_url')
+      .range(opskrifter.length, opskrifter.length + PAGE - 1)
+    setOpskrifter((prev) => [...prev, ...(data ?? [])])
+    setHarFler((data?.length ?? 0) >= PAGE)
+    setLasterFler(false)
+  }
 
   function håndterSøg(tekst) {
     setSøgeTekst(tekst)
     if (søgeTimer.current) clearTimeout(søgeTimer.current)
     if (!tekst.trim()) { setSøgeResultater([]); setSøgerAktivt(false); return }
     setSøgerAktivt(true)
-    søgeTimer.current = setTimeout(async () => {
-      const { data } = await supabase
-        .from('recipes')
-        .select('id, title, prep_time, cook_time, tags, storage_image')
-        .ilike('title', `%${tekst.trim()}%`)
-        .limit(20)
-      setSøgeResultater(data ?? [])
-    }, 250)
+    const q = tekst.trim().toLowerCase()
+    søgeTimer.current = setTimeout(() => {
+      setSøgeResultater(opskrifter.filter((r) =>
+        r.title.toLowerCase().includes(q) ||
+        (r.description ?? '').toLowerCase().includes(q) ||
+        (r.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
+      ))
+    }, 150)
   }
 
   const aktiv = SEKTIONER.find(s => s.id === aktivSektion) ?? SEKTIONER[0]
@@ -119,24 +138,39 @@ export default function Galleri() {
         </div>
       ) : visteListe.length === 0 ? (
         <div style={s.tom}>
-          <span style={{ fontSize: 40 }}>🍽️</span>
-          <p style={s.tomTekst}>Ingen retter her endnu</p>
-          {aktivSektion === 'til-dig' && brugerTags.length === 0 && (
+          <span style={{ fontSize: 40 }}>{søgerAktivt ? '🔍' : '🍽️'}</span>
+          <p style={s.tomTekst}>{søgerAktivt ? `Ingen resultater for "${søgeTekst}"` : 'Ingen retter her endnu'}</p>
+          {søgerAktivt ? (
+            <p style={s.tomSub}>Prøv et andet søgeord — vi søger i titel, tags og beskrivelse</p>
+          ) : aktivSektion === 'til-dig' && brugerTags.length === 0 ? (
             <p style={s.tomSub}>Tilføj tags på din profil for at se personlige forslag</p>
-          )}
+          ) : null}
         </div>
       ) : (
-        <div style={s.grid}>
-          {visteListe.map(o => (
-            <GalleriKort
-              key={o.id}
-              opskrift={o}
-              onClick={() => navigate(`/opskrift/${o.id}`)}
-              erGemt={gemte.includes(o.id)}
-              onToggleGem={() => { toggleGemt(o.id); setGemte(hentGemte()) }}
-            />
-          ))}
-        </div>
+        <>
+          <div style={s.grid}>
+            {visteListe.map(o => (
+              <GalleriKort
+                key={o.id}
+                opskrift={o}
+                onClick={() => navigate(`/opskrift/${o.id}`)}
+                erGemt={gemte.includes(o.id)}
+                onToggleGem={() => { toggleGemt(o.id); setGemte(hentGemte()) }}
+              />
+            ))}
+          </div>
+          {!søgerAktivt && harFler && (
+            <div style={{ padding: '20px 20px 0', textAlign: 'center' }}>
+              <button
+                style={s.hentFlereBtn}
+                onClick={hentFler}
+                disabled={lasterFler}
+              >
+                {lasterFler ? 'Henter…' : 'Hent flere opskrifter'}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
     </div>
@@ -157,7 +191,7 @@ function GalleriKort({ opskrift, onClick, erGemt, onToggleGem }) {
       >
         <div style={{ ...s.kortHero, background: grad(farve) }}>
           {imgUrl
-            ? <img src={imgUrl} alt={opskrift.title} style={s.kortImg} />
+            ? <img src={imgUrl} alt={opskrift.title} style={s.kortImg} loading="lazy" />
             : <span style={s.kortInitial}>{opskrift.title.charAt(0)}</span>
           }
           {sværhed && <span style={s.kortBadge}>{sværhed}</span>}
@@ -217,4 +251,6 @@ const s = {
   tom: { textAlign: 'center', padding: '60px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 },
   tomTekst: { fontFamily: font.display, fontWeight: 600, fontSize: 18, color: colors.text, margin: 0 },
   tomSub: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0, lineHeight: 1.5, maxWidth: 260 },
+
+  hentFlereBtn: { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: colors.green, background: colors.card, border: `1.5px solid ${colors.green}`, borderRadius: 999, padding: '10px 24px', cursor: 'pointer' },
 }

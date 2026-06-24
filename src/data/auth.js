@@ -31,6 +31,8 @@ function fjernBruger() {
 }
 
 function bygBruger(userId, email, kunde) {
+  const cached = hentAktivBruger()
+  const bevar = cached?.id === userId ? cached : {}
   return {
     id:              userId,
     email,
@@ -43,6 +45,7 @@ function bygBruger(userId, email, kunde) {
     onboardingFærdig: (kunde?.tags ?? []).length > 0 || kunde?.onboarding_done === true,
     bio:             kunde?.bio           ?? '',
     avatarUrl:       kunde?.avatar_url    ?? null,
+    standardPortioner: bevar?.standardPortioner ?? null,
   }
 }
 

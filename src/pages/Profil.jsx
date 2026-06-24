@@ -191,6 +191,7 @@ export default function Profil() {
   const [logUdDialog, setLogUdDialog] = useState(false)
   const [tilføjVenÅben, setTilføjVenÅben] = useState(false)
   const [autoLager, setAutoLagerState] = useState(hentAutoLager)
+  const [standardPortioner, setStandardPortioner] = useState(() => hentAktivBruger()?.standardPortioner ?? null)
   const [uploadLoader, setUploadLoader] = useState(false)
   const [opnåedeBadges, setOpnåedeBadges] = useState(new Set())
   const avatarInputRef = useRef(null)
@@ -581,6 +582,28 @@ export default function Profil() {
               gemAutoLager(ny)
             }}
           />
+        </div>
+
+        {/* Standard portioner */}
+        <div style={{ ...s.indstRække, cursor: 'default' }}>
+          <span style={s.indstEmoji}>🍽️</span>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <p style={s.indstLabel}>Standard portioner</p>
+            <p style={s.indstSub}>Startværdi når du åbner en opskrift</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              style={{ width: 30, height: 30, borderRadius: 999, border: `1.5px solid ${colors.border}`, background: colors.bg, fontFamily: font.body, fontWeight: 700, fontSize: 16, color: colors.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              onClick={() => { const ny = Math.max(1, (standardPortioner ?? 4) - 1); setStandardPortioner(ny); opdaterBruger({ standardPortioner: ny }) }}
+            >−</button>
+            <span style={{ fontFamily: font.body, fontWeight: 700, fontSize: 15, color: colors.text, minWidth: 24, textAlign: 'center' }}>
+              {standardPortioner ?? '—'}
+            </span>
+            <button
+              style={{ width: 30, height: 30, borderRadius: 999, border: `1.5px solid ${colors.border}`, background: colors.bg, fontFamily: font.body, fontWeight: 700, fontSize: 16, color: colors.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              onClick={() => { const ny = Math.min(12, (standardPortioner ?? 4) + 1); setStandardPortioner(ny); opdaterBruger({ standardPortioner: ny }) }}
+            >+</button>
+          </div>
         </div>
       </div>
 
