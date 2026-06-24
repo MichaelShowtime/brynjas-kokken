@@ -197,8 +197,19 @@ export default function Profil() {
   const streak = beregnStreak(kreationer)
   const gnsTid = beregnGnsTid(kreationer)
 
-  function loadGemte() {
-    const ids = hentGemte()
+  async function loadGemte() {
+    let ids = hentGemte()
+
+    // Hent fra Supabase saved_recipes og merge med localStorage
+    if (bruger?.id) {
+      const { data } = await supabase.from('saved_recipes').select('recipe_id').eq('user_id', bruger.id)
+      if (data?.length) {
+        const dbIds = data.map(r => r.recipe_id)
+        ids = [...new Set([...dbIds, ...ids])]
+        try { localStorage.setItem('simmer_gemte_v1', JSON.stringify(ids)) } catch {}
+      }
+    }
+
     setGemteIds(ids)
     if (!ids.length) { setGemteOpskrifter([]); return }
     supabase.from('recipes')

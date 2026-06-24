@@ -15,3 +15,13 @@ export function toggleGemt(id) {
   try { localStorage.setItem(GEMTE_KEY, JSON.stringify(ny)) } catch {}
   return !gemt
 }
+
+export function addGemt(id) {
+  const liste = hentGemte()
+  if (liste.includes(id)) return
+  try { localStorage.setItem(GEMTE_KEY, JSON.stringify([id, ...liste])) } catch {}
+}
+
+export function removeGemt(id) {
+  try { localStorage.setItem(GEMTE_KEY, JSON.stringify(hentGemte().filter(x => x !== id))) } catch {}
+}

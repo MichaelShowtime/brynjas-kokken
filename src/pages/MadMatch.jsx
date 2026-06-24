@@ -5,7 +5,7 @@ import SwipeCard from '../components/SwipeCard'
 import { supabase } from '../lib/supabase'
 import { tidMinutter } from '../lib/recipeUtils'
 import { hentLager, byggLagerOpslag } from '../data/lager'
-import { gemLike, fjernLike } from '../data/likes'
+import { addGemt, removeGemt } from '../data/gemte'
 import { gemAfvist, rydOgHent } from '../data/afviste'
 import { colors, shadow, radius, font } from '../data/theme'
 import { hentAktivBruger } from '../data/auth'
@@ -162,7 +162,13 @@ export default function MadMatch() {
 
       if (retning === 'right') {
         setGemte((g) => [...g, aktuel])
-        gemLike(aktuel)
+        addGemt(aktuel.id)
+        const bruger = hentAktivBruger()
+        if (bruger?.id) {
+          supabase.from('saved_recipes')
+            .upsert({ user_id: bruger.id, recipe_id: aktuel.id }, { onConflict: 'user_id,recipe_id' })
+            .then()
+        }
       }
       if (retning === 'left') {
         gemAfvist(aktuel.id)
@@ -187,7 +193,13 @@ export default function MadMatch() {
     // Fortryd effekter
     if (sidst.retning === 'right') {
       setGemte((g) => g.filter((o) => o.id !== sidst.opskrift.id))
-      fjernLike(sidst.opskrift.id)
+      removeGemt(sidst.opskrift.id)
+      const bruger = hentAktivBruger()
+      if (bruger?.id) {
+        supabase.from('saved_recipes')
+          .delete().eq('user_id', bruger.id).eq('recipe_id', sidst.opskrift.id)
+          .then()
+      }
     }
     if (sidst.retning === 'left') {
       // Fjern fra localStorage — afviste state opdateres IKKE her, fordi opskriften
