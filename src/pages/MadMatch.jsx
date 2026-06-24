@@ -190,15 +190,12 @@ export default function MadMatch() {
       fjernLike(sidst.opskrift.id)
     }
     if (sidst.retning === 'left') {
-      // Fjern fra afviste
+      // Fjern fra localStorage — afviste state opdateres IKKE her, fordi opskriften
+      // aldrig blev tilføjet til state under swipe (se fuldförSwipe). Indeks
+      // dekrementeres nedenfor, og kortet er stadig i `kort`-arrayet.
       const råAfviste = JSON.parse(localStorage.getItem('brynjas_afviste') ?? '{}')
       delete råAfviste[String(sidst.opskrift.id)]
       localStorage.setItem('brynjas_afviste', JSON.stringify(råAfviste))
-      setAfviste((prev) => {
-        const næste = new Set(prev)
-        næste.delete(sidst.opskrift.id)
-        return næste
-      })
     }
     setHistorik((h) => h.slice(0, -1))
     setIndex((i) => Math.max(0, i - 1))
@@ -386,6 +383,7 @@ export default function MadMatch() {
         <div style={styles.actions}>
           <button
             onClick={() => fuldførSwipe('left')}
+            disabled={animating}
             style={{ ...styles.actionBtn, ...styles.nopeBtn }}
             aria-label="Spring over"
           >
@@ -395,10 +393,10 @@ export default function MadMatch() {
           {/* Fortryd — kun synlig hvis der er historik */}
           <button
             onClick={fortryd}
-            disabled={historik.length === 0}
+            disabled={historik.length === 0 || animating}
             style={{
               ...styles.actionBtn,
-              opacity: historik.length === 0 ? 0.3 : 1,
+              opacity: historik.length === 0 || animating ? 0.3 : 1,
               width: 48, height: 48,
             }}
             aria-label="Fortryd"
@@ -408,6 +406,7 @@ export default function MadMatch() {
 
           <button
             onClick={() => fuldførSwipe('right')}
+            disabled={animating}
             style={{ ...styles.actionBtn, ...styles.likeBtn }}
             aria-label="Gem ret"
           >
