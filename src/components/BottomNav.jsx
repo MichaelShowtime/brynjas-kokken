@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { colors, shadow, font } from '../data/theme'
+import { colors, font } from '../data/theme'
 import { useLang } from '../lib/lang'
 
 // --- Ikoner (stroke-baserede SVG'er, arver currentColor) ---
@@ -26,14 +26,6 @@ function SwipeIcon({ size = 24 }) {
   )
 }
 
-function SparkleIcon({ size = 26 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2.5c.4 3.7 1.8 5.1 5.5 5.5-3.7.4-5.1 1.8-5.5 5.5-.4-3.7-1.8-5.1-5.5-5.5 3.7-.4 5.1-1.8 5.5-5.5Z" />
-      <path d="M18.5 13.5c.2 1.9.9 2.6 2.8 2.8-1.9.2-2.6.9-2.8 2.8-.2-1.9-.9-2.6-2.8-2.8 1.9-.2 2.6-.9 2.8-2.8Z" />
-    </svg>
-  )
-}
 
 function PantryIcon({ size = 24 }) {
   // Kasse / spisekammer
@@ -61,26 +53,19 @@ function PersonIcon({ size = 24 }) {
 export default function BottomNav() {
   const { t } = useLang()
   const tabs = [
-    { to: '/hjem',     labelKey: 'nav.hjem',     Icon: HouseIcon },
-    { to: '/madmatch', labelKey: 'nav.madmatch',  Icon: SwipeIcon },
-    { to: '/opret',    labelKey: 'nav.opret',     Icon: SparkleIcon, featured: true },
-    { to: '/lager',    labelKey: 'nav.lager',     Icon: PantryIcon },
-    { to: '/profil',   labelKey: 'nav.profil',    Icon: PersonIcon },
+    { to: '/hjem',     labelKey: 'nav.hjem',    Icon: HouseIcon },
+    { to: '/madmatch', labelKey: 'nav.madmatch', Icon: SwipeIcon },
+    { to: '/lager',    labelKey: 'nav.lager',    Icon: PantryIcon },
+    { to: '/profil',   labelKey: 'nav.profil',   Icon: PersonIcon },
   ]
   return (
     <nav style={styles.nav}>
       <div style={styles.inner}>
-        {tabs.map(({ to, labelKey, Icon, featured }) => {
+        {tabs.map(({ to, labelKey, Icon }) => {
           const label = t(labelKey)
           return (
           <NavLink key={to} to={to} style={styles.link}>
-            {({ isActive }) =>
-              featured ? (
-                <FeaturedTab Icon={Icon} label={label} />
-              ) : (
-                <RegularTab Icon={Icon} label={label} isActive={isActive} />
-              )
-            }
+            {({ isActive }) => <RegularTab Icon={Icon} label={label} isActive={isActive} />}
           </NavLink>
         )})}
       </div>
@@ -98,16 +83,6 @@ function RegularTab({ Icon, label, isActive }) {
   )
 }
 
-function FeaturedTab({ Icon, label }) {
-  return (
-    <div style={styles.tab}>
-      <div style={styles.featuredCircle}>
-        <Icon size={26} />
-      </div>
-      <span style={{ ...styles.label, color: colors.green, fontWeight: 600 }}>{label}</span>
-    </div>
-  )
-}
 
 const styles = {
   nav: {
@@ -146,18 +121,5 @@ const styles = {
     fontSize: 11,
     fontWeight: 500,
     letterSpacing: 0.1,
-  },
-  featuredCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 999,
-    background: colors.green,
-    color: '#fff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: shadow.fab,
-    marginTop: -18,
-    border: `3px solid ${colors.card}`,
   },
 }
