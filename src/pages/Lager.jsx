@@ -448,7 +448,7 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: fil.type || 'image/jpeg', data: base64 } },
-            { type: 'text', text: 'Identificer alle madvarer/ingredienser på billedet. Svar KUN med et JSON-array:\n[{"navn":"...","mængde":"","enhed":"stk","kategori":"tørvarer","usikker":false}]\nKategorier: grønt, køl, frys, tørvarer, krydderier. Brug "usikker":true hvis du ikke er 100% sikker. Navne på dansk.' }
+            { type: 'text', text: 'Du er en præcis madlager-assistent. Analyser billedet grundigt og identificer SPECIFIKKE produkter — ikke generiske ingredienser.\n\nVigtige regler:\n- "Basilikum pesto" eller "pesto med basilikum" = "Pesto" (ikke "Basilikum")\n- Se efter produktets fulde navn, ikke bare hovedingrediensen\n- "Honning" = "Honning" (ikke "sukker" eller andet)\n- Hvis du ser en krukke/dåse/flaske, beskriv INDHOLDET ikke beholderen\n- Mærker og brandnavne: brug det generiske produktnavn (fx "Kikærter" ikke "Bonduelle Kikærter")\n- Hvis du er i tvivl, sæt usikker: true\n\nReturner KUN JSON array (navne på dansk):\n[{"navn":"...","mængde":"","enhed":"stk","kategori":"tørvarer","usikker":false}]\nKategorier: grønt, køl, frys, tørvarer, krydderier.' }
           ]
         }]
       })
@@ -458,10 +458,20 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
       const items = JSON.parse(jsonMatch[0])
       const matchede = items.map((item) => {
         const kn = kanoniselér(item.navn ?? '')
+        // 1. Eksakt kanoniseret match
         let match = katalog.find((k) => kanoniselér(k.navn) === kn)
-        if (!match && kn) match = katalog.find((k) => { const kk = kanoniselér(k.navn); return kk && kk.length >= 3 && kn.includes(kk) })
+        // 2. Sidst ord i scannernavn — fx "basilikum pesto" → "pesto"
+        if (!match && kn) {
+          const ord = kn.split(/\s+/)
+          const sidsteOrd = ord[ord.length - 1]
+          if (sidsteOrd && sidsteOrd.length >= 3) {
+            match = katalog.find((k) => kanoniselér(k.navn) === sidsteOrd)
+          }
+        }
+        // 3. Substring som sidste udvej (katalog-ord indeholdt i produktnavn)
+        if (!match && kn) match = katalog.find((k) => { const kk = kanoniselér(k.navn); return kk && kk.length >= 4 && kn.includes(kk) })
         if (match) return { ...item, navn: match.navn, emoji: match.emoji, kategori: match.kategori, enhed: item.enhed || match.standardEnhed }
-        return { ...item, emoji: gætEmoji(item.navn), kategori: item.kategori || gætKategori(item.navn), enhed: item.enhed || gætEnhed(item.navn) }
+        return { ...item, emoji: null, kategori: item.kategori || gætKategori(item.navn), enhed: item.enhed || gætEnhed(item.navn) }
       })
       setBilledeItems(matchede)
     } catch {
@@ -736,7 +746,7 @@ function BilledeReview({ items, onOpdater, onFjern, onTilføjAlle, onAnnuller })
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
           {items.map((item, i) => (
             <div key={i} style={{ background: colors.bg, border: `1.5px solid ${item.usikker ? '#F59E0B' : colors.border}`, borderRadius: 12, padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{ fontSize: 20, flexShrink: 0 }}>{item.emoji || '🍽️'}</span>
+              <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: colors.muted }}><VareIkon vare={item} size={20} /></span>
               {item.usikker && <AlertTriangle size={13} color="#F59E0B" style={{ flexShrink: 0 }} />}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <input
