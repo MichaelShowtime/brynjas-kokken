@@ -749,12 +749,8 @@ function BilledeReview({ items, onOpdater, onFjern, onTilføjAlle, onAnnuller })
               <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: colors.muted }}><VareIkon vare={item} size={20} /></span>
               {item.usikker && <AlertTriangle size={13} color="#F59E0B" style={{ flexShrink: 0 }} />}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <input
-                  value={item.navn}
-                  onChange={(e) => onOpdater(i, 'navn', e.target.value)}
-                  style={{ fontFamily: font.body, fontSize: 14, fontWeight: 600, color: colors.text, border: 'none', background: 'transparent', padding: 0, outline: 'none', width: '100%' }}
-                />
-                <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
+                <p style={{ fontFamily: font.body, fontSize: 14, fontWeight: 600, color: colors.text, margin: 0, marginBottom: 3 }}>{item.navn}</p>
+                <div style={{ display: 'flex', gap: 6 }}>
                   <input
                     type="number"
                     inputMode="decimal"
