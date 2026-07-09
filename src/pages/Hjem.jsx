@@ -317,7 +317,7 @@ export default function Hjem() {
                     <p style={styles.feedTomTekst}>{t('hjem.ingenFeedSub')}</p>
                     <div style={styles.feedTomKnapper}>
                       <button style={styles.feedTomPrimær} onClick={() => navigate('/profil')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
-                      <button style={styles.feedTomSekundær} onClick={() => navigate('/opret')}>{t('nav.opret')}</button>
+                      <button style={styles.feedTomSekundær} onClick={() => navigate('/madmatch')}>Find en ret</button>
                     </div>
                   </div>
                 )

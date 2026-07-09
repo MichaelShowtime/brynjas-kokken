@@ -31,12 +31,19 @@ export default function Indkøbsliste() {
 
   async function håndterFlyt() {
     setFlyttes(true)
-    const { ryddet, lagerVarer } = flytTjekkede()
-    for (const v of lagerVarer) tilføjTilLager(v)
-    setListe(ryddet)
-    setFlyttes(false)
-    const antal = lagerVarer.length
-    visToast(`${antal} ${antal === 1 ? t('il.flytToastEn') : t('il.flytToast')}`)
+    try {
+      const resultat = flytTjekkede()
+      if (!resultat) { visToast('Ingen tjekkede varer at flytte'); setFlyttes(false); return }
+      const { ryddet, lagerVarer } = resultat
+      for (const v of lagerVarer) tilføjTilLager(v)
+      setListe(ryddet)
+      const antal = lagerVarer.length
+      visToast(`${antal} ${antal === 1 ? t('il.flytToastEn') : t('il.flytToast')}`)
+    } catch {
+      visToast('Noget gik galt — prøv igen')
+    } finally {
+      setFlyttes(false)
+    }
   }
 
   function tilføjManuelt() {

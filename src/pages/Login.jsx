@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { logInd } from '../data/auth'
 import { supabase } from '../lib/supabase'
@@ -16,6 +16,16 @@ export default function Login() {
   const [fejl, setFejl] = useState('')
   const [loading, setLoading] = useState(false)
   const [visPassword, setVisPassword] = useState(false)
+
+  // Detect Supabase password-recovery link (redirected here with #type=recovery)
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash.includes('type=recovery')) {
+      setVisning('nulstil')
+      // Clear the hash so browser back doesn't re-trigger
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
 
   async function håndterLogin(e) {
     e.preventDefault()
@@ -40,11 +50,18 @@ export default function Login() {
     setVisning('sendt')
   }
 
-  function håndterNulstil(e) {
+  async function håndterNulstil(e) {
     e.preventDefault()
-    setVisning('login')
-    setPassword('')
     setFejl('')
+    if (nyPw.length < 6) { setFejl('Adgangskoden skal være mindst 6 tegn'); return }
+    if (nyPw !== nyPw2) { setFejl('Adgangskoderne er ikke ens'); return }
+    setLoading(true)
+    const { error } = await supabase.auth.updateUser({ password: nyPw })
+    setLoading(false)
+    if (error) { setFejl(error.message); return }
+    setVisning('login')
+    setNyPw('')
+    setNyPw2('')
   }
 
   return (
@@ -145,11 +162,13 @@ export default function Login() {
             <form onSubmit={håndterNulstil} style={s.form}>
               <label style={s.label}>{t('li.nyAdg')}</label>
               <input type="password" value={nyPw} onChange={(e) => setNyPw(e.target.value)}
-                placeholder={t('li.nyAdgPh')} style={s.input} required />
+                placeholder={t('li.nyAdgPh')} style={s.input} required autoFocus />
               <label style={s.label}>{t('li.gentagAdg')}</label>
               <input type="password" value={nyPw2} onChange={(e) => setNyPw2(e.target.value)}
                 placeholder={t('li.gentagPh')} style={s.input} required />
-              <button type="submit" style={s.primærBtn}>{t('li.gemNy')}</button>
+              <button type="submit" style={{ ...s.primærBtn, opacity: loading ? 0.7 : 1 }} disabled={loading}>
+                {loading ? 'Gemmer…' : t('li.gemNy')}
+              </button>
             </form>
           </>
         )}

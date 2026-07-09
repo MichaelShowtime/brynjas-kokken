@@ -272,6 +272,7 @@ export default function MadMatch() {
   const synlige = kort.slice(index, index + 3)
   const slut = !loading && index >= kort.length
   const harAktiveFiltre = !!(tagFilter || mealFilter || under30 || kunKanLaves)
+  const lagerErTomt = brugLager && hentLager().length === 0
 
   function fjernAlleFiltre() {
     setTagFilter(null)
@@ -368,7 +369,7 @@ export default function MadMatch() {
             <p style={styles.loadTekst}>{t('mm.henter')}</p>
           </div>
         ) : slut ? (
-          <TomStak antalGemte={gemte.length} onForfra={nulstilStak} onFjernFiltre={fjernAlleFiltre} harFiltre={harAktiveFiltre} t={t} />
+          <TomStak antalGemte={gemte.length} onForfra={nulstilStak} onFjernFiltre={fjernAlleFiltre} harFiltre={harAktiveFiltre} lagerErTomt={lagerErTomt} t={t} />
         ) : (
           synlige
             .map((opskrift, i) => {
@@ -439,7 +440,17 @@ export default function MadMatch() {
   )
 }
 
-function TomStak({ antalGemte, onForfra, onFjernFiltre, harFiltre, t }) {
+function TomStak({ antalGemte, onForfra, onFjernFiltre, harFiltre, lagerErTomt, t }) {
+  if (lagerErTomt) {
+    return (
+      <div style={styles.tom}>
+        <div style={styles.tomEmoji}>🧺</div>
+        <h2 style={styles.tomTitel}>Dit lager er tomt</h2>
+        <p style={styles.tomTekst}>Tilføj råvarer til dit lager for at se hvilke retter du kan lave nu.</p>
+        <button onClick={onFjernFiltre} style={styles.forfraBtn}>Vis alle retter i stedet</button>
+      </div>
+    )
+  }
   if (harFiltre) {
     return (
       <div style={styles.tom}>

@@ -269,12 +269,14 @@ export default function Profil() {
     opdater({ tags })
   }
 
+  const [shareToast, setShareToast] = useState(false)
   function håndterShare() {
     if (navigator.share) {
       navigator.share({ title: 'Brynjas Køkken', text: `Tjek ${bruger.navn} på Brynjas Køkken!`, url: window.location.href })
     } else {
       navigator.clipboard?.writeText(window.location.href)
-      alert('Link kopieret!')
+      setShareToast(true)
+      setTimeout(() => setShareToast(false), 2500)
     }
   }
 
@@ -287,6 +289,14 @@ export default function Profil() {
   async function håndterAvatarUpload(e) {
     const fil = e.target.files?.[0]
     if (!fil || !bruger?.id) return
+    if (!fil.type.startsWith('image/')) {
+      alert('Vælg venligst et billede (jpg, png, webp)')
+      return
+    }
+    if (fil.size > 5_000_000) {
+      alert('Billedet er for stort — maks 5 MB')
+      return
+    }
     setUploadLoader(true)
     const ext = fil.name.split('.').pop() || 'jpg'
     const sti = `${bruger.id}/avatar.${ext}`
@@ -318,6 +328,12 @@ export default function Profil() {
 
   return (
     <div style={s.page}>
+
+      {shareToast && (
+        <div style={{ position: 'fixed', top: 14, left: '50%', transform: 'translateX(-50%)', background: colors.green, color: '#fff', borderRadius: 999, padding: '10px 20px', fontFamily: font.body, fontSize: 14, fontWeight: 600, zIndex: 500, whiteSpace: 'nowrap', boxShadow: shadow.fab }}>
+          Link kopieret! 🔗
+        </div>
+      )}
 
       {/* Hero */}
       <div style={s.hero}>

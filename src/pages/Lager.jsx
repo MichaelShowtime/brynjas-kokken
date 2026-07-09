@@ -341,6 +341,7 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
   const [indlæser, setIndlæser]   = useState(!_katalogCache)
   const [scanMode, setScanMode]   = useState(false)
   const [lytter, setLytter]       = useState(false)
+  const [scanFejl, setScanFejl]   = useState(null)
   const søgeRef = useRef(null)
 
   useEffect(() => { søgeRef.current?.focus() }, [])
@@ -418,10 +419,13 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
         }
       } else {
         setSøgning('')
-        alert(`Produkt med kode ${kode} ikke fundet. Prøv manuelt.`)
+        setScanFejl(`Produkt med stregkode ${kode} ikke fundet — søg manuelt.`)
+        setTimeout(() => setScanFejl(null), 4000)
       }
     } catch {
       setSøgning('')
+      setScanFejl('Kunne ikke slå produktet op — tjek din internetforbindelse.')
+      setTimeout(() => setScanFejl(null), 4000)
     }
   }
 
@@ -470,9 +474,11 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
         {/* Scanner + stemme-knapper */}
         {!valgt && !scanMode && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <button style={{ ...s.scanKnap, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => setScanMode(true)}>
-              <Camera size={15} /> Scan stregkode
-            </button>
+            {'BarcodeDetector' in window && (
+              <button style={{ ...s.scanKnap, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => setScanMode(true)}>
+                <Camera size={15} /> Scan stregkode
+              </button>
+            )}
             <button style={{ ...s.scanKnap, opacity: lytter ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={startStemme}>
               <Mic size={15} /> {lytter ? 'Lytter…' : 'Stemme'}
             </button>
@@ -481,6 +487,13 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
 
         {/* Stregkodescanner */}
         {scanMode && <BarcodeScanner onDetected={skanBarcode} onLuk={() => setScanMode(false)} />}
+
+        {/* Inline scan-fejl */}
+        {scanFejl && (
+          <div style={{ fontFamily: font.body, fontSize: 13.5, color: colors.red, background: '#FEF3F2', borderRadius: 10, padding: '10px 13px', marginBottom: 10 }}>
+            {scanFejl}
+          </div>
+        )}
 
         {/* Søgefelt + resultater — skjult under scanner */}
         {!scanMode && (<>

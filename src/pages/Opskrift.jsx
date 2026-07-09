@@ -217,7 +217,11 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
         messages: apiMessages,
       })
       const svar = response.content[0]?.text ?? t('op.chatFejl')
-      setBeskeder((prev) => [...prev, { rolle: 'ai', tekst: svar }])
+      // Trim til maks 50 beskeder (25 runder) for at undgå hukommelseslæk
+      setBeskeder((prev) => {
+        const ny = [...prev, { rolle: 'ai', tekst: svar }]
+        return ny.length > 50 ? ny.slice(ny.length - 50) : ny
+      })
     } catch {
       setBeskeder((prev) => [...prev, { rolle: 'ai', tekst: t('op.chatFejl') }])
     } finally {
