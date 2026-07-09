@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { NotFoundException } from '@zxing/library'
+import Anthropic from '@anthropic-ai/sdk'
 import {
   AlertTriangle, Camera, Search, Trash2,
   Egg, Milk, Carrot, Fish, Leaf, LeafyGreen, Wheat, Snowflake,
@@ -83,7 +84,8 @@ export default function Lager() {
   function gem(id, data)      { setRedigerVare(null); opdater(opdaterVare(id, data)) }
 
   function tilføj(vare) {
-    const ny = [{ ...vare, id: Date.now() }, ...lager]
+    const varer = Array.isArray(vare) ? vare : [vare]
+    const ny = [...varer.map((v, i) => ({ ...v, id: Date.now() + i })), ...lager]
     opdater(ny)
     setTilføjOpen(false)
   }
@@ -364,9 +366,12 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
   const [udløb, setUdløb]         = useState('')
   const [katalog, setKatalog]     = useState(_katalogCache ?? INGREDIENS_KATALOG)
   const [indlæser, setIndlæser]   = useState(!_katalogCache)
-  const [scanMode, setScanMode]   = useState(false)
-  const [scanFejl, setScanFejl]   = useState(null)
-  const søgeRef = useRef(null)
+  const [scanMode, setScanMode]           = useState(false)
+  const [scanFejl, setScanFejl]           = useState(null)
+  const [billedeAnalyserer, setBilledeAnalyserer] = useState(false)
+  const [billedeItems, setBilledeItems]   = useState(null)
+  const søgeRef      = useRef(null)
+  const billedeInputRef = useRef(null)
 
   useEffect(() => { søgeRef.current?.focus() }, [])
 
@@ -426,24 +431,89 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
     setSøgning(item.navn)
   }
 
+  async function analyserBillede(fil) {
+    setBilledeAnalyserer(true)
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(fil)
+      })
+      const anthropic = new Anthropic({ apiKey: import.meta.env.VITE_ANTHROPIC_KEY, dangerouslyAllowBrowser: true })
+      const msg = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: fil.type || 'image/jpeg', data: base64 } },
+            { type: 'text', text: 'Identificer alle madvarer/ingredienser på billedet. Svar KUN med et JSON-array:\n[{"navn":"...","mængde":"","enhed":"stk","kategori":"tørvarer","usikker":false}]\nKategorier: grønt, køl, frys, tørvarer, krydderier. Brug "usikker":true hvis du ikke er 100% sikker. Navne på dansk.' }
+          ]
+        }]
+      })
+      const tekst = msg.content[0]?.text ?? ''
+      const jsonMatch = tekst.match(/\[[\s\S]*\]/)
+      if (!jsonMatch) throw new Error('Intet JSON i svar')
+      const items = JSON.parse(jsonMatch[0])
+      const matchede = items.map((item) => {
+        const kn = kanoniselér(item.navn ?? '')
+        let match = katalog.find((k) => kanoniselér(k.navn) === kn)
+        if (!match && kn) match = katalog.find((k) => { const kk = kanoniselér(k.navn); return kk && kk.length >= 3 && kn.includes(kk) })
+        if (match) return { ...item, navn: match.navn, emoji: match.emoji, kategori: match.kategori, enhed: item.enhed || match.standardEnhed }
+        return { ...item, emoji: gætEmoji(item.navn), kategori: item.kategori || gætKategori(item.navn), enhed: item.enhed || gætEnhed(item.navn) }
+      })
+      setBilledeItems(matchede)
+    } catch {
+      setScanFejl('Kunne ikke analysere billedet — prøv igen.')
+      setTimeout(() => setScanFejl(null), 4000)
+    } finally {
+      setBilledeAnalyserer(false)
+      if (billedeInputRef.current) billedeInputRef.current.value = ''
+    }
+  }
+
   async function skanBarcode(kode) {
     setScanMode(false)
     setSøgning('Søger produkt…')
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${kode}.json`)
-      const data = await res.json()
+      if (!res.ok) throw new Error('HTTP-fejl')
+      let data
+      try { data = await res.json() } catch { throw new Error('Ugyldigt svar') }
       if (data.status === 1 && data.product) {
-        const navn = data.product.product_name_da || data.product.product_name || kode
-        const matchFraKatalog = katalog.find((k) => k.navn.toLowerCase() === navn.toLowerCase())
+        const rårNavn = (data.product.product_name_da || data.product.product_name || '').trim()
+        if (!rårNavn) {
+          setSøgning('')
+          setScanFejl('Produktet er fundet men mangler navn — søg manuelt.')
+          setTimeout(() => setScanFejl(null), 4000)
+          return
+        }
+        const kanonNavn = kanoniselér(rårNavn)
+        // 1. Eksakt match
+        let matchFraKatalog = katalog.find((k) => k.navn.toLowerCase() === rårNavn.toLowerCase())
+        // 2. Kanoniseret match (fx "Kildevand 0,5L" → kanoniselér → "vand" matcher "Vand")
+        if (!matchFraKatalog && kanonNavn) {
+          matchFraKatalog = katalog.find((k) => kanoniselér(k.navn) === kanonNavn)
+        }
+        // 3. Substring: katalog-navn indeholdt i det kanoniserede produkt-navn
+        if (!matchFraKatalog && kanonNavn) {
+          matchFraKatalog = katalog.find((k) => {
+            const kk = kanoniselér(k.navn)
+            return kk && kk.length >= 3 && kanonNavn.includes(kk)
+          })
+        }
         if (matchFraKatalog) {
           vælgIngrediens(matchFraKatalog)
         } else {
-          const nyVare = { navn, emoji: gætEmoji(navn), kategori: gætKategori(navn), standardEnhed: gætEnhed(navn) }
-          vælgIngrediens(nyVare)
+          const visNavn = kanonNavn
+            ? kanonNavn.charAt(0).toUpperCase() + kanonNavn.slice(1)
+            : rårNavn
+          vælgIngrediens({ navn: visNavn, emoji: gætEmoji(visNavn), kategori: gætKategori(visNavn), standardEnhed: gætEnhed(visNavn) })
         }
       } else {
         setSøgning('')
-        setScanFejl(`Produkt med stregkode ${kode} ikke fundet — søg manuelt.`)
+        setScanFejl('Produktet blev ikke fundet — tilføj manuelt.')
         setTimeout(() => setScanFejl(null), 4000)
       }
     } catch {
@@ -478,133 +548,238 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
           <button style={s.lukBtn} onClick={onLuk}>✕</button>
         </div>
 
-        {/* Scan-knap */}
-        {!valgt && !scanMode && (
-          <button
-            style={{ ...s.scanKnap, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', marginBottom: 12 }}
-            onClick={() => setScanMode(true)}
-          >
-            <Camera size={15} /> Scan stregkode
-          </button>
-        )}
-
-        {/* Stregkodescanner */}
-        {scanMode && <BarcodeScanner onDetected={skanBarcode} onLuk={() => setScanMode(false)} />}
-
-        {/* Inline scan-fejl */}
-        {scanFejl && (
-          <div style={{ fontFamily: font.body, fontSize: 13.5, color: colors.red, background: '#FEF3F2', borderRadius: 10, padding: '10px 13px', marginBottom: 10 }}>
-            {scanFejl}
+        {/* Billede-analyse-spinner */}
+        {billedeAnalyserer && (
+          <div style={{ fontFamily: font.body, fontSize: 14, color: colors.muted, textAlign: 'center', padding: '24px 0' }}>
+            🔍 Analyserer billede…
           </div>
         )}
 
-        {/* Søgefelt + resultater — skjult under scanner */}
-        {!scanMode && (<>
-          <div style={s.søgeWrap}>
-            <Search size={16} color={colors.muted} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.6 }} />
-            <input
-              ref={søgeRef}
-              value={søgning}
-              onChange={(e) => { setSøgning(e.target.value); setValgt(null) }}
-              placeholder={t('lag.søgPh')}
-              style={s.søgeInput}
-            />
-            {søgning && (
-              <button style={s.søgeRyd} onClick={() => { setSøgning(''); setValgt(null) }}>✕</button>
-            )}
-          </div>
+        {/* Billede-scanner: review-liste */}
+        {billedeItems !== null && !billedeAnalyserer && (
+          <BilledeReview
+            items={billedeItems}
+            onOpdater={(idx, felt, val) => setBilledeItems((it) => it.map((x, i) => i === idx ? { ...x, [felt]: val } : x))}
+            onFjern={(idx) => setBilledeItems((it) => it.filter((_, i) => i !== idx))}
+            onTilføjAlle={() => { if (billedeItems.length > 0) onTilføj(billedeItems); setBilledeItems(null) }}
+            onAnnuller={() => setBilledeItems(null)}
+          />
+        )}
 
-          {/* Ingrediens-tæller */}
-          {!valgt && !indlæser && (
-            <p style={s.katalogTæller}>{katalog.length} ingredienser · fra alle opskrifter</p>
+        {/* Normal tilføj-UI — skjult under billede-review */}
+        {billedeItems === null && !billedeAnalyserer && (<>
+
+          {/* Scan-knapper */}
+          {!valgt && !scanMode && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <button
+                style={{ ...s.scanKnap, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flex: 1 }}
+                onClick={() => setScanMode(true)}
+              >
+                <Camera size={15} /> Stregkode
+              </button>
+              <button
+                style={{ ...s.scanKnap, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flex: 1 }}
+                onClick={() => billedeInputRef.current?.click()}
+              >
+                📷 Scan billede
+              </button>
+            </div>
+          )}
+          <input
+            ref={billedeInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) analyserBillede(f) }}
+          />
+
+          {/* Stregkodescanner */}
+          {scanMode && <BarcodeScanner onDetected={skanBarcode} onLuk={() => setScanMode(false)} />}
+
+          {/* Inline scan-fejl */}
+          {scanFejl && (
+            <div style={{ fontFamily: font.body, fontSize: 13.5, color: colors.red, background: '#FEF3F2', borderRadius: 10, padding: '10px 13px', marginBottom: 10 }}>
+              {scanFejl}
+            </div>
           )}
 
-          {/* Søgeresultater — kun hvis ikke valgt */}
-          {!valgt && (
-          <div style={s.resultaterListe}>
-            {indlæser ? (
-              <div style={s.ingenResultater}>Henter ingredienser fra opskrifter…</div>
-            ) : resultater.length === 0 ? (
-              <div style={s.ingenResultater}>
-                Ingen ingredienser fundet —{' '}
-                <button style={s.manueltLink}
-                  onClick={() => setValgt({
-                    navn: søgning.trim(),
-                    emoji: gætEmoji(søgning.trim()),
-                    kategori: gætKategori(søgning.trim()),
-                    standardEnhed: gætEnhed(søgning.trim()),
-                  })}>
-                  tilføj manuelt
-                </button>
-              </div>
-            ) : (
-              resultater.map((item, i) => (
-                <button key={i} style={s.resultatItem} onClick={() => vælgIngrediens(item)}>
-                  <span style={{ width: 30, display: 'flex', justifyContent: 'center', color: colors.muted }}><VareIkon vare={item} size={18} /></span>
-                  <div style={{ flex: 1, textAlign: 'left' }}>
-                    <p style={s.resultatNavn}>{fremhæv(item.navn, søgning)}</p>
-                    <p style={s.resultatKategori}>{KATEGORI_LABELS[item.kategori]}</p>
-                  </div>
-                  <span style={{ color: colors.mutedLight, fontSize: 18 }}>›</span>
-                </button>
-              ))
+          {/* Søgefelt + resultater — skjult under scanner */}
+          {!scanMode && (<>
+            <div style={s.søgeWrap}>
+              <Search size={16} color={colors.muted} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.6 }} />
+              <input
+                ref={søgeRef}
+                value={søgning}
+                onChange={(e) => { setSøgning(e.target.value); setValgt(null) }}
+                placeholder={t('lag.søgPh')}
+                style={s.søgeInput}
+              />
+              {søgning && (
+                <button style={s.søgeRyd} onClick={() => { setSøgning(''); setValgt(null) }}>✕</button>
+              )}
+            </div>
+
+            {/* Ingrediens-tæller */}
+            {!valgt && !indlæser && (
+              <p style={s.katalogTæller}>{katalog.length} ingredienser · fra alle opskrifter</p>
             )}
-          </div>
+
+            {/* Søgeresultater — kun hvis ikke valgt */}
+            {!valgt && (
+            <div style={s.resultaterListe}>
+              {indlæser ? (
+                <div style={s.ingenResultater}>Henter ingredienser fra opskrifter…</div>
+              ) : resultater.length === 0 ? (
+                <div style={s.ingenResultater}>
+                  Ingen ingredienser fundet —{' '}
+                  <button style={s.manueltLink}
+                    onClick={() => setValgt({
+                      navn: søgning.trim(),
+                      emoji: gætEmoji(søgning.trim()),
+                      kategori: gætKategori(søgning.trim()),
+                      standardEnhed: gætEnhed(søgning.trim()),
+                    })}>
+                    tilføj manuelt
+                  </button>
+                </div>
+              ) : (
+                resultater.map((item, i) => (
+                  <button key={i} style={s.resultatItem} onClick={() => vælgIngrediens(item)}>
+                    <span style={{ width: 30, display: 'flex', justifyContent: 'center', color: colors.muted }}><VareIkon vare={item} size={18} /></span>
+                    <div style={{ flex: 1, textAlign: 'left' }}>
+                      <p style={s.resultatNavn}>{fremhæv(item.navn, søgning)}</p>
+                      <p style={s.resultatKategori}>{KATEGORI_LABELS[item.kategori]}</p>
+                    </div>
+                    <span style={{ color: colors.mutedLight, fontSize: 18 }}>›</span>
+                  </button>
+                ))
+              )}
+            </div>
+            )}
+          </>)}
+
+          {/* Detalje-formular — når ingrediens er valgt */}
+          {valgt && (
+            <div style={s.detaljeFormular}>
+              <div style={s.valgtHeader}>
+                <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: colors.muted }}><VareIkon vare={valgt} size={24} /></span>
+                <div>
+                  <p style={s.valgtNavn}>{valgt.navn}</p>
+                  <p style={s.valgtKategori}>{KATEGORI_LABELS[valgt.kategori]}</p>
+                </div>
+                <button style={s.skiftBtn} onClick={() => setValgt(null)}>Skift</button>
+              </div>
+
+              {/* Mængde + enhed */}
+              <label style={s.feltLabel}>{t('lag.mængde')}</label>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={mængde}
+                  onChange={(e) => setMængde(e.target.value)}
+                  placeholder="fx. 400"
+                  style={{ ...s.input, flex: 1 }}
+                  autoFocus
+                />
+                <select
+                  value={enhed}
+                  onChange={(e) => setEnhed(e.target.value)}
+                  style={s.enhedSelect}
+                >
+                  {ENHEDER.map((e) => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+
+              {/* Udløbsdato */}
+              <label style={s.feltLabel}>{t('lag.udløber')}</label>
+              <input
+                type="date"
+                value={udløb}
+                onChange={(e) => setUdløb(e.target.value)}
+                min={new Date().toISOString().slice(0,10)}
+                style={s.input}
+              />
+
+              <button
+                style={{ ...s.primærBtn, opacity: valgt ? 1 : 0.5 }}
+                onClick={håndterTilføj}
+              >
+                {t('lag.tilføjDialog.gem')}
+              </button>
+            </div>
           )}
         </>)}
-
-        {/* Detalje-formular — når ingrediens er valgt */}
-        {valgt && (
-          <div style={s.detaljeFormular}>
-            <div style={s.valgtHeader}>
-              <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: colors.muted }}><VareIkon vare={valgt} size={24} /></span>
-              <div>
-                <p style={s.valgtNavn}>{valgt.navn}</p>
-                <p style={s.valgtKategori}>{KATEGORI_LABELS[valgt.kategori]}</p>
-              </div>
-              <button style={s.skiftBtn} onClick={() => setValgt(null)}>Skift</button>
-            </div>
-
-            {/* Mængde + enhed */}
-            <label style={s.feltLabel}>{t('lag.mængde')}</label>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={mængde}
-                onChange={(e) => setMængde(e.target.value)}
-                placeholder="fx. 400"
-                style={{ ...s.input, flex: 1 }}
-                autoFocus
-              />
-              <select
-                value={enhed}
-                onChange={(e) => setEnhed(e.target.value)}
-                style={s.enhedSelect}
-              >
-                {ENHEDER.map((e) => <option key={e} value={e}>{e}</option>)}
-              </select>
-            </div>
-
-            {/* Udløbsdato */}
-            <label style={s.feltLabel}>{t('lag.udløber')}</label>
-            <input
-              type="date"
-              value={udløb}
-              onChange={(e) => setUdløb(e.target.value)}
-              min={new Date().toISOString().slice(0,10)}
-              style={s.input}
-            />
-
-            <button
-              style={{ ...s.primærBtn, opacity: valgt ? 1 : 0.5 }}
-              onClick={håndterTilføj}
-            >
-              {t('lag.tilføjDialog.gem')}
-            </button>
-          </div>
-        )}
       </div>
+    </div>
+  )
+}
+
+// ── Billede-scanner review-liste ──────────────────────────────────────────────
+
+function BilledeReview({ items, onOpdater, onFjern, onTilføjAlle, onAnnuller }) {
+  return (
+    <div>
+      <div style={{ background: '#FFFBEB', border: '1.5px solid #F59E0B', borderRadius: 10, padding: '10px 13px', marginBottom: 12, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+        <AlertTriangle size={16} color="#F59E0B" style={{ flexShrink: 0, marginTop: 1 }} />
+        <p style={{ fontFamily: font.body, fontSize: 13, color: '#92400E', margin: 0, lineHeight: 1.45 }}>
+          Tjek venligst at informationerne er korrekte inden du tilføjer
+        </p>
+      </div>
+      {items.length === 0 ? (
+        <p style={{ fontFamily: font.body, fontSize: 14, color: colors.muted, textAlign: 'center', padding: '20px 0', margin: 0 }}>
+          Ingen madvarer fundet — prøv et andet billede
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+          {items.map((item, i) => (
+            <div key={i} style={{ background: colors.bg, border: `1.5px solid ${item.usikker ? '#F59E0B' : colors.border}`, borderRadius: 12, padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 20, flexShrink: 0 }}>{item.emoji || '🍽️'}</span>
+              {item.usikker && <AlertTriangle size={13} color="#F59E0B" style={{ flexShrink: 0 }} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <input
+                  value={item.navn}
+                  onChange={(e) => onOpdater(i, 'navn', e.target.value)}
+                  style={{ fontFamily: font.body, fontSize: 14, fontWeight: 600, color: colors.text, border: 'none', background: 'transparent', padding: 0, outline: 'none', width: '100%' }}
+                />
+                <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={item.mængde ?? ''}
+                    onChange={(e) => onOpdater(i, 'mængde', e.target.value)}
+                    placeholder="Mængde"
+                    style={{ fontFamily: font.body, fontSize: 12.5, color: colors.muted, border: `1px solid ${colors.border}`, borderRadius: 6, padding: '3px 7px', width: 70, background: colors.card }}
+                  />
+                  <select
+                    value={item.enhed || 'stk'}
+                    onChange={(e) => onOpdater(i, 'enhed', e.target.value)}
+                    style={{ fontFamily: font.body, fontSize: 12.5, color: colors.muted, border: `1px solid ${colors.border}`, borderRadius: 6, padding: '3px 6px', background: colors.card }}
+                  >
+                    {ENHEDER.map((e) => <option key={e} value={e}>{e}</option>)}
+                  </select>
+                </div>
+              </div>
+              <button
+                onClick={() => onFjern(i)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.mutedLight, padding: 4, flexShrink: 0, fontSize: 16 }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        style={{ ...s.primærBtn, marginBottom: 8, opacity: items.length === 0 ? 0.5 : 1 }}
+        onClick={onTilføjAlle}
+        disabled={items.length === 0}
+      >
+        Tilføj alle ({items.length})
+      </button>
+      <button style={s.ghostBtn} onClick={onAnnuller}>Annullér</button>
     </div>
   )
 }
