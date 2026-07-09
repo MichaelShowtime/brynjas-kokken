@@ -1,7 +1,9 @@
 ﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BrowserMultiFormatReader } from '@zxing/browser'
+import { NotFoundException } from '@zxing/library'
 import {
-  AlertTriangle, Camera, Mic, Search, Trash2,
+  AlertTriangle, Camera, Search, Trash2,
   Egg, Milk, Carrot, Fish, Leaf, LeafyGreen, Wheat, Snowflake,
   Beef, Drumstick, Package, Sparkles, Refrigerator, Apple, Bean,
 } from 'lucide-react'
@@ -285,48 +287,71 @@ export default function Lager() {
 
 function BarcodeScanner({ onDetected, onLuk }) {
   const videoRef = useRef(null)
-  const streamRef = useRef(null)
-  const rafRef = useRef(null)
+  const readerRef = useRef(null)
   const [fejl, setFejl] = useState(null)
+  const [klar, setKlar] = useState(false)
 
   useEffect(() => {
-    if (!('BarcodeDetector' in window)) {
-      setFejl('Stregkodescanner understøttes ikke i denne browser (kræver Chrome/Edge/Safari 17+).')
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setFejl('Kamera understøttes ikke i denne browser.')
       return
     }
-    const detector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code'] })
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
-      .then((stream) => {
-        streamRef.current = stream
-        if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
-        async function scan() {
-          if (!videoRef.current || videoRef.current.readyState < 2) { rafRef.current = requestAnimationFrame(scan); return }
-          try {
-            const koder = await detector.detect(videoRef.current)
-            if (koder.length > 0) { stream.getTracks().forEach((t) => t.stop()); onDetected(koder[0].rawValue); return }
-          } catch {}
-          rafRef.current = requestAnimationFrame(scan)
-        }
-        rafRef.current = requestAnimationFrame(scan)
+
+    const reader = new BrowserMultiFormatReader()
+    readerRef.current = reader
+
+    let stoppet = false
+
+    reader.decodeFromVideoDevice(undefined, videoRef.current, (result, err, controls) => {
+      if (stoppet) return
+      if (result) {
+        stoppet = true
+        controls.stop()
+        onDetected(result.getText())
+        return
+      }
+      // NotFoundException er normal — betyder bare ingen kode i dette frame
+      if (err && !(err instanceof NotFoundException)) {
+        stoppet = true
+        controls.stop()
+        setFejl('Kamera-fejl — tjek at du har givet tilladelse.')
+      }
+    })
+      .then(() => { if (!stoppet) setKlar(true) })
+      .catch((e) => {
+        if (!stoppet) setFejl(e?.message?.includes('Permission') || e?.name === 'NotAllowedError'
+          ? 'Kameratilladelse nægtet — tillad kamera i browserindstillinger.'
+          : 'Kunne ikke åbne kamera.')
       })
-      .catch(() => setFejl('Kunne ikke åbne kamera — tjek kameratilladelse.'))
-    return () => { streamRef.current?.getTracks().forEach((t) => t.stop()); cancelAnimationFrame(rafRef.current) }
+
+    return () => {
+      stoppet = true
+      try { readerRef.current?.reset() } catch {}
+    }
   }, [onDetected])
 
   return (
     <div style={{ marginBottom: 14 }}>
       {fejl ? (
-        <div style={{ fontFamily: font.body, fontSize: 13.5, color: colors.red, padding: '12px 0' }}>{fejl}</div>
+        <div style={{ fontFamily: font.body, fontSize: 13.5, color: colors.red, background: '#FEF3F2', borderRadius: 10, padding: '12px 13px' }}>
+          {fejl}
+        </div>
       ) : (
-        <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: '#000', height: 200 }}>
+        <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: '#000', height: 210 }}>
           <video ref={videoRef} playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          <div style={{ position: 'absolute', inset: 8, border: `2px solid ${colors.green}`, borderRadius: 10, pointerEvents: 'none' }} />
-          <p style={{ position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center', color: '#fff', fontFamily: font.body, fontSize: 12.5, fontWeight: 700, margin: 0 }}>
-            Hold stregkoden inden for rammen
+          {/* Sigte-ramme */}
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-54%)', width: '72%', height: 90, pointerEvents: 'none' }}>
+            {/* Hjørner */}
+            {[['0','0','right','bottom'],['0','auto','right','auto'],['auto','0','auto','bottom'],['auto','auto','auto','auto']].map(([t,r,br,bl], i) => (
+              <div key={i} style={{ position: 'absolute', top: t === 'auto' ? 'auto' : 0, bottom: t === 'auto' ? 0 : 'auto', left: r === 'auto' ? 'auto' : 0, right: r === 'auto' ? 0 : 'auto', width: 20, height: 20, borderTop: (i < 2) ? `3px solid ${colors.green}` : 'none', borderBottom: (i >= 2) ? `3px solid ${colors.green}` : 'none', borderLeft: (i === 0 || i === 2) ? `3px solid ${colors.green}` : 'none', borderRight: (i === 1 || i === 3) ? `3px solid ${colors.green}` : 'none' }} />
+            ))}
+          </div>
+          <p style={{ position: 'absolute', bottom: 10, left: 0, right: 0, textAlign: 'center', color: klar ? '#fff' : 'rgba(255,255,255,0.6)', fontFamily: font.body, fontSize: 12.5, fontWeight: 700, margin: 0 }}>
+            {klar ? 'Hold stregkoden inden for rammen' : 'Starter kamera…'}
           </p>
         </div>
       )}
-      <button style={{ ...s.ghostBtn, marginTop: 8 }} onClick={onLuk}>Annullér scanner</button>
+      <button style={{ ...s.ghostBtn, marginTop: 8 }} onClick={onLuk}>Annullér</button>
     </div>
   )
 }
@@ -340,7 +365,6 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
   const [katalog, setKatalog]     = useState(_katalogCache ?? INGREDIENS_KATALOG)
   const [indlæser, setIndlæser]   = useState(!_katalogCache)
   const [scanMode, setScanMode]   = useState(false)
-  const [lytter, setLytter]       = useState(false)
   const [scanFejl, setScanFejl]   = useState(null)
   const søgeRef = useRef(null)
 
@@ -429,23 +453,6 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
     }
   }
 
-  function startStemme() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { alert('Taleindtastning understøttes ikke i denne browser.'); return }
-    const rec = new SR()
-    rec.lang = 'da-DK'
-    rec.onstart = () => setLytter(true)
-    rec.onresult = (e) => {
-      const tekst = e.results[0][0].transcript
-      setLytter(false)
-      setSøgning(tekst)
-      setValgt(null)
-    }
-    rec.onerror = () => setLytter(false)
-    rec.onend = () => setLytter(false)
-    rec.start()
-  }
-
   function håndterTilføj() {
     if (!valgt) return
     onTilføj({
@@ -471,18 +478,14 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
           <button style={s.lukBtn} onClick={onLuk}>✕</button>
         </div>
 
-        {/* Scanner + stemme-knapper */}
+        {/* Scan-knap */}
         {!valgt && !scanMode && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            {'BarcodeDetector' in window && (
-              <button style={{ ...s.scanKnap, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => setScanMode(true)}>
-                <Camera size={15} /> Scan stregkode
-              </button>
-            )}
-            <button style={{ ...s.scanKnap, opacity: lytter ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={startStemme}>
-              <Mic size={15} /> {lytter ? 'Lytter…' : 'Stemme'}
-            </button>
-          </div>
+          <button
+            style={{ ...s.scanKnap, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', marginBottom: 12 }}
+            onClick={() => setScanMode(true)}
+          >
+            <Camera size={15} /> Scan stregkode
+          </button>
         )}
 
         {/* Stregkodescanner */}
