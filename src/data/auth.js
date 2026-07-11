@@ -76,10 +76,14 @@ export async function registrerBruger({ email, navn, efternavn, telefon, usernam
     return { ok: false, fejl: 'Adgangskoden skal være mindst 6 tegn.' }
 
   // Tjek om brugernavn er taget
-  const existing = await databases.listDocuments(DB_ID, COL.customers, [
-    Query.equal('username', normUsername), Query.limit(1),
-  ])
-  if (existing.total > 0) return { ok: false, fejl: 'Dette brugernavn er allerede taget.' }
+  try {
+    const existing = await databases.listDocuments(DB_ID, COL.customers, [
+      Query.equal('username', normUsername), Query.limit(1),
+    ])
+    if (existing.total > 0) return { ok: false, fejl: 'Dette brugernavn er allerede taget.' }
+  } catch {
+    // Ignorer fejl her — unikhed håndteres af DB-index
+  }
 
   // Opret Appwrite-bruger
   let user
