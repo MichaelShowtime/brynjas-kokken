@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Heart } from 'lucide-react'
 import SwipeCard from '../components/SwipeCard'
-import { supabase } from '../lib/supabase'
+import { databases, DB_ID, COL, Query, ID } from '../lib/appwrite'
 import { tidMinutter } from '../lib/recipeUtils'
 import { hentLager, byggLagerOpslag } from '../data/lager'
 import { addGemt, removeGemt } from '../data/gemte'
@@ -49,11 +49,13 @@ export default function MadMatch() {
   const [afviste, setAfviste] = useState(() => rydOgHent())
 
   useEffect(() => {
-    supabase
-      .from('recipes')
-      .select('id, title, difficulty, prep_time, cook_time, tags, storage_image, image_url, ingredients, source')
-      .then(({ data }) => {
-        const liste = data ?? []
+    databases.listDocuments(DB_ID, COL.recipes, [Query.limit(500)])
+      .then(({ documents }) => {
+        const liste = documents.map(d => ({
+          ...d,
+          id:          d.$id,
+          ingredients: d.ingredients_json ? JSON.parse(d.ingredients_json) : [],
+        }))
         setAlleOpskrifter(liste)
         setShuffled(bland(liste))
         setLoading(false)
@@ -165,9 +167,9 @@ export default function MadMatch() {
         addGemt(aktuel.id)
         const bruger = hentAktivBruger()
         if (bruger?.id) {
-          supabase.from('saved_recipes')
-            .upsert({ user_id: bruger.id, recipe_id: aktuel.id }, { onConflict: 'user_id,recipe_id' })
-            .then()
+          databases.createDocument(DB_ID, COL.saved_recipes, ID.unique(), {
+            user_id: bruger.id, recipe_id: aktuel.id,
+          }).catch(() => {})
         }
       }
       if (retning === 'left') {
@@ -196,9 +198,13 @@ export default function MadMatch() {
       removeGemt(sidst.opskrift.id)
       const bruger = hentAktivBruger()
       if (bruger?.id) {
-        supabase.from('saved_recipes')
-          .delete().eq('user_id', bruger.id).eq('recipe_id', sidst.opskrift.id)
-          .then()
+        databases.listDocuments(DB_ID, COL.saved_recipes, [
+          Query.equal('user_id', bruger.id),
+          Query.equal('recipe_id', sidst.opskrift.id),
+          Query.limit(1),
+        ]).then(({ documents }) => {
+          if (documents[0]) databases.deleteDocument(DB_ID, COL.saved_recipes, documents[0].$id)
+        }).catch(() => {})
       }
     }
     if (sidst.retning === 'left') {

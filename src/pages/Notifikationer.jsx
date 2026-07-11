@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, UserPlus, MessageCircle } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { databases, DB_ID, COL, Query } from '../lib/appwrite'
 import { hentAktivBruger } from '../data/auth'
 import { useLang, relativTidLang } from '../lib/lang'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -21,32 +21,29 @@ export default function Notifikationer() {
 
     async function hent() {
       const [følgerRes, minePostsRes] = await Promise.all([
-        supabase
-          .from('venner')
-          .select('bruger_user_id, bruger_email, created_at')
-          .eq('ven_user_id', bruger.id)
-          .order('created_at', { ascending: false })
-          .limit(30),
-        supabase
-          .from('posts')
-          .select('id, opskrift_titel')
-          .eq('user_id', bruger.id)
-          .limit(50),
+        databases.listDocuments(DB_ID, COL.venner, [
+          Query.equal('ven_user_id', bruger.id),
+          Query.orderDesc('created_at'),
+          Query.limit(30),
+        ]),
+        databases.listDocuments(DB_ID, COL.posts, [
+          Query.equal('user_id', bruger.id),
+          Query.limit(50),
+        ]),
       ])
 
       if (cancelled) return
 
-      const følgere = følgerRes.data ?? []
-      const minePosts = minePostsRes.data ?? []
+      const følgere = følgerRes.documents
+      const minePosts = minePostsRes.documents.map(d => ({ ...d, id: d.$id }))
 
       // Hent følgeres kundeinfo
       const følgerIds = følgere.map((f) => f.bruger_user_id).filter(Boolean)
-      const { data: følgerKunder } = følgerIds.length
-        ? await supabase
-            .from('customers')
-            .select('user_id, first_name, avatar, username')
-            .in('user_id', følgerIds)
-        : { data: [] }
+      const følgerKunder = følgerIds.length
+        ? (await databases.listDocuments(DB_ID, COL.customers, [
+            Query.equal('user_id', følgerIds), Query.limit(30),
+          ])).documents
+        : []
 
       if (cancelled) return
 
@@ -54,22 +51,34 @@ export default function Notifikationer() {
       const minePostIds = minePosts.map((p) => p.id)
       const [likesRes, kommentarerRes] = await Promise.all([
         minePostIds.length
-          ? supabase.from('post_likes').select('post_id, user_id, created_at').in('post_id', minePostIds).neq('user_id', bruger.id).order('created_at', { ascending: false }).limit(30)
-          : { data: [] },
+          ? databases.listDocuments(DB_ID, COL.post_likes, [
+              Query.equal('post_id', minePostIds),
+              Query.notEqual('user_id', bruger.id),
+              Query.orderDesc('created_at'),
+              Query.limit(30),
+            ])
+          : Promise.resolve({ documents: [] }),
         minePostIds.length
-          ? supabase.from('post_kommentarer').select('post_id, user_id, bruger_navn, bruger_avatar, created_at').in('post_id', minePostIds).neq('user_id', bruger.id).order('created_at', { ascending: false }).limit(30)
-          : { data: [] },
+          ? databases.listDocuments(DB_ID, COL.post_kommentarer, [
+              Query.equal('post_id', minePostIds),
+              Query.notEqual('user_id', bruger.id),
+              Query.orderDesc('created_at'),
+              Query.limit(30),
+            ])
+          : Promise.resolve({ documents: [] }),
       ])
-      const likes = likesRes.data ?? []
-      const kommentarer = kommentarerRes.data ?? []
+      const likes = likesRes.documents
+      const kommentarer = kommentarerRes.documents
 
       if (cancelled) return
 
       // Hent likeres kundeinfo
       const likerIds = [...new Set(likes.map((l) => l.user_id))]
-      const { data: likerKunder } = likerIds.length
-        ? await supabase.from('customers').select('user_id, first_name, avatar, username').in('user_id', likerIds)
-        : { data: [] }
+      const likerKunder = likerIds.length
+        ? (await databases.listDocuments(DB_ID, COL.customers, [
+            Query.equal('user_id', likerIds), Query.limit(30),
+          ])).documents
+        : []
 
       if (cancelled) return
 

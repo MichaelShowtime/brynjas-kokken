@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bookmark, BookmarkX } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { databases, DB_ID, COL, Query } from '../lib/appwrite'
 import { hentGemte, toggleGemt } from '../data/gemte'
 import { billedeUrl, opskriftFarve, grad, tidLabel, sværhedLabel } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -18,12 +18,10 @@ export default function Gemte() {
     const ids = hentGemte()
     setGemteIds(ids)
     if (!ids.length) { setLoading(false); return }
-    supabase
-      .from('recipes')
-      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image, image_url')
-      .in('id', ids)
-      .then(({ data }) => {
-        const sorteret = (data ?? []).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
+    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('$id', ids), Query.limit(ids.length)])
+      .then(({ documents }) => {
+        const sorteret = documents.map(d => ({ ...d, id: d.$id }))
+          .sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
         setOpskrifter(sorteret)
         setLoading(false)
       })

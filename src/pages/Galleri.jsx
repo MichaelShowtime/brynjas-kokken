@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { databases, DB_ID, COL, Query } from '../lib/appwrite'
 import { hentAktivBruger } from '../data/auth'
 import { billedeUrl, opskriftFarve, grad, tidLabel, tidMinutter, sværhedLabel } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -35,25 +35,21 @@ export default function Galleri() {
   const PAGE = 300
 
   useEffect(() => {
-    supabase
-      .from('recipes')
-      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image, image_url')
-      .range(0, PAGE - 1)
-      .then(({ data }) => {
-        setOpskrifter(data ?? [])
-        setHarFler((data?.length ?? 0) >= PAGE)
+    databases.listDocuments(DB_ID, COL.recipes, [Query.limit(PAGE), Query.offset(0)])
+      .then(({ documents, total }) => {
+        setOpskrifter(documents.map(d => ({ ...d, id: d.$id })))
+        setHarFler(total > PAGE)
         setLoading(false)
       })
   }, [])
 
   async function hentFler() {
     setLasterFler(true)
-    const { data } = await supabase
-      .from('recipes')
-      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image, image_url')
-      .range(opskrifter.length, opskrifter.length + PAGE - 1)
-    setOpskrifter((prev) => [...prev, ...(data ?? [])])
-    setHarFler((data?.length ?? 0) >= PAGE)
+    const { documents, total } = await databases.listDocuments(DB_ID, COL.recipes, [
+      Query.limit(PAGE), Query.offset(opskrifter.length),
+    ])
+    setOpskrifter((prev) => [...prev, ...documents.map(d => ({ ...d, id: d.$id }))])
+    setHarFler(total > opskrifter.length + PAGE)
     setLasterFler(false)
   }
 

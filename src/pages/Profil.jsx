@@ -43,7 +43,7 @@ function tagIkon(id, size = 14) {
   }[id] ?? <Leaf {...p} />
 }
 import { hentAutoLager, gemAutoLager } from '../data/lager'
-import { supabase } from '../lib/supabase'
+import { databases, storage, DB_ID, COL, Query, ID, BUCKET_ID } from '../lib/appwrite'
 import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
 import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
 import { hentKreationer, sletKreation } from '../data/kreationer'
@@ -204,9 +204,11 @@ export default function Profil() {
 
     // Hent fra Supabase saved_recipes og merge med localStorage
     if (bruger?.id) {
-      const { data } = await supabase.from('saved_recipes').select('recipe_id').eq('user_id', bruger.id)
-      if (data?.length) {
-        const dbIds = data.map(r => r.recipe_id)
+      const res = await databases.listDocuments(DB_ID, COL.saved_recipes, [
+        Query.equal('user_id', bruger.id), Query.limit(200),
+      ])
+      if (res.documents.length) {
+        const dbIds = res.documents.map(r => r.recipe_id)
         ids = [...new Set([...dbIds, ...ids])]
         try { localStorage.setItem('simmer_gemte_v1', JSON.stringify(ids)) } catch {}
       }
@@ -214,11 +216,10 @@ export default function Profil() {
 
     setGemteIds(ids)
     if (!ids.length) { setGemteOpskrifter([]); return }
-    supabase.from('recipes')
-      .select('id, title, prep_time, cook_time, tags, storage_image, image_url')
-      .in('id', ids)
-      .then(({ data }) => {
-        const sorted = (data ?? []).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
+    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('$id', ids), Query.limit(ids.length)])
+      .then(({ documents }) => {
+        const sorted = documents.map(d => ({ ...d, id: d.$id }))
+          .sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
         setGemteOpskrifter(sorted)
       })
   }
@@ -299,19 +300,19 @@ export default function Profil() {
       return
     }
     setUploadLoader(true)
-    const ext = (fil.name.includes('.') ? fil.name.split('.').pop() : null) || 'jpg'
-    const sti = `avatarer/${bruger.id}/avatar.${ext}`
-    const { error } = await supabase.storage.from('recipes').upload(sti, fil, { upsert: true, contentType: fil.type })
-    if (error) {
-      setUploadLoader(false)
-      const msg = error.message ?? ''
+    try {
+      const fileId = `avatar_${bruger.id}`
+      // Slet gammel avatar hvis den findes
+      try { await storage.deleteFile(BUCKET_ID, fileId) } catch {}
+      await storage.createFile(BUCKET_ID, fileId, fil)
+      const publicUrl = storage.getFileView(BUCKET_ID, fileId).href
+      opdater({ avatarUrl: publicUrl })
+    } catch (e) {
+      const msg = e.message ?? ''
       if (msg.includes('too large') || msg.includes('413')) alert('Billedet er for stort — prøv et mindre billede (maks 5 MB)')
-      else if (msg.includes('security policy') || msg.includes('403')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
+      else if (msg.includes('403')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
       else alert('Upload fejlede: ' + msg)
-      return
     }
-    const { data: { publicUrl } } = supabase.storage.from('recipes').getPublicUrl(sti)
-    opdater({ avatarUrl: publicUrl })
     setUploadLoader(false)
   }
 
@@ -689,19 +690,19 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
     setGemmer(true)
     let nyAvatarUrl = bruger.avatarUrl || null
     if (avatarFil) {
-      const ext = (avatarFil.name.includes('.') ? avatarFil.name.split('.').pop() : null) || 'jpg'
-      const sti = `avatarer/${bruger.id}/avatar.${ext}`
-      const { error } = await supabase.storage.from('recipes').upload(sti, avatarFil, { upsert: true, contentType: avatarFil.type })
-      if (error) {
+      try {
+        const fileId = `avatar_${bruger.id}`
+        try { await storage.deleteFile(BUCKET_ID, fileId) } catch {}
+        await storage.createFile(BUCKET_ID, fileId, avatarFil)
+        nyAvatarUrl = storage.getFileView(BUCKET_ID, fileId).href
+      } catch (e) {
         setGemmer(false)
-        const msg = error.message ?? ''
+        const msg = e.message ?? ''
         if (msg.includes('too large') || msg.includes('413')) alert('Billedet er for stort — prøv et mindre billede (maks 5 MB)')
-        else if (msg.includes('security policy') || msg.includes('403')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
+        else if (msg.includes('403')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
         else alert('Billedet kunne ikke uploades: ' + msg)
         return
       }
-      const { data: { publicUrl } } = supabase.storage.from('recipes').getPublicUrl(sti)
-      nyAvatarUrl = publicUrl
     }
     setGemmer(false)
     onGem({ avatar, navn, efternavn, bio, telefon, username: normUsername || bruger.username, avatarUrl: nyAvatarUrl })

@@ -1,9 +1,9 @@
 ﻿import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Anthropic from '@anthropic-ai/sdk'
-import { supabase } from '../lib/supabase'
+import { databases, DB_ID, COL } from '../lib/appwrite'
 import { hentLager, byggLagerOpslag } from '../data/lager'
-import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
+import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad, normaliserOpskrift } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
 import { tilføjTilIndkøbsliste } from '../data/indkøbsliste'
@@ -154,19 +154,17 @@ export default function Opskrift() {
 
   useEffect(() => {
     let cancelled = false
-    supabase
-      .from('recipes')
-      .select('*')
-      .eq('id', id)
-      .single()
-      .then(({ data }) => {
+    databases.getDocument(DB_ID, COL.recipes, id)
+      .then((doc) => {
         if (!cancelled) {
+          const data = normaliserOpskrift(doc)
           setOpskrift(data)
           const stdPortioner = hentAktivBruger()?.standardPortioner
           setPortioner(stdPortioner ?? data?.servings ?? 4)
           setLoading(false)
         }
       })
+      .catch(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [id])
 

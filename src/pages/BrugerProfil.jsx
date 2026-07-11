@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Pencil, Trash2 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { databases, DB_ID, COL, Query } from '../lib/appwrite'
 import { hentAktivBruger } from '../data/auth'
 import { billedeUrl, opskriftFarve, grad } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -26,18 +26,13 @@ export default function BrugerProfil() {
   useEffect(() => {
     if (!userId) return
     Promise.all([
-      supabase.from('customers')
-        .select('user_id, first_name, last_name, username, avatar, avatar_url, bio')
-        .eq('user_id', userId)
-        .maybeSingle(),
-      supabase.from('posts')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(30),
-    ]).then(([{ data: k }, { data: p }]) => {
-      setKunde(k ?? null)
-      setPosts(p ?? [])
+      databases.listDocuments(DB_ID, COL.customers, [Query.equal('user_id', userId), Query.limit(1)]),
+      databases.listDocuments(DB_ID, COL.posts, [
+        Query.equal('user_id', userId), Query.orderDesc('created_at'), Query.limit(30),
+      ]),
+    ]).then(([kRes, pRes]) => {
+      setKunde(kRes.documents[0] ?? null)
+      setPosts(pRes.documents.map(d => ({ ...d, id: d.$id })))
       setLoading(false)
     })
   }, [userId])
@@ -54,7 +49,7 @@ export default function BrugerProfil() {
 
   async function sletPost() {
     if (!postMenuId) return
-    await supabase.from('posts').delete().eq('id', postMenuId).eq('user_id', bruger.id)
+    await databases.deleteDocument(DB_ID, COL.posts, postMenuId)
     setPosts(prev => prev.filter(p => p.id !== postMenuId))
     lukMenu()
   }
@@ -62,7 +57,7 @@ export default function BrugerProfil() {
   async function gemRedigering(nyCitat) {
     if (!redigerPost) return
     const value = nyCitat?.trim() || null
-    await supabase.from('posts').update({ citat: value }).eq('id', redigerPost.id).eq('user_id', bruger.id)
+    await databases.updateDocument(DB_ID, COL.posts, redigerPost.id, { citat: value })
     setPosts(prev => prev.map(p => p.id === redigerPost.id ? { ...p, citat: value } : p))
     setRedigerPost(null)
   }
