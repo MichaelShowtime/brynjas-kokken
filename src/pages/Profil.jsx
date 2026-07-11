@@ -684,13 +684,12 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
     if (avatarFil) {
       try {
         const ext = avatarFil.name.split('.').pop() || 'jpg'
-        const sti = `avatarer/${bruger.id}_${Date.now()}.${ext}`
-        const { data, error } = await supabase.storage.from('recipes').upload(sti, avatarFil, { upsert: true })
-        if (!error && data?.path) {
-          const { data: urlData } = supabase.storage.from('recipes').getPublicUrl(data.path)
-          nyAvatarUrl = urlData.publicUrl
-        }
-      } catch {}
+        const sti = `${bruger.id}/avatar.${ext}`
+        const { error } = await supabase.storage.from('avatars').upload(sti, avatarFil, { upsert: true })
+        if (error) throw error
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(sti)
+        nyAvatarUrl = publicUrl
+      } catch (e) { console.error('Avatar upload fejl:', e) }
     }
     setGemmer(false)
     onGem({ avatar, navn, efternavn, bio, telefon, username: normUsername || bruger.username, avatarUrl: nyAvatarUrl })
