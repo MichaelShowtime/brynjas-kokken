@@ -5,6 +5,7 @@ import { billedeUrl, opskriftFarve, tidLabel, grad } from '../lib/recipeUtils'
 import { gemKreation } from '../data/kreationer'
 import { matchIngredienserMedLager, fjernFraLagerVedIds, hentAutoLager } from '../data/lager'
 import { hentAktivBruger } from '../data/auth'
+import { hentNote } from '../data/noter'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
 
@@ -119,7 +120,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
         publicUrl = urlData?.publicUrl ?? null
       }
     }
-    const noter = (() => { try { return localStorage.getItem(`brynjas_noter_${opskrift.id}`) ?? '' } catch { return '' } })()
+    const noter = await hentNote(opskrift.id)
     gemKreation({
       id:         Date.now().toString(),
       titel:      opskrift.title,

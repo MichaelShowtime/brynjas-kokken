@@ -128,11 +128,7 @@ const pv = {
   },
 }
 
-// ── Noter (lokalt pr. opskrift) ────────────────────────────────────────────────
-
-const NOTER_KEY = (id) => `brynjas_noter_${id}`
-function hentNoter(id) { try { return localStorage.getItem(NOTER_KEY(id)) ?? '' } catch { return '' } }
-function gemNoter(id, tekst) { try { localStorage.setItem(NOTER_KEY(id), tekst) } catch {} }
+import { hentNote, gemNote } from '../data/noter'
 
 // ── Hoved-komponent ───────────────────────────────────────────────────────────
 
@@ -145,6 +141,8 @@ export default function Opskrift() {
   const [gemt, setGemt] = useState(() => erGemt(id))
   const [portioner, setPortioner] = useState(null)
   const [noter, setNoter] = useState('')
+  const [noteStatus, setNoteStatus] = useState('idle') // 'idle' | 'gemmer' | 'gemt'
+  const debounceRef = useRef(null)
   const [chatÅben, setChatÅben] = useState(false)
   const [beskeder, setBeskeder] = useState(() => [
     { rolle: 'ai', tekst: null },
@@ -166,7 +164,6 @@ export default function Opskrift() {
           setOpskrift(data)
           const stdPortioner = hentAktivBruger()?.standardPortioner
           setPortioner(stdPortioner ?? data?.servings ?? 4)
-          setNoter(hentNoter(id))
           setLoading(false)
         }
       })
@@ -174,6 +171,15 @@ export default function Opskrift() {
   }, [id])
 
   const lagerOpslag = useMemo(() => byggLagerOpslag(hentLager()), [])
+
+  useEffect(() => {
+    let cancelled = false
+    hentNote(id).then((tekst) => { if (!cancelled) setNoter(tekst) })
+    return () => {
+      cancelled = true
+      clearTimeout(debounceRef.current)
+    }
+  }, [id])
 
   useEffect(() => {
     if (chatÅben && chatBundRef.current) {
@@ -417,10 +423,24 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
 
         {/* Noter */}
         <section style={s.sektion}>
-          <h2 style={s.sektionTitel}>{t('op.mineNoter')}</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={s.sektionTitel}>{t('op.mineNoter')}</h2>
+            {noteStatus === 'gemt' && <span style={{ fontFamily: font.body, fontSize: 12, color: colors.green }}>Gemt ✓</span>}
+            {noteStatus === 'gemmer' && <span style={{ fontFamily: font.body, fontSize: 12, color: colors.muted }}>Gemmer…</span>}
+          </div>
           <textarea
             value={noter}
-            onChange={(e) => { setNoter(e.target.value); gemNoter(id, e.target.value) }}
+            onChange={(e) => {
+              const val = e.target.value
+              setNoter(val)
+              setNoteStatus('gemmer')
+              clearTimeout(debounceRef.current)
+              debounceRef.current = setTimeout(async () => {
+                await gemNote(id, val)
+                setNoteStatus('gemt')
+                setTimeout(() => setNoteStatus('idle'), 2000)
+              }, 1000)
+            }}
             placeholder={t('op.noterPh')}
             style={s.noterFelt}
           />
