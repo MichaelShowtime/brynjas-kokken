@@ -75,9 +75,9 @@ export default function Hjem() {
     const brugerTags = bruger?.tags ?? []
     supabase
       .from('recipes')
-      .select('id, title, description, difficulty, prep_time, cook_time, tags, storage_image, image_url')
+      .select('id, title, difficulty, prep_time, cook_time, tags, storage_image, image_url')
       .order('id', { ascending: true })
-      .limit(1000)
+      .limit(200)
       .then(({ data }) => {
         if (cancelled) return
         const alle = data ?? []
