@@ -299,10 +299,18 @@ export default function Profil() {
       return
     }
     setUploadLoader(true)
-    const ext = fil.name.split('.').pop() || 'jpg'
+    const ext = (fil.name.includes('.') ? fil.name.split('.').pop() : null) || 'jpg'
     const sti = `${bruger.id}/avatar.${ext}`
-    const { error } = await supabase.storage.from('avatars').upload(sti, fil, { upsert: true })
-    if (error) { console.error('Avatar upload fejl:', error); setUploadLoader(false); return }
+    const { error } = await supabase.storage.from('avatars').upload(sti, fil, { upsert: true, contentType: fil.type })
+    if (error) {
+      setUploadLoader(false)
+      const msg = error.message ?? ''
+      if (msg.includes('Bucket') || msg.includes('bucket')) alert('Upload-fejl: Lagerbucket ikke fundet — kontakt support.')
+      else if (msg.includes('too large') || msg.includes('413')) alert('Billedet er for stort — prøv et mindre billede (maks 5 MB)')
+      else if (msg.includes('security policy') || msg.includes('403')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
+      else alert('Upload fejlede: ' + msg)
+      return
+    }
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(sti)
     opdater({ avatarUrl: publicUrl })
     setUploadLoader(false)
@@ -682,14 +690,20 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
     setGemmer(true)
     let nyAvatarUrl = bruger.avatarUrl || null
     if (avatarFil) {
-      try {
-        const ext = avatarFil.name.split('.').pop() || 'jpg'
-        const sti = `${bruger.id}/avatar.${ext}`
-        const { error } = await supabase.storage.from('avatars').upload(sti, avatarFil, { upsert: true })
-        if (error) throw error
-        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(sti)
-        nyAvatarUrl = publicUrl
-      } catch (e) { console.error('Avatar upload fejl:', e) }
+      const ext = (avatarFil.name.includes('.') ? avatarFil.name.split('.').pop() : null) || 'jpg'
+      const sti = `${bruger.id}/avatar.${ext}`
+      const { error } = await supabase.storage.from('avatars').upload(sti, avatarFil, { upsert: true, contentType: avatarFil.type })
+      if (error) {
+        setGemmer(false)
+        const msg = error.message ?? ''
+        if (msg.includes('Bucket') || msg.includes('bucket')) alert('Upload-fejl: Lagerbucket ikke fundet — kontakt support.')
+        else if (msg.includes('too large') || msg.includes('413')) alert('Billedet er for stort — prøv et mindre billede (maks 5 MB)')
+        else if (msg.includes('security policy') || msg.includes('403')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
+        else alert('Billedet kunne ikke uploades: ' + msg)
+        return
+      }
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(sti)
+      nyAvatarUrl = publicUrl
     }
     setGemmer(false)
     onGem({ avatar, navn, efternavn, bio, telefon, username: normUsername || bruger.username, avatarUrl: nyAvatarUrl })
