@@ -492,6 +492,15 @@ export default function Profil() {
                           const nyIds = hentGemte()
                           setGemteIds(nyIds)
                           setGemteOpskrifter(prev => prev.filter(x => x.id !== o.id))
+                          if (bruger?.id) {
+                            databases.listDocuments(DB_ID, COL.saved_recipes, [
+                              Query.equal('user_id', bruger.id),
+                              Query.equal('recipe_id', o.id),
+                              Query.limit(1),
+                            ]).then(({ documents }) => {
+                              if (documents[0]) databases.deleteDocument(DB_ID, COL.saved_recipes, documents[0].$id)
+                            }).catch(() => {})
+                          }
                         }}>✕</button>
                       </div>
                       <div style={s.opskriftBody}>

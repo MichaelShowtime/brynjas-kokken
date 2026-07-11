@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bookmark, BookmarkX } from 'lucide-react'
 import { databases, DB_ID, COL, Query } from '../lib/appwrite'
 import { hentGemte, toggleGemt } from '../data/gemte'
+import { hentAktivBruger } from '../data/auth'
 import { billedeUrl, opskriftFarve, grad, tidLabel, sværhedLabel } from '../lib/recipeUtils'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
@@ -32,6 +33,16 @@ export default function Gemte() {
     const nyIds = gemteIds.filter(x => x !== id)
     setGemteIds(nyIds)
     setOpskrifter(prev => prev.filter(o => o.id !== id))
+    const bruger = hentAktivBruger()
+    if (bruger?.id) {
+      databases.listDocuments(DB_ID, COL.saved_recipes, [
+        Query.equal('user_id', bruger.id),
+        Query.equal('recipe_id', id),
+        Query.limit(1),
+      ]).then(({ documents }) => {
+        if (documents[0]) databases.deleteDocument(DB_ID, COL.saved_recipes, documents[0].$id)
+      }).catch(() => {})
+    }
   }
 
   return (
