@@ -241,7 +241,7 @@ export default function Hjem() {
         </header>
 
         <div style={styles.stats}>
-          <Stat tal={streak > 0 ? streak : '—'} label={t('hjem.streakLabel')} ikon="🔥" fremhæv />
+          <Stat tal={streak > 0 ? streak : '—'} label={streak > 0 ? t('hjem.streakLabel') : 'Start en streak!'} ikon={<span style={{ opacity: streak > 0 ? 1 : 0.4 }}>🔥</span>} fremhæv={streak > 0} />
           <Stat tal={kreationer.length || '—'} label={t('pf.retterLavet')} ikon={<UtensilsCrossed size={15} />} />
           <Stat tal={gemte.length || '—'} label="gemte" ikon={<Bookmark size={15} />} onClick={() => navigate('/gemte')} />
         </div>
