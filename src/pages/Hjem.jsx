@@ -72,7 +72,10 @@ export default function Hjem() {
   useEffect(() => {
     let cancelled = false
     const brugerTags = bruger?.tags ?? []
-    databases.listDocuments(DB_ID, COL.recipes, [Query.limit(200)])
+    databases.listDocuments(DB_ID, COL.recipes, [
+      Query.limit(1000),
+      Query.select(['$id', 'title', 'image_url', 'storage_image', 'tags', 'prep_time', 'cook_time', 'difficulty', 'description', 'source']),
+    ])
       .then(({ documents }) => {
         if (cancelled) return
         const alle = documents.map(d => ({ ...d, id: d.$id }))
