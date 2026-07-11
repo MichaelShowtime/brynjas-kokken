@@ -253,13 +253,13 @@ export default function Hjem() {
           </span>
         </div>
 
-        <Section titel={t('hjem.aktivNu')} handling={t('pf.tilføj')} onHandling={() => navigate('/profil')} />
+        <Section titel={t('hjem.aktivNu')} handling={t('pf.tilføj')} onHandling={() => navigate('/profil?tilføj=1')} />
         {(
           vennerListe.length === 0 ? (
             <div style={styles.tomVenner}>
               <span style={{ fontSize: 28 }}>👥</span>
               <p style={styles.tomVennerTekst}>{t('hjem.ingenAktive')}</p>
-              <button style={styles.tilføjVenBtn} onClick={() => navigate('/profil')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
+              <button style={styles.tilføjVenBtn} onClick={() => navigate('/profil?tilføj=1')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
             </div>
           ) : (
             <div style={styles.scrollRow}>
@@ -316,7 +316,7 @@ export default function Hjem() {
                     <p style={styles.feedTomTitel}>{t('hjem.ingenFeed')}</p>
                     <p style={styles.feedTomTekst}>{t('hjem.ingenFeedSub')}</p>
                     <div style={styles.feedTomKnapper}>
-                      <button style={styles.feedTomPrimær} onClick={() => navigate('/profil')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
+                      <button style={styles.feedTomPrimær} onClick={() => navigate('/profil?tilføj=1')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
                       <button style={styles.feedTomSekundær} onClick={() => navigate('/madmatch')}>Find en ret</button>
                     </div>
                   </div>

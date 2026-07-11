@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera, ShoppingBasket, UtensilsCrossed, Clock, ImagePlus,
   Leaf, Sprout, Fish, Dumbbell, Flame, Wheat, Zap, Home, BookOpen, Recycle, CalendarDays,
@@ -189,7 +189,8 @@ export default function Profil() {
   const [venner, setVenner] = useState(() => hentVenner())
   const [antalFølgere, setAntalFølgere] = useState(0)
   const [logUdDialog, setLogUdDialog] = useState(false)
-  const [tilføjVenÅben, setTilføjVenÅben] = useState(false)
+  const [searchParams] = useSearchParams()
+  const [tilføjVenÅben, setTilføjVenÅben] = useState(() => searchParams.get('tilføj') === '1')
   const [autoLager, setAutoLagerState] = useState(hentAutoLager)
   const [standardPortioner, setStandardPortioner] = useState(() => hentAktivBruger()?.standardPortioner ?? null)
   const [uploadLoader, setUploadLoader] = useState(false)
