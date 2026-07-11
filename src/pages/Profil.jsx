@@ -300,18 +300,17 @@ export default function Profil() {
     }
     setUploadLoader(true)
     const ext = (fil.name.includes('.') ? fil.name.split('.').pop() : null) || 'jpg'
-    const sti = `${bruger.id}/avatar.${ext}`
-    const { error } = await supabase.storage.from('avatars').upload(sti, fil, { upsert: true, contentType: fil.type })
+    const sti = `avatarer/${bruger.id}/avatar.${ext}`
+    const { error } = await supabase.storage.from('recipes').upload(sti, fil, { upsert: true, contentType: fil.type })
     if (error) {
       setUploadLoader(false)
       const msg = error.message ?? ''
-      if (msg.includes('Bucket') || msg.includes('bucket')) alert('Upload-fejl: Lagerbucket ikke fundet — kontakt support.')
-      else if (msg.includes('too large') || msg.includes('413')) alert('Billedet er for stort — prøv et mindre billede (maks 5 MB)')
+      if (msg.includes('too large') || msg.includes('413')) alert('Billedet er for stort — prøv et mindre billede (maks 5 MB)')
       else if (msg.includes('security policy') || msg.includes('403')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
       else alert('Upload fejlede: ' + msg)
       return
     }
-    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(sti)
+    const { data: { publicUrl } } = supabase.storage.from('recipes').getPublicUrl(sti)
     opdater({ avatarUrl: publicUrl })
     setUploadLoader(false)
   }
@@ -691,18 +690,17 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
     let nyAvatarUrl = bruger.avatarUrl || null
     if (avatarFil) {
       const ext = (avatarFil.name.includes('.') ? avatarFil.name.split('.').pop() : null) || 'jpg'
-      const sti = `${bruger.id}/avatar.${ext}`
-      const { error } = await supabase.storage.from('avatars').upload(sti, avatarFil, { upsert: true, contentType: avatarFil.type })
+      const sti = `avatarer/${bruger.id}/avatar.${ext}`
+      const { error } = await supabase.storage.from('recipes').upload(sti, avatarFil, { upsert: true, contentType: avatarFil.type })
       if (error) {
         setGemmer(false)
         const msg = error.message ?? ''
-        if (msg.includes('Bucket') || msg.includes('bucket')) alert('Upload-fejl: Lagerbucket ikke fundet — kontakt support.')
-        else if (msg.includes('too large') || msg.includes('413')) alert('Billedet er for stort — prøv et mindre billede (maks 5 MB)')
+        if (msg.includes('too large') || msg.includes('413')) alert('Billedet er for stort — prøv et mindre billede (maks 5 MB)')
         else if (msg.includes('security policy') || msg.includes('403')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
         else alert('Billedet kunne ikke uploades: ' + msg)
         return
       }
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(sti)
+      const { data: { publicUrl } } = supabase.storage.from('recipes').getPublicUrl(sti)
       nyAvatarUrl = publicUrl
     }
     setGemmer(false)
