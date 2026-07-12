@@ -1,6 +1,6 @@
-// Venneliste via Supabase — bruger user_id (UUID) fra Supabase Auth.
+// Venneliste via Appwrite.
 
-import { supabase } from '../lib/supabase'
+import { databases, DB_ID, COL, Query, ID } from '../lib/appwrite'
 import { hentAktivBruger } from './auth'
 
 const KEY = 'brynjas_venner'
@@ -16,27 +16,27 @@ function gemVennerLokalt(liste) {
   try { localStorage.setItem(KEY, JSON.stringify(liste)) } catch {}
 }
 
-// ── Supabase DB-funktioner ────────────────────────────────────────────────────
+// ── DB-funktioner ─────────────────────────────────────────────────────────────
 
 export async function hentVennerFraDB(userId) {
   if (!userId) return []
 
-  const { data: vennerData } = await supabase
-    .from('venner')
-    .select('ven_email, ven_user_id')
-    .eq('bruger_user_id', userId)
-
-  if (!vennerData?.length) return []
+  const venRes = await databases.listDocuments(DB_ID, COL.venner, [
+    Query.equal('bruger_user_id', userId),
+    Query.limit(100),
+  ])
+  const vennerData = venRes.documents
+  if (!vennerData.length) return []
 
   const venUserIds = vennerData.map((v) => v.ven_user_id).filter(Boolean)
 
   let kunder = []
   if (venUserIds.length) {
-    const { data } = await supabase
-      .from('customers')
-      .select('user_id, email, first_name, last_name, avatar, avatar_url')
-      .in('user_id', venUserIds)
-    kunder = data ?? []
+    const kRes = await databases.listDocuments(DB_ID, COL.customers, [
+      Query.equal('user_id', venUserIds),
+      Query.limit(100),
+    ])
+    kunder = kRes.documents
   }
 
   const liste = vennerData.map((v) => {
@@ -57,12 +57,11 @@ export async function hentVennerFraDB(userId) {
 
 export async function søgBrugere(query) {
   if (!query || query.length < 2) return []
-  const { data } = await supabase
-    .from('customers')
-    .select('user_id, email, username, first_name, last_name, avatar, avatar_url')
-    .ilike('username', `${query.toLowerCase()}%`)
-    .limit(8)
-  return data ?? []
+  const res = await databases.listDocuments(DB_ID, COL.customers, [
+    Query.startsWith('username', query.toLowerCase()),
+    Query.limit(8),
+  ])
+  return res.documents
 }
 
 export async function tilføjVenDB(userId, venUsername) {
@@ -73,25 +72,26 @@ export async function tilføjVenDB(userId, venUsername) {
   if (norm === bruger?.username?.toLowerCase())
     return { ok: false, fejl: 'Du kan ikke tilføje dig selv.' }
 
-  const { data: kunde } = await supabase
-    .from('customers')
-    .select('user_id, email, username, first_name, last_name, avatar, avatar_url')
-    .eq('username', norm)
-    .maybeSingle()
-
+  const søgRes = await databases.listDocuments(DB_ID, COL.customers, [
+    Query.equal('username', norm), Query.limit(1),
+  ])
+  const kunde = søgRes.documents[0]
   if (!kunde) return { ok: false, fejl: 'Ingen bruger fundet med det brugernavn.' }
 
-  const { error } = await supabase.from('venner').insert({
+  // Tjek om venskab allerede eksisterer
+  const eksist = await databases.listDocuments(DB_ID, COL.venner, [
+    Query.equal('bruger_user_id', userId),
+    Query.equal('ven_user_id', kunde.user_id),
+    Query.limit(1),
+  ])
+  if (eksist.total > 0) return { ok: false, fejl: 'Du følger allerede denne person.' }
+
+  await databases.createDocument(DB_ID, COL.venner, ID.unique(), {
     bruger_user_id: userId,
     bruger_email:   bruger?.email ?? '',
     ven_user_id:    kunde.user_id,
     ven_email:      kunde.email ?? '',
   })
-
-  if (error) {
-    if (error.code === '23505') return { ok: false, fejl: 'Du følger allerede denne person.' }
-    return { ok: false, fejl: 'Noget gik galt. Prøv igen.' }
-  }
 
   return {
     ok: true,
@@ -108,23 +108,26 @@ export async function tilføjVenDB(userId, venUsername) {
 }
 
 export async function fjernVenDB(userId, venEmail) {
-  await supabase
-    .from('venner')
-    .delete()
-    .eq('bruger_user_id', userId)
-    .eq('ven_email', venEmail.toLowerCase())
+  const res = await databases.listDocuments(DB_ID, COL.venner, [
+    Query.equal('bruger_user_id', userId),
+    Query.equal('ven_email', venEmail.toLowerCase()),
+    Query.limit(1),
+  ])
+  if (res.documents[0]) {
+    await databases.deleteDocument(DB_ID, COL.venner, res.documents[0].$id)
+  }
 }
 
 export async function hentAntalFølgere(userId) {
   if (!userId) return 0
-  const { count } = await supabase
-    .from('venner')
-    .select('*', { count: 'exact', head: true })
-    .eq('ven_user_id', userId)
-  return count ?? 0
+  const res = await databases.listDocuments(DB_ID, COL.venner, [
+    Query.equal('ven_user_id', userId),
+    Query.limit(1),
+  ])
+  return res.total
 }
 
-// Lokale hjælpefunktioner (til offline-cache-manipulation)
+// Lokale hjælpefunktioner
 export function tilføjVen(brugernavn) {
   const liste = hentVenner()
   const bnLower = brugernavn.toLowerCase().trim()

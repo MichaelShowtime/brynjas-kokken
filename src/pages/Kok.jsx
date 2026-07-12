@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { billedeUrl, opskriftFarve, tidLabel, grad } from '../lib/recipeUtils'
+import { databases, storage, DB_ID, COL, BUCKET_ID, ID } from '../lib/appwrite'
+import { billedeUrl, opskriftFarve, tidLabel, grad, normaliserOpskrift } from '../lib/recipeUtils'
 import { gemKreation } from '../data/kreationer'
 import { matchIngredienserMedLager, fjernFraLagerVedIds, hentAutoLager } from '../data/lager'
 import { hentAktivBruger } from '../data/auth'
@@ -108,16 +108,14 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
       const ext  = foto.name.split('.').pop().toLowerCase() || 'jpg'
       // UUID first in filename — matches the Storage policy that works for avatars
       const navn = `avatarer/${bruger.id}_kreation_${Date.now()}.${ext}`
-      const { data, error } = await supabase.storage
-        .from('recipes').upload(navn, foto, { cacheControl: '3600', upsert: true })
-      if (error) {
+      try {
+        const fileId = ID.unique()
+        await storage.createFile(BUCKET_ID, fileId, foto)
+        publicUrl = storage.getFileView(BUCKET_ID, fileId).href
+      } catch {
         setUploadFejl(t('kok.modal.fejl'))
         setUploader(false)
         return
-      }
-      if (data?.path) {
-        const { data: urlData } = supabase.storage.from('recipes').getPublicUrl(data.path)
-        publicUrl = urlData?.publicUrl ?? null
       }
     }
     const noter = await hentNote(opskrift.id)
@@ -133,7 +131,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
     })
 
     if (del && bruger) {
-      await supabase.from('posts').insert({
+      await databases.createDocument(DB_ID, COL.posts, ID.unique(), {
         user_id:        bruger.id,
         bruger_email:   bruger.email,
         bruger_navn:    bruger.navn,
@@ -142,6 +140,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
         opskrift_titel: opskrift.title,
         foto_path:      publicUrl,
         citat:          citat.trim() || null,
+        created_at:     new Date().toISOString(),
       })
     }
 
@@ -242,17 +241,13 @@ export default function Kok() {
   useWakeLock()
 
   useEffect(() => {
-    supabase
-      .from('recipes')
-      .select('*')
-      .eq('id', id)
-      .single()
-      .then(({ data }) => {
-        setOpskrift(data)
+    databases.getDocument(DB_ID, COL.recipes, id)
+      .then((doc) => {
+        setOpskrift(normaliserOpskrift(doc))
         setLoading(false)
-        // Start timer automatisk
         setTimeout(() => start(), 300)
       })
+      .catch(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 

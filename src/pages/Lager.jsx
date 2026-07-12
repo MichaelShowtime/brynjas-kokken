@@ -13,7 +13,7 @@ import {
   KATEGORIER, INGREDIENS_KATALOG, ENHEDER, kanoniselér,
   hentAutoLager, gemAutoLager,
 } from '../data/lager'
-import { supabase } from '../lib/supabase'
+import { databases, DB_ID, COL, Query } from '../lib/appwrite'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
 import { gætKategori, gætEmoji, gætEnhed } from '../lib/ingrediensUtils'
@@ -377,12 +377,13 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
 
   useEffect(() => {
     if (_katalogCache) return
-    supabase.from('recipes').select('ingredients').then(({ data }) => {
+    databases.listDocuments(DB_ID, COL.recipes, [Query.limit(1000)]).then(({ documents: data }) => {
       const statiskeNavne = new Set(INGREDIENS_KATALOG.map((i) => i.navn.toLowerCase()))
       const set = new Set(statiskeNavne)
       const ekstra = []
       for (const r of data ?? []) {
-        for (const ing of r.ingredients ?? []) {
+        const ings = r.ingredients_json ? JSON.parse(r.ingredients_json) : (r.ingredients ?? [])
+        for (const ing of ings) {
           // Normaliser råt ingrediensnavn til et rent pantry-navn
           const rå = (ing.name ?? '').trim()
           if (!rå) continue

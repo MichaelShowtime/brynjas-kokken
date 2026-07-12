@@ -1,11 +1,20 @@
-export const STORAGE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/recipes`
-
+// Appwrite: billeder er altid eksterne URLs (image_url) eller Appwrite Storage URLs
 export function billedeUrl(storageImage, imageUrl) {
-  if (storageImage) {
-    if (storageImage.startsWith('http')) return storageImage
-    return `${STORAGE_BASE}/${storageImage}`
-  }
+  // storage_image er nu enten en fuld Appwrite Storage URL eller null
+  if (storageImage?.startsWith('http')) return storageImage
   return imageUrl ?? null
+}
+
+// Normaliserer et Appwrite-dokument til det format resten af appen forventer.
+// Appwrite gemmer ingredients/steps som JSON-strings; vi parser dem her.
+export function normaliserOpskrift(doc) {
+  if (!doc) return null
+  return {
+    ...doc,
+    id:          doc.$id,
+    ingredients: doc.ingredients_json ? JSON.parse(doc.ingredients_json) : [],
+    steps:       doc.steps_json       ? JSON.parse(doc.steps_json)       : [],
+  }
 }
 
 const TAG_FARVE = {

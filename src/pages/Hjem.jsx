@@ -7,7 +7,7 @@ import { hentAktivBruger } from '../data/auth'
 import { hentKreationer } from '../data/kreationer'
 import { hentLikes } from '../data/likes'
 import { colors, shadow, radius, font } from '../data/theme'
-import { supabase } from '../lib/supabase'
+import { databases, client, DB_ID, COL, Query, ID } from '../lib/appwrite'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
 import { useLang, relativTidLang, datoLinjeLang } from '../lib/lang'
 
@@ -62,25 +62,23 @@ export default function Hjem() {
     if (!bruger?.id) return
     const sidst = localStorage.getItem('simmer_notif_sist')
     const cutoff = sidst ?? '1970-01-01T00:00:00Z'
-    supabase
-      .from('venner')
-      .select('*', { count: 'exact', head: true })
-      .eq('ven_user_id', bruger.id)
-      .gt('created_at', cutoff)
-      .then(({ count }) => { if ((count ?? 0) > 0) setHarUlæste(true) })
+    databases.listDocuments(DB_ID, COL.venner, [
+      Query.equal('ven_user_id', bruger.id),
+      Query.greaterThan('created_at', cutoff),
+      Query.limit(1),
+    ]).then(({ total }) => { if (total > 0) setHarUlæste(true) })
   }, [bruger?.id])
 
   useEffect(() => {
     let cancelled = false
     const brugerTags = bruger?.tags ?? []
-    supabase
-      .from('recipes')
-      .select('id, title, difficulty, prep_time, cook_time, tags, storage_image, image_url')
-      .order('id', { ascending: true })
-      .limit(200)
-      .then(({ data }) => {
+    databases.listDocuments(DB_ID, COL.recipes, [
+      Query.limit(1000),
+      Query.select(['$id', 'title', 'image_url', 'storage_image', 'tags', 'prep_time', 'cook_time', 'difficulty', 'description', 'source']),
+    ])
+      .then(({ documents }) => {
         if (cancelled) return
-        const alle = data ?? []
+        const alle = documents.map(d => ({ ...d, id: d.$id }))
         const sorteret = brugerTags.length > 0
           ? [...alle].sort((a, b) => {
               const aMatch = (a.tags ?? []).filter(tg => brugerTags.includes(tg)).length
@@ -110,20 +108,37 @@ export default function Hjem() {
         Notification.requestPermission()
       }
 
-      const idFilter   = venUserIds.join(',')
-      const mailFilter = emails.map(e => `"${e}"`).join(',')
-      const { data } = await supabase
-        .from('posts')
-        .select('*')
-        .or(`user_id.in.(${idFilter}),bruger_email.in.(${mailFilter})`)
-        .order('created_at', { ascending: false })
-        .limit(20)
-      const postsData = data ?? []
-      if (!cancelled && postsData.length) setDbPosts(postsData)
+      // Appwrite understøtter ikke OR på tværs af attributter — to queries, merge + dedupliker
+      const [byId, byEmail] = await Promise.all([
+        venUserIds.length
+          ? databases.listDocuments(DB_ID, COL.posts, [
+              Query.equal('user_id', venUserIds),
+              Query.orderDesc('created_at'),
+              Query.limit(20),
+            ])
+          : Promise.resolve({ documents: [] }),
+        emails.length
+          ? databases.listDocuments(DB_ID, COL.posts, [
+              Query.equal('bruger_email', emails),
+              Query.orderDesc('created_at'),
+              Query.limit(20),
+            ])
+          : Promise.resolve({ documents: [] }),
+      ])
+      const seen = new Set()
+      const merged = [...byId.documents, ...byEmail.documents]
+        .map(d => ({ ...d, id: d.$id }))
+        .filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true })
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 20)
+      if (!cancelled && merged.length) setDbPosts(merged)
 
-      channel = supabase.channel(`hjem-feed-${bruger.id}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
-          const post = payload.new
+      // Appwrite realtime
+      channel = client.subscribe(
+        `databases.${DB_ID}.collections.${COL.posts}.documents`,
+        (response) => {
+          if (!response.events.some(e => e.includes('.create'))) return
+          const post = { ...response.payload, id: response.payload.$id }
           const erFraVen = venUserIds.includes(post.user_id) || emails.includes(post.bruger_email)
           if (!erFraVen) return
           setDbPosts((prev) => [post, ...prev])
@@ -136,15 +151,15 @@ export default function Hjem() {
               icon: '/favicon.ico',
             })
           }
-        })
-        .subscribe()
+        }
+      )
     }
 
     init()
 
     return () => {
       cancelled = true
-      if (channel) supabase.removeChannel(channel)
+      if (channel) channel()  // Appwrite: unsubscribe er den returnerede funktion
       if (toastTimer.current) clearTimeout(toastTimer.current)
     }
   }, [bruger?.id])
@@ -152,9 +167,11 @@ export default function Hjem() {
   useEffect(() => {
     if (!dbPosts.length || !bruger?.id) return
     const ids = dbPosts.map((p) => p.id)
-    supabase.from('post_likes').select('post_id, user_id').in('post_id', ids).then(({ data }) => {
+    databases.listDocuments(DB_ID, COL.post_likes, [
+      Query.equal('post_id', ids), Query.limit(500),
+    ]).then(({ documents }) => {
       const map = {}
-      for (const like of data ?? []) {
+      for (const like of documents) {
         if (!map[like.post_id]) map[like.post_id] = { count: 0, likedByMe: false }
         map[like.post_id].count++
         if (like.user_id === bruger.id) map[like.post_id].likedByMe = true
@@ -168,21 +185,24 @@ export default function Hjem() {
     const cur = postLikes[postId] ?? { count: 0, likedByMe: false }
     if (cur.likedByMe) {
       setPostLikes((prev) => ({ ...prev, [postId]: { count: Math.max(0, cur.count - 1), likedByMe: false } }))
-      await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', bruger.id)
+      const likeRes = await databases.listDocuments(DB_ID, COL.post_likes, [
+        Query.equal('post_id', postId), Query.equal('user_id', bruger.id), Query.limit(1),
+      ])
+      if (likeRes.documents[0]) await databases.deleteDocument(DB_ID, COL.post_likes, likeRes.documents[0].$id)
     } else {
       setPostLikes((prev) => ({ ...prev, [postId]: { count: cur.count + 1, likedByMe: true } }))
-      await supabase.from('post_likes').insert({ post_id: postId, user_id: bruger.id })
+      await databases.createDocument(DB_ID, COL.post_likes, ID.unique(), { post_id: postId, user_id: bruger.id })
     }
   }
 
   async function sletPost(postId) {
-    await supabase.from('posts').delete().eq('id', postId).eq('user_id', bruger.id)
+    await databases.deleteDocument(DB_ID, COL.posts, postId)
     setDbPosts(prev => prev.filter(p => p.id !== postId))
   }
 
   async function gemRedigering(postId, nyCitat) {
     const value = nyCitat?.trim() || null
-    await supabase.from('posts').update({ citat: value }).eq('id', postId).eq('user_id', bruger.id)
+    await databases.updateDocument(DB_ID, COL.posts, postId, { citat: value })
     setDbPosts(prev => prev.map(p => p.id === postId ? { ...p, citat: value } : p))
   }
 
@@ -600,23 +620,21 @@ function KommentarSektion({ postId, bruger, t }) {
   const [fejl, setFejl] = useState(null)
 
   useEffect(() => {
-    supabase
-      .from('post_kommentarer')
-      .select('*')
-      .eq('post_id', postId)
-      .order('created_at', { ascending: true })
-      .limit(50)
-      .then(({ data }) => { setKommentarer(data ?? []); setLoading(false) })
-      .catch(() => setLoading(false))
+    databases.listDocuments(DB_ID, COL.post_kommentarer, [
+      Query.equal('post_id', postId),
+      Query.orderAsc('created_at'),
+      Query.limit(50),
+    ]).then(({ documents }) => {
+      setKommentarer(documents.map(d => ({ ...d, id: d.$id })))
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [postId])
 
   async function sendKommentar() {
     if (!tekst.trim()) return
     setFejl(null)
 
-    // Brug rigtig Supabase auth session — ikke cachede localStorage-data
-    const { data: authData } = await supabase.auth.getUser()
-    const uid = authData?.user?.id ?? bruger?.id
+    const uid = bruger?.id
     if (!uid) { setFejl('Ikke logget ind'); return }
 
     const indhold = tekst.trim()
@@ -633,18 +651,18 @@ function KommentarSektion({ postId, bruger, t }) {
     setKommentarer(prev => [...prev, optimistisk])
     setTekst('')
     setSender(true)
-    const { error } = await supabase
-      .from('post_kommentarer')
-      .insert({
+    try {
+      await databases.createDocument(DB_ID, COL.post_kommentarer, ID.unique(), {
         post_id:       postId,
         user_id:       uid,
         bruger_navn:   bruger?.navn ?? 'Anonym',
         bruger_avatar: bruger?.avatar ?? null,
         tekst:         indhold,
+        created_at:    new Date().toISOString(),
       })
-    if (error) {
-      console.error('Kommentar insert fejl:', error)
-      setFejl(error.message)
+    } catch (e) {
+      console.error('Kommentar insert fejl:', e)
+      setFejl(e.message)
       setKommentarer(prev => prev.filter(k => k.id !== tempId))
     }
     setSender(false)

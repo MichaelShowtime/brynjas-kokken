@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { logInd } from '../data/auth'
-import { supabase } from '../lib/supabase'
+import { account } from '../lib/appwrite'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
 
@@ -17,12 +17,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [visPassword, setVisPassword] = useState(false)
 
-  // Detect Supabase password-recovery link (redirected here with #type=recovery)
+  // Detect Appwrite password-recovery redirect (?userId=...&secret=...)
   useEffect(() => {
-    const hash = window.location.hash
-    if (hash.includes('type=recovery')) {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('userId') && params.get('secret')) {
       setVisning('nulstil')
-      // Clear the hash so browser back doesn't re-trigger
       window.history.replaceState(null, '', window.location.pathname)
     }
   }, [])
@@ -42,12 +41,14 @@ export default function Login() {
     setFejl('')
     if (!email.trim()) { setFejl('Indtast din e-mailadresse'); return }
     setLoading(true)
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: window.location.origin + '/login',
-    })
-    setLoading(false)
-    if (error) { setFejl(error.message); return }
-    setVisning('sendt')
+    try {
+      await account.createRecovery(email.trim(), window.location.origin + '/login')
+      setVisning('sendt')
+    } catch (e) {
+      setFejl(e.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function håndterNulstil(e) {
@@ -56,12 +57,17 @@ export default function Login() {
     if (nyPw.length < 6) { setFejl('Adgangskoden skal være mindst 6 tegn'); return }
     if (nyPw !== nyPw2) { setFejl('Adgangskoderne er ikke ens'); return }
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ password: nyPw })
-    setLoading(false)
-    if (error) { setFejl(error.message); return }
-    setVisning('login')
-    setNyPw('')
-    setNyPw2('')
+    try {
+      const params = new URLSearchParams(window.location.search)
+      await account.updateRecovery(params.get('userId') ?? '', params.get('secret') ?? '', nyPw)
+      setVisning('login')
+      setNyPw('')
+      setNyPw2('')
+    } catch (e) {
+      setFejl(e.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

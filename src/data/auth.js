@@ -1,10 +1,9 @@
-// Auth via Supabase Auth — profil caches i localStorage for synkron adgang.
+// Auth via Appwrite Account — profil caches i localStorage for synkron adgang.
 
-import { supabase } from '../lib/supabase'
+import { account, databases, DB_ID, COL, Query, ID } from '../lib/appwrite'
 
 const SESSION_KEY = 'simmer_bruger_v2'
 
-// Alle nøgler der tilhører én bestemt bruger — ryddes ved skift/logout
 const BRUGER_KEYS = [
   SESSION_KEY,
   'simmer_likes',
@@ -34,19 +33,31 @@ function bygBruger(userId, email, kunde) {
   const cached = hentAktivBruger()
   const bevar = cached?.id === userId ? cached : {}
   return {
-    id:              userId,
+    id:               userId,
     email,
-    username:        kunde?.username      ?? null,
-    navn:            kunde?.first_name    ?? email.split('@')[0],
-    efternavn:       kunde?.last_name     ?? '',
-    telefon:         kunde?.phone         ?? '',
-    avatar:          kunde?.avatar        ?? '🧑‍🍳',
-    tags:            kunde?.tags          ?? [],
+    username:         kunde?.username       ?? null,
+    navn:             kunde?.first_name     ?? email.split('@')[0],
+    efternavn:        kunde?.last_name      ?? '',
+    telefon:          kunde?.phone          ?? '',
+    avatar:           kunde?.avatar         ?? '🧑‍🍳',
+    tags:             kunde?.tags           ?? [],
     onboardingFærdig: (kunde?.tags ?? []).length > 0 || kunde?.onboarding_done === true,
-    bio:             kunde?.bio           ?? '',
-    avatarUrl:       kunde?.avatar_url    ?? null,
+    bio:              kunde?.bio            ?? '',
+    avatarUrl:        kunde?.avatar_url     ?? null,
     standardPortioner: bevar?.standardPortioner ?? null,
   }
+}
+
+// ── Hent kundeprofil fra DB ───────────────────────────────────────────────────
+
+async function hentKunde(userId) {
+  try {
+    const res = await databases.listDocuments(DB_ID, COL.customers, [
+      Query.equal('user_id', userId),
+      Query.limit(1),
+    ])
+    return res.documents[0] ?? null
+  } catch { return null }
 }
 
 // ── Registrering ─────────────────────────────────────────────────────────────
@@ -64,21 +75,32 @@ export async function registrerBruger({ email, navn, efternavn, telefon, usernam
   if (password.length < 6)
     return { ok: false, fejl: 'Adgangskoden skal være mindst 6 tegn.' }
 
-  const { data: existing } = await supabase
-    .from('customers').select('id').eq('username', normUsername).maybeSingle()
-  if (existing) return { ok: false, fejl: 'Dette brugernavn er allerede taget.' }
-
-  const { data: authData, error: authError } = await supabase.auth.signUp({ email: normEmail, password })
-  if (authError) {
-    if (authError.message.toLowerCase().includes('already registered'))
-      return { ok: false, fejl: 'Denne e-mail er allerede registreret.' }
-    return { ok: false, fejl: authError.message }
+  // Tjek om brugernavn er taget
+  try {
+    const existing = await databases.listDocuments(DB_ID, COL.customers, [
+      Query.equal('username', normUsername), Query.limit(1),
+    ])
+    if (existing.total > 0) return { ok: false, fejl: 'Dette brugernavn er allerede taget.' }
+  } catch {
+    // Ignorer fejl her — unikhed håndteres af DB-index
   }
 
-  const userId = authData.user.id
+  // Opret Appwrite-bruger
+  let user
+  try {
+    user = await account.create(ID.unique(), normEmail, password, navn.trim())
+  } catch (e) {
+    if (e.message?.toLowerCase().includes('already exists'))
+      return { ok: false, fejl: 'Denne e-mail er allerede registreret.' }
+    return { ok: false, fejl: e.message }
+  }
 
-  await supabase.from('customers').insert({
-    user_id:    userId,
+  // Log automatisk ind
+  await account.createEmailPasswordSession(normEmail, password)
+
+  // Opret kundeprofil
+  await databases.createDocument(DB_ID, COL.customers, ID.unique(), {
+    user_id:    user.$id,
     email:      normEmail,
     first_name: navn.trim(),
     last_name:  efternavn?.trim() ?? '',
@@ -86,10 +108,8 @@ export async function registrerBruger({ email, navn, efternavn, telefon, usernam
     username:   normUsername,
   })
 
-  // Ryd evt. forrige brugers data inden ny session
   fjernBruger()
-
-  const bruger = bygBruger(userId, normEmail, {
+  const bruger = bygBruger(user.$id, normEmail, {
     first_name: navn.trim(),
     last_name:  efternavn?.trim() ?? '',
     phone:      telefon?.trim() || null,
@@ -104,43 +124,36 @@ export async function registrerBruger({ email, navn, efternavn, telefon, usernam
 export async function logInd({ email, password }) {
   const normEmail = email.trim().toLowerCase()
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email: normEmail, password })
-  if (error) {
-    if (error.message.toLowerCase().includes('invalid login credentials'))
+  try {
+    await account.createEmailPasswordSession(normEmail, password)
+  } catch (e) {
+    if (e.code === 401)
       return { ok: false, fejl: 'Forkert e-mail eller adgangskode.' }
-    return { ok: false, fejl: error.message }
+    return { ok: false, fejl: e.message }
   }
 
-  // Ryd evt. forrige brugers data inden ny session sættes
   fjernBruger()
 
-  const { data: kunde } = await supabase.from('customers')
-    .select('*').eq('user_id', data.user.id).maybeSingle()
-
-  const bruger = bygBruger(data.user.id, normEmail, kunde)
+  const user  = await account.get()
+  const kunde = await hentKunde(user.$id)
+  const bruger = bygBruger(user.$id, normEmail, kunde)
   gemBruger(bruger)
   return { ok: true, bruger }
 }
 
 // ── Session-sync ved app-start ────────────────────────────────────────────────
-// Returnerer den opdaterede bruger (eller null) — kald i App.jsx ved mount
 
 export async function syncSession() {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) {
-    fjernBruger()
-    return null
-  }
+  let user
+  try { user = await account.get() }
+  catch { fjernBruger(); return null }
+
   const cached = hentAktivBruger()
+  if (cached?.id !== user.$id) fjernBruger()
+  if (cached?.id === user.$id) return cached
 
-  // Anden bruger end den der sidder i cachen — ryd alt lokalt data
-  if (cached?.id !== session.user.id) fjernBruger()
-
-  if (cached?.id === session.user.id) return cached
-
-  const { data: kunde } = await supabase.from('customers')
-    .select('*').eq('user_id', session.user.id).maybeSingle()
-  const bruger = bygBruger(session.user.id, session.user.email, kunde)
+  const kunde  = await hentKunde(user.$id)
+  const bruger = bygBruger(user.$id, user.email, kunde)
   gemBruger(bruger)
   return bruger
 }
@@ -148,7 +161,7 @@ export async function syncSession() {
 // ── Log ud ────────────────────────────────────────────────────────────────────
 
 export async function logUd() {
-  await supabase.auth.signOut()
+  try { await account.deleteSession('current') } catch {}
   fjernBruger()
 }
 
@@ -160,17 +173,21 @@ export function opdaterBruger(opdatering) {
   const ny = { ...bruger, ...opdatering }
   gemBruger(ny)
   if (bruger.id) {
-    supabase.from('customers').update({
-      first_name:      ny.navn,
-      last_name:       ny.efternavn,
-      phone:           ny.telefon ?? null,
-      avatar:          ny.avatar,
-      bio:             ny.bio ?? null,
-      tags:            ny.tags ?? [],
-      avatar_url:      ny.avatarUrl ?? null,
-      onboarding_done: ny.onboardingFærdig ?? false,
-      username:        ny.username ?? null,
-    }).eq('user_id', bruger.id).then(() => {})
+    // Find og opdater kundedokument asynkront (fire-and-forget)
+    hentKunde(bruger.id).then((doc) => {
+      if (!doc) return
+      databases.updateDocument(DB_ID, COL.customers, doc.$id, {
+        first_name:      ny.navn,
+        last_name:       ny.efternavn,
+        phone:           ny.telefon ?? null,
+        avatar:          ny.avatar,
+        bio:             ny.bio ?? null,
+        tags:            ny.tags ?? [],
+        avatar_url:      ny.avatarUrl ?? null,
+        onboarding_done: ny.onboardingFærdig ?? false,
+        username:        ny.username ?? null,
+      }).catch(() => {})
+    })
   }
   return ny
 }
@@ -179,7 +196,6 @@ export function erLoggetInd() {
   return !!hentAktivBruger()
 }
 
-// Baglæns-kompatibilitet — ikke brugt mere
 export function anmodReset() { return { ok: true, token: null } }
-export function nulstilAdgangskode() { return { ok: false, fejl: 'Brug "Glemt adgangskode" via Supabase.' } }
+export function nulstilAdgangskode() { return { ok: false, fejl: 'Brug "Glemt adgangskode".' } }
 export function hentResetToken() { return null }

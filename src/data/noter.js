@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { databases, DB_ID, COL, Query, ID } from '../lib/appwrite'
 import { hentAktivBruger } from './auth'
 
 const LS_KEY = (id) => `brynjas_noter_${id}`
@@ -8,17 +8,16 @@ export async function hentNote(recipeId) {
   if (!bruger?.id) {
     try { return localStorage.getItem(LS_KEY(recipeId)) ?? '' } catch { return '' }
   }
-  const { data, error } = await supabase
-    .from('noter')
-    .select('indhold')
-    .eq('user_id', bruger.id)
-    .eq('recipe_id', recipeId)
-    .maybeSingle()
-  if (error) {
-    // Tabellen mangler endnu — fallback til localStorage
+  try {
+    const res = await databases.listDocuments(DB_ID, COL.noter, [
+      Query.equal('user_id', bruger.id),
+      Query.equal('recipe_id', recipeId),
+      Query.limit(1),
+    ])
+    return res.documents[0]?.indhold ?? ''
+  } catch {
     try { return localStorage.getItem(LS_KEY(recipeId)) ?? '' } catch { return '' }
   }
-  return data?.indhold ?? ''
 }
 
 export async function gemNote(recipeId, indhold) {
@@ -27,18 +26,27 @@ export async function gemNote(recipeId, indhold) {
     try { localStorage.setItem(LS_KEY(recipeId), indhold) } catch {}
     return
   }
-  if (!indhold.trim()) {
-    await supabase.from('noter').delete()
-      .eq('user_id', bruger.id)
-      .eq('recipe_id', recipeId)
-    return
-  }
-  const { error } = await supabase.from('noter').upsert(
-    { user_id: bruger.id, recipe_id: recipeId, indhold, opdateret_at: new Date().toISOString() },
-    { onConflict: 'user_id,recipe_id' },
-  )
-  if (error) {
-    // Tabellen mangler — gem lokalt som fallback
+  try {
+    const res = await databases.listDocuments(DB_ID, COL.noter, [
+      Query.equal('user_id', bruger.id),
+      Query.equal('recipe_id', recipeId),
+      Query.limit(1),
+    ])
+    const eksisterende = res.documents[0]
+
+    if (!indhold.trim()) {
+      if (eksisterende) await databases.deleteDocument(DB_ID, COL.noter, eksisterende.$id)
+      return
+    }
+
+    if (eksisterende) {
+      await databases.updateDocument(DB_ID, COL.noter, eksisterende.$id, { indhold })
+    } else {
+      await databases.createDocument(DB_ID, COL.noter, ID.unique(), {
+        user_id: bruger.id, recipe_id: recipeId, indhold,
+      })
+    }
+  } catch {
     try { localStorage.setItem(LS_KEY(recipeId), indhold) } catch {}
   }
 }

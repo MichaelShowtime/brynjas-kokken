@@ -1,6 +1,6 @@
 ﻿import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { databases, DB_ID, COL, Query } from '../lib/appwrite'
 import { hentKreationer, gemKreation, genererNavn } from '../data/kreationer'
 import { colors, shadow, radius, font } from '../data/theme'
 
@@ -201,11 +201,12 @@ export default function Opret() {
 
   useEffect(() => {
     if (!visForslag || !query) { setForslagListe([]); return }
-    supabase.from('recipes').select('id, title, prep_time')
-      .ilike('title', `%${query}%`)
-      .not('id', 'in', `(${referencer.map(r => r.id).join(',') || '00000000-0000-0000-0000-000000000000'})`)
-      .limit(8)
-      .then(({ data }) => setForslagListe(data ?? []))
+    databases.listDocuments(DB_ID, COL.recipes, [
+      Query.search('title', query),
+      Query.limit(8),
+    ]).then(({ documents }) =>
+      setForslagListe(documents.map(d => ({ ...d, id: d.$id })).filter(d => !referencer.some(r => r.id === d.id)))
+    )
   }, [visForslag, query])
 
   return (
