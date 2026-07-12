@@ -92,6 +92,8 @@ export async function registrerBruger({ email, navn, efternavn, telefon, usernam
   } catch (e) {
     if (e.message?.toLowerCase().includes('already exists'))
       return { ok: false, fejl: 'Denne e-mail er allerede registreret.' }
+    if (e.message === 'Failed to fetch' || e.type === 'general_network_error')
+      return { ok: false, fejl: 'Ingen forbindelse til serveren. Prøv igen.' }
     return { ok: false, fejl: e.message }
   }
 
@@ -129,6 +131,8 @@ export async function logInd({ email, password }) {
   } catch (e) {
     if (e.code === 401)
       return { ok: false, fejl: 'Forkert e-mail eller adgangskode.' }
+    if (e.message === 'Failed to fetch' || e.type === 'general_network_error')
+      return { ok: false, fejl: 'Ingen forbindelse til serveren. Tjek din internetforbindelse og prøv igen.' }
     return { ok: false, fejl: e.message }
   }
 

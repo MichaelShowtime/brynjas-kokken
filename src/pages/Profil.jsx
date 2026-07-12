@@ -301,16 +301,15 @@ export default function Profil() {
     }
     setUploadLoader(true)
     try {
-      const fileId = `avatar_${bruger.id}`
-      // Slet gammel avatar hvis den findes
-      try { await storage.deleteFile(BUCKET_ID, fileId) } catch {}
+      const fileId = ID.unique()
       await storage.createFile(BUCKET_ID, fileId, fil)
       const publicUrl = storage.getFileView(BUCKET_ID, fileId).href
       opdater({ avatarUrl: publicUrl })
     } catch (e) {
       const msg = e.message ?? ''
       if (msg.includes('too large') || msg.includes('413')) alert('Billedet er for stort — prøv et mindre billede (maks 5 MB)')
-      else if (msg.includes('403')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
+      else if (msg.includes('403') || msg.includes('unauthorized')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
+      else if (msg === 'Failed to fetch') alert('Ingen forbindelse til serveren. Prøv igen.')
       else alert('Upload fejlede: ' + msg)
     }
     setUploadLoader(false)
@@ -700,15 +699,15 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
     let nyAvatarUrl = bruger.avatarUrl || null
     if (avatarFil) {
       try {
-        const fileId = `avatar_${bruger.id}`
-        try { await storage.deleteFile(BUCKET_ID, fileId) } catch {}
+        const fileId = ID.unique()
         await storage.createFile(BUCKET_ID, fileId, avatarFil)
         nyAvatarUrl = storage.getFileView(BUCKET_ID, fileId).href
       } catch (e) {
         setGemmer(false)
         const msg = e.message ?? ''
         if (msg.includes('too large') || msg.includes('413')) alert('Billedet er for stort — prøv et mindre billede (maks 5 MB)')
-        else if (msg.includes('403')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
+        else if (msg.includes('403') || msg.includes('unauthorized')) alert('Ingen upload-adgang — prøv at logge ud og ind igen')
+        else if (msg === 'Failed to fetch') alert('Ingen forbindelse til serveren. Prøv igen.')
         else alert('Billedet kunne ikke uploades: ' + msg)
         return
       }

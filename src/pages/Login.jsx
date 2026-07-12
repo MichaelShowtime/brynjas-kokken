@@ -45,7 +45,9 @@ export default function Login() {
       await account.createRecovery(email.trim(), window.location.origin + '/login')
       setVisning('sendt')
     } catch (e) {
-      setFejl(e.message)
+      setFejl(e.message === 'Failed to fetch' || e.type === 'general_network_error'
+        ? 'Ingen forbindelse til serveren. Prøv igen.'
+        : e.message)
     } finally {
       setLoading(false)
     }
@@ -64,7 +66,9 @@ export default function Login() {
       setNyPw('')
       setNyPw2('')
     } catch (e) {
-      setFejl(e.message)
+      setFejl(e.message === 'Failed to fetch' || e.type === 'general_network_error'
+        ? 'Ingen forbindelse til serveren. Prøv igen.'
+        : e.message)
     } finally {
       setLoading(false)
     }
