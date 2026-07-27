@@ -441,27 +441,93 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
         reader.onerror = reject
         reader.readAsDataURL(fil)
       })
+
+      const prompt = `Du er en præcis dansk madlager-assistent. Analyser billedet og returner en liste over alle madvarer du kan se.
+
+NAVNGIVNING — brug altid det generiske produktnavn på dansk:
+- Adjektiver/beskrivelser er IKKE en del af navnet: "Frisk persille" → "Persille", "Hakket oksekød" → "Oksekød", "Røget laks" → "Laks", "Saltede mandler" → "Mandler"
+- Brandnavne fjernes: "Lurpak smør" → "Smør", "Arla mælk" → "Mælk", "Bonduelle kikærter" → "Kikærter"
+- Beskriv INDHOLDET, ikke beholderen: en krukke med pesto → "Pesto", en flaske olivenolie → "Olivenolie"
+- Etiketten du kan læse er vejledende — brug det generiske dansknavn, ikke mærkets særnavn
+- Skriv i ental: "Tomat" ikke "Tomater", "Gulerod" ikke "Gulerødder" (undtagelse: "Havregryn", "Kikærter", "Sorte bønner", "Frosne ærter")
+
+KATEGORIER — vælg præcist:
+- "grønt": frisk frugt, grøntsager og friske urter (tomat, løg, æble, persille, basilikum, ingefær)
+- "køl": kød, fisk, æg, mælk, fløde, smør, ost, yoghurt, tofu — alt der står kølet og IKKE er frosset
+- "frys": alt der er frosset (frosne ærter, frossen kylling, is)
+- "tørvarer": pasta, ris, mel, olie, dåsevarer, sauce på flaske, brød, nødder, sukker, konserves
+- "krydderier": salt, peber, og alle krydderipulvere/tørrede krydderier i glas eller pose
+
+MÆNGDE — estimer hvis muligt:
+- En fuldt pakke/flaske: angiv normalpakke-størrelse (fx "1" dl / "500" g)
+- En halvt tom flaske mælk (1 l): mængde "5", enhed "dl"
+- Sæt mængde til "" hvis du ikke kan estimere
+
+ENHED — vælg ud fra type:
+- Væsker (mælk, olie, fløde): "l" eller "dl"
+- Kød og fisk: "g"
+- Grøntsager/frugt enkeltvis (løg, æble, gulerod): "stk"
+- Friske urter i potte: "potte"
+- Krydderipulver: "tsk"
+- Dåsevarer: "dåse"
+- Pasta, ris, mel: "g"
+
+USIKKER — sæt usikker: true hvis:
+- Etiketten ikke er synlig eller er delvist skjult
+- Du kan se en beholder men ikke indholdet
+- Varen ligner noget men du er ikke sikker på hvad
+- Billedet er uklart eller mørkt ved den vare
+
+UDELAD:
+- Ikke-madvarer (opvask, plastik, klude, batterier)
+- Tomme emballager og beholdere
+- Varer der er næsten umulige at identificere (fx et uidentificerbart mørkt glas)
+- Dubletter — list hver vare KUN én gang selv om den ses flere steder i billedet
+
+Returner KUN et JSON array uden forklaring:
+[{"navn":"Mælk","mængde":"5","enhed":"dl","kategori":"køl","usikker":false}]`
+
       const claudeRes = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 1024,
+          max_tokens: 2048,
           messages: [{
             role: 'user',
             content: [
               { type: 'image', source: { type: 'base64', media_type: fil.type || 'image/jpeg', data: base64 } },
-              { type: 'text', text: 'Du er en præcis madlager-assistent. Analyser billedet og identificer alle madvarer.\n\nHOVEDREGEL: Identificer altid HVAD produktet er (hovedsubstantiv), ikke HVORDAN det er beskrevet (adjektiv/forstavelse).\n\nEksempler på korrekt navngivning:\n- "Blomster honning" → "Honning"\n- "Basilikum pesto" → "Pesto"\n- "Økologisk mælk" → "Mælk"\n- "Frisk persille" → "Persille"\n- "Hakket oksekød" → "Oksekød"\n- "Røget laks" → "Laks"\n- "Saltede mandler" → "Mandler"\n- "Koncentreret tomatpuré" → "Tomatpuré"\n- "Pesto med basilikum" → "Pesto"\n- "Økologisk græsk yoghurt" → "Græsk yoghurt"\n\nAndre regler:\n- Adjektiver og beskrivende ord (blomster, økologisk, frisk, hakket, røget, saltet) er IKKE produktnavnet\n- Beholder = ikke produktet: beskriv INDHOLDET af krukke/dåse/flaske\n- Brandnavne fjernes: brug generisk navn (fx "Kikærter" ikke "Bonduelle Kikærter")\n- Sæt usikker: true hvis du ikke er 100% sikker\n\nReturner KUN JSON array (navne på dansk):\n[{"navn":"...","mængde":"","enhed":"stk","kategori":"tørvarer","usikker":false}]\nKategorier: grønt, køl, frys, tørvarer, krydderier.' }
+              { type: 'text', text: prompt },
             ]
           }]
         }),
       })
       if (!claudeRes.ok) throw new Error(`HTTP ${claudeRes.status}`)
       const { text: tekst } = await claudeRes.json()
-      const jsonMatch = tekst.match(/\[[\s\S]*\]/)
-      if (!jsonMatch) throw new Error('Intet JSON i svar')
-      const items = JSON.parse(jsonMatch[0])
-      const matchede = items.map((item) => {
+
+      // Robust JSON-udtræk: prøv rå tekst, derefter regex
+      let items
+      try {
+        const cleaned = tekst.trim()
+        items = JSON.parse(cleaned.startsWith('[') ? cleaned : cleaned.match(/\[[\s\S]*\]/)?.[0] ?? '[]')
+      } catch {
+        const fallback = tekst.match(/\[[\s\S]*?\]/)
+        if (!fallback) throw new Error('Intet JSON i svar')
+        items = JSON.parse(fallback[0])
+      }
+
+      if (!Array.isArray(items) || items.length === 0) throw new Error('Tomt svar fra AI')
+
+      // Dedupliker på kanoniseret navn (behold første forekomst)
+      const set = new Set()
+      const unikke = items.filter((item) => {
+        const k = kanoniselér(item.navn ?? '')
+        if (!k || set.has(k)) return false
+        set.add(k)
+        return true
+      })
+
+      const matchede = unikke.map((item) => {
         const kn = kanoniselér(item.navn ?? '')
         // 1. Eksakt kanoniseret match
         let match = katalog.find((k) => kanoniselér(k.navn) === kn)
@@ -473,8 +539,13 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
             match = katalog.find((k) => kanoniselér(k.navn) === sidsteOrd)
           }
         }
-        // 3. Substring som sidste udvej (katalog-ord indeholdt i produktnavn)
-        if (!match && kn) match = katalog.find((k) => { const kk = kanoniselér(k.navn); return kk && kk.length >= 4 && kn.includes(kk) })
+        // 3. Hvert katalogord checkes mod AI-navn (undgår for korte ord der giver false positives)
+        if (!match && kn) {
+          match = katalog.find((k) => {
+            const kk = kanoniselér(k.navn)
+            return kk && kk.length >= 4 && kn.includes(kk)
+          })
+        }
         if (match) return { ...item, navn: match.navn, emoji: match.emoji, kategori: match.kategori, enhed: item.enhed || match.standardEnhed }
         return { ...item, emoji: null, kategori: item.kategori || gætKategori(item.navn), enhed: item.enhed || gætEnhed(item.navn) }
       })
