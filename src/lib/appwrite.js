@@ -1,4 +1,4 @@
-import { Client, Databases, Account, Storage, Query, ID } from 'appwrite'
+import { Client, Databases, Account, Storage, Query, ID, Permission, Role } from 'appwrite'
 
 const client = new Client()
   .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT)
@@ -7,7 +7,7 @@ const client = new Client()
 export const account  = new Account(client)
 export const databases = new Databases(client)
 export const storage  = new Storage(client)
-export { Query, ID, client }
+export { Query, ID, Permission, Role, client }
 
 // Database + collection IDs
 export const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
@@ -22,6 +22,7 @@ export const COL = {
   saved_recipes:   import.meta.env.VITE_APPWRITE_COL_SAVED_RECIPES,
   noter:           import.meta.env.VITE_APPWRITE_COL_NOTER,
   user_badges:     import.meta.env.VITE_APPWRITE_COL_USER_BADGES,
+  ratings:         import.meta.env.VITE_APPWRITE_COL_RATINGS,
 }
 
 export const BUCKET_ID = import.meta.env.VITE_APPWRITE_BUCKET_ID

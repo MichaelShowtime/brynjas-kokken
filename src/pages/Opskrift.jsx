@@ -128,6 +128,8 @@ const pv = {
 }
 
 import { hentNote, gemNote } from '../data/noter'
+import { hentRatingsForOpskrift, gemRating } from '../data/ratings'
+import { hentVennerFraDB } from '../data/venner'
 
 // ── Hoved-komponent ───────────────────────────────────────────────────────────
 
@@ -150,6 +152,13 @@ export default function Opskrift() {
   const [sender, setSender] = useState(false)
   const chatBundRef = useRef(null)
   const [indkøbsToast, setIndkøbsToast] = useState(null)
+
+  const [alleRatings, setAlleRatings] = useState([])
+  const [venner, setVenner]           = useState([])
+  const [ratingInput, setRatingInput] = useState(0)
+  const [noteInput, setNoteInput]     = useState('')
+  const [gemmerRating, setGemmerRating] = useState(false)
+  const [ratingSaved, setRatingSaved]   = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -177,6 +186,44 @@ export default function Opskrift() {
       clearTimeout(debounceRef.current)
     }
   }, [id])
+
+  useEffect(() => {
+    let cancelled = false
+    const bruger = hentAktivBruger()
+    Promise.all([
+      hentRatingsForOpskrift(id),
+      bruger?.id ? hentVennerFraDB(bruger.id) : Promise.resolve([]),
+    ]).then(([ratings, vennerData]) => {
+      if (cancelled) return
+      setAlleRatings(ratings)
+      setVenner(vennerData)
+      const minEgen = ratings.find(r => r.user_id === bruger?.id)
+      if (minEgen) {
+        setRatingInput(minEgen.rating)
+        setNoteInput(minEgen.note ?? '')
+      }
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [id])
+
+  async function håndterGemRating() {
+    const bruger = hentAktivBruger()
+    if (!bruger?.id || !ratingInput || gemmerRating) return
+    setGemmerRating(true)
+    try {
+      const gemt = await gemRating(id, ratingInput, noteInput, bruger.id)
+      setAlleRatings(prev => {
+        const uden = prev.filter(r => r.user_id !== bruger.id)
+        return [...uden, gemt]
+      })
+      setRatingSaved(true)
+      setTimeout(() => setRatingSaved(false), 2500)
+    } catch (e) {
+      console.error('Rating fejlede:', e)
+    } finally {
+      setGemmerRating(false)
+    }
+  }
 
   useEffect(() => {
     if (chatÅben && chatBundRef.current) {
@@ -419,6 +466,20 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
           </section>
         )}
 
+        {/* Rating */}
+        <RatingSektion
+          alleRatings={alleRatings}
+          venner={venner}
+          ratingInput={ratingInput}
+          noteInput={noteInput}
+          gemmerRating={gemmerRating}
+          ratingSaved={ratingSaved}
+          bruger={hentAktivBruger()}
+          onRatingChange={setRatingInput}
+          onNoteChange={setNoteInput}
+          onGem={håndterGemRating}
+        />
+
         {/* Noter */}
         <section style={s.sektion}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -520,6 +581,182 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
       )}
     </div>
   )
+}
+
+// ── RatingStjerner ────────────────────────────────────────────────────────────
+
+function RatingStjerner({ value, hover, interactive, onHover, onLeave, onClick, size = 28 }) {
+  const aktiv = hover || value
+  return (
+    <div style={{ display: 'flex', gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          disabled={!interactive}
+          style={{
+            background: 'none', border: 'none', padding: '2px 3px',
+            fontSize: size, lineHeight: 1, cursor: interactive ? 'pointer' : 'default',
+            color: n <= aktiv ? '#F5A623' : colors.border,
+            transition: 'color 0.1s',
+          }}
+          onMouseEnter={() => onHover?.(n)}
+          onMouseLeave={() => onLeave?.()}
+          onClick={() => onClick?.(n)}
+        >★</button>
+      ))}
+    </div>
+  )
+}
+
+// ── RatingSektion ─────────────────────────────────────────────────────────────
+
+function RatingSektion({ alleRatings, venner, ratingInput, noteInput, gemmerRating, ratingSaved, bruger, onRatingChange, onNoteChange, onGem }) {
+  const [hover, setHover] = useState(0)
+
+  const antalRatings = alleRatings.length
+  const snit = antalRatings > 0
+    ? (alleRatings.reduce((s, r) => s + r.rating, 0) / antalRatings).toFixed(1)
+    : null
+
+  const vennerIds = new Set(venner.map(v => v.id))
+  const vennerRatings = alleRatings
+    .filter(r => vennerIds.has(r.user_id))
+    .map(r => {
+      const ven = venner.find(v => v.id === r.user_id)
+      return { ...r, ven }
+    })
+
+  const MAX_NOTE = 300
+
+  return (
+    <section style={s.sektion}>
+      {/* ── Gennemsnit ── */}
+      <div style={rs.header}>
+        <h2 style={s.sektionTitel}>Rating</h2>
+        {snit && (
+          <span style={rs.snitBadge}>
+            <span style={{ color: '#F5A623' }}>★</span> {snit}
+            <span style={rs.antalTxt}> ({antalRatings})</span>
+          </span>
+        )}
+      </div>
+
+      {/* ── Min rating ── */}
+      <div style={rs.kortWrap}>
+        <p style={rs.label}>{bruger ? 'Din rating' : 'Log ind for at rate'}</p>
+        <RatingStjerner
+          value={ratingInput}
+          hover={hover}
+          interactive={!!bruger}
+          onHover={bruger ? setHover : undefined}
+          onLeave={bruger ? () => setHover(0) : undefined}
+          onClick={bruger ? onRatingChange : undefined}
+        />
+
+        {bruger && ratingInput > 0 && (
+          <>
+            <div style={rs.noteWrap}>
+              <textarea
+                value={noteInput}
+                onChange={(e) => onNoteChange(e.target.value.slice(0, MAX_NOTE))}
+                placeholder="Din note (valgfrit) — hvad syntes du? Tips? Ændringer?"
+                style={rs.noteFelt}
+                rows={3}
+              />
+              <span style={{ ...rs.tæller, color: noteInput.length >= MAX_NOTE - 20 ? colors.terracotta : colors.muted }}>
+                {noteInput.length}/{MAX_NOTE}
+              </span>
+            </div>
+            <button
+              style={{ ...rs.gemKnap, opacity: gemmerRating ? 0.6 : 1 }}
+              disabled={gemmerRating}
+              onClick={onGem}
+            >
+              {ratingSaved ? '✓ Gemt' : gemmerRating ? 'Gemmer…' : 'Gem rating'}
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* ── Venners ratings ── */}
+      <div style={rs.vennerSektionHeader}>
+        <span style={rs.vennerLabel}>Venners ratings</span>
+      </div>
+
+      {vennerRatings.length === 0 ? (
+        <p style={rs.tomState}>Ingen af dine venner har prøvet denne ret endnu.</p>
+      ) : (
+        <div style={rs.vennerListe}>
+          {vennerRatings.map((r) => (
+            <div key={r.$id} style={rs.venKort}>
+              <div style={rs.venAvatar}>
+                {r.ven?.avatarUrl
+                  ? <img src={r.ven.avatarUrl} alt={r.ven.navn} style={rs.venAvatarImg} />
+                  : <span style={rs.venEmoji}>{r.ven?.emoji ?? '🧑‍🍳'}</span>
+                }
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={rs.venNavn}>{r.ven?.navn} {r.ven?.efternavn}</div>
+                <RatingStjerner value={r.rating} interactive={false} size={16} />
+                {r.note ? <p style={rs.venNote}>"{r.note}"</p> : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+const rs = {
+  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  snitBadge: {
+    fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.text,
+    background: colors.card, boxShadow: shadow.card,
+    padding: '5px 12px', borderRadius: 999,
+  },
+  antalTxt: { fontWeight: 400, color: colors.muted },
+
+  kortWrap: {
+    background: colors.card, borderRadius: 16, boxShadow: shadow.card,
+    padding: '16px', marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 10,
+  },
+  label: { fontFamily: font.body, fontSize: 13, fontWeight: 600, color: colors.muted, margin: 0 },
+
+  noteWrap: { position: 'relative' },
+  noteFelt: {
+    width: '100%', padding: '11px 12px', paddingBottom: 22,
+    fontFamily: font.body, fontSize: 14, color: colors.text, lineHeight: 1.5,
+    background: colors.bg, border: `1.5px solid ${colors.border}`,
+    borderRadius: 12, outline: 'none', resize: 'none', boxSizing: 'border-box',
+  },
+  tæller: {
+    position: 'absolute', bottom: 8, right: 10,
+    fontFamily: font.body, fontSize: 11, transition: 'color 0.2s',
+  },
+
+  gemKnap: {
+    alignSelf: 'flex-end', fontFamily: font.body, fontWeight: 700, fontSize: 14,
+    color: '#fff', background: colors.green,
+    border: 'none', borderRadius: 999, padding: '10px 22px', cursor: 'pointer',
+    transition: 'opacity 0.15s',
+  },
+
+  vennerSektionHeader: { marginBottom: 10 },
+  vennerLabel: { fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  tomState: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: '4px 0 0', fontStyle: 'italic' },
+
+  vennerListe: { display: 'flex', flexDirection: 'column', gap: 10 },
+  venKort: {
+    display: 'flex', gap: 12, alignItems: 'flex-start',
+    background: colors.card, borderRadius: 14, boxShadow: shadow.card, padding: '12px 14px',
+  },
+  venAvatar: { width: 38, height: 38, borderRadius: 999, overflow: 'hidden', flexShrink: 0, background: colors.border, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  venAvatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  venEmoji: { fontSize: 20 },
+  venNavn: { fontFamily: font.body, fontSize: 13.5, fontWeight: 700, color: colors.text, marginBottom: 3 },
+  venNote: { fontFamily: font.body, fontSize: 13, color: colors.muted, margin: '5px 0 0', lineHeight: 1.4, fontStyle: 'italic' },
 }
 
 const s = {
