@@ -120,10 +120,11 @@ export default function Lager() {
       <div style={s.header}>
         <h1 style={s.titel}>{t('lag.titel')}</h1>
         <button style={s.indkøbsBtn} onClick={() => navigate('/indkøbsliste')}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
           </svg>
+          Indkøb
           {indkøbsAntal > 0 && <span style={s.indkøbsBadge}>{indkøbsAntal}</span>}
         </button>
         <button style={s.tilføjBtn} onClick={() => setTilføjOpen(true)}>
@@ -929,8 +930,8 @@ const s = {
   header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '28px 20px 12px' },
   titel: { fontFamily: font.display, fontWeight: 600, fontSize: 32, color: colors.text, margin: 0, letterSpacing: -0.5 },
   tilføjBtn: { display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: '#fff', background: colors.green, border: 'none', borderRadius: 999, padding: '10px 18px', boxShadow: shadow.fab },
-  indkøbsBtn: { position: 'relative', width: 40, height: 40, borderRadius: 999, background: colors.card, boxShadow: shadow.card, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, marginRight: 4 },
-  indkøbsBadge: { position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: 999, background: colors.terracotta, border: `2px solid ${colors.bg}` },
+  indkøbsBtn: { position: 'relative', display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, background: colors.card, boxShadow: shadow.card, border: `1.5px solid ${colors.border}`, borderRadius: 999, padding: '9px 16px', cursor: 'pointer' },
+  indkøbsBadge: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: 999, background: colors.terracotta, color: '#fff', fontSize: 11.5, fontWeight: 700, padding: '0 5px' },
 
   // Tabs
 
