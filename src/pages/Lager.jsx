@@ -437,7 +437,7 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
       const img = new Image()
       const url = URL.createObjectURL(fil)
       img.onload = () => {
-        const max = 1024
+        const max = 1568
         let { width, height } = img
         if (width > max || height > max) {
           if (width >= height) { height = Math.round(height * max / width); width = max }
@@ -495,16 +495,22 @@ ENHED — vælg ud fra type:
 - Dåsevarer: "dåse"
 - Pasta, ris, mel: "g"
 
+VARER PÅ AFSTAND ELLER DELVIST SYNLIGE — vær modig, ikke perfektionistisk:
+- Brug form, farve, emballagetype og placering i køleskabet som ledetråde, selv når etiketten ikke kan læses
+- En gul klemmeflaske i køleskabsdøren er sandsynligvis remoulade eller sennep — gæt det mest sandsynlige og sæt usikker: true
+- Et glas med grønt indhold ved siden af pesto-lignende varer → "Pesto", usikker: true
+- En flaske med lys væske i døren → "Mælk" eller "Juice" alt efter form — vælg den mest sandsynlige
+- Det er BEDRE at gætte med usikker: true end at udelade en vare — brugeren kan selv rette eller fjerne den bagefter
+- Kun hvis du overhovedet ikke kan give et rimeligt gæt (fx en helt skjult beholder), udelad varen
+
 USIKKER — sæt usikker: true hvis:
 - Etiketten ikke er synlig eller er delvist skjult
-- Du kan se en beholder men ikke indholdet
-- Varen ligner noget men du er ikke sikker på hvad
+- Du gætter ud fra form/farve/placering frem for læsbar tekst
 - Billedet er uklart eller mørkt ved den vare
 
 UDELAD:
 - Ikke-madvarer (opvask, plastik, klude, batterier)
 - Tomme emballager og beholdere
-- Varer der er næsten umulige at identificere (fx et uidentificerbart mørkt glas)
 - Dubletter — list hver vare KUN én gang selv om den ses flere steder i billedet
 
 Returner KUN et JSON array uden forklaring:
@@ -519,7 +525,7 @@ Returner KUN et JSON array uden forklaring:
           messages: [{
             role: 'user',
             content: [
-              { type: 'image', source: { type: 'base64', media_type: fil.type || 'image/jpeg', data: base64 } },
+              { type: 'image', source: { type: 'base64', media_type: komprimeret.type || 'image/jpeg', data: base64 } },
               { type: 'text', text: prompt },
             ]
           }]

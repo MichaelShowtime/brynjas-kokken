@@ -24,6 +24,9 @@ export default async function handler(req, res) {
     res.json({ text: response.content[0]?.text ?? '' })
   } catch (e) {
     console.error('Claude API fejl:', e)
-    res.status(500).json({ error: 'Anmodning fejlede' })
+    res.status(500).json({
+      error: 'Anmodning fejlede',
+      detail: `${e?.status ?? ''} ${e?.error?.error?.type ?? e?.name ?? ''}: ${e?.error?.error?.message ?? e?.message ?? 'ukendt'}`.trim(),
+    })
   }
 }
