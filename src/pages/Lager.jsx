@@ -432,14 +432,37 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
     setSøgning(item.navn)
   }
 
+  function komprimerBillede(fil) {
+    return new Promise((resolve) => {
+      const img = new Image()
+      const url = URL.createObjectURL(fil)
+      img.onload = () => {
+        const max = 1024
+        let { width, height } = img
+        if (width > max || height > max) {
+          if (width >= height) { height = Math.round(height * max / width); width = max }
+          else { width = Math.round(width * max / height); height = max }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+        URL.revokeObjectURL(url)
+        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.85)
+      }
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(fil) }
+      img.src = url
+    })
+  }
+
   async function analyserBillede(fil) {
     setBilledeAnalyserer(true)
     try {
+      const komprimeret = await komprimerBillede(fil)
       const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = () => resolve(reader.result.split(',')[1])
         reader.onerror = reject
-        reader.readAsDataURL(fil)
+        reader.readAsDataURL(komprimeret)
       })
 
       const prompt = `Du er en præcis dansk madlager-assistent. Analyser billedet og returner en liste over alle madvarer du kan se.
@@ -516,7 +539,7 @@ Returner KUN et JSON array uden forklaring:
         items = JSON.parse(fallback[0])
       }
 
-      if (!Array.isArray(items) || items.length === 0) throw new Error('Tomt svar fra AI')
+      if (!Array.isArray(items)) throw new Error('Ugyldigt svar fra AI')
 
       // Dedupliker på kanoniseret navn (behold første forekomst)
       const set = new Set()
