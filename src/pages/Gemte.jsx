@@ -19,7 +19,7 @@ export default function Gemte() {
     const ids = hentGemte()
     setGemteIds(ids)
     if (!ids.length) { setLoading(false); return }
-    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('$id', ids), Query.limit(ids.length)])
+    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('$id', ids), Query.limit(Math.min(ids.length, 5000))])
       .then(({ documents }) => {
         const sorteret = documents.map(d => ({ ...d, id: d.$id }))
           .sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
@@ -41,7 +41,7 @@ export default function Gemte() {
         Query.limit(1),
       ]).then(({ documents }) => {
         if (documents[0]) databases.deleteDocument(DB_ID, COL.saved_recipes, documents[0].$id)
-      }).catch(() => {})
+      }).catch((e) => console.error('Fjern gemt fejlede:', e))
     }
   }
 

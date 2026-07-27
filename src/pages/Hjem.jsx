@@ -49,6 +49,7 @@ export default function Hjem() {
   const [gemte, setGemte] = useState(() => hentGemte())
   const [søgeÅben, setSøgeÅben] = useState(false)
   const søgeInputRef = useRef(null)
+  const indlæstePostIds = useRef(new Set())
 
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
@@ -171,17 +172,24 @@ export default function Hjem() {
 
   useEffect(() => {
     if (!dbPosts.length || !bruger?.id) return
-    const ids = dbPosts.map((p) => p.id)
+    const nyeIds = dbPosts.map(p => p.id).filter(id => !indlæstePostIds.current.has(id))
+    if (!nyeIds.length) return
     databases.listDocuments(DB_ID, COL.post_likes, [
-      Query.equal('post_id', ids), Query.limit(500),
+      Query.equal('post_id', nyeIds), Query.limit(Math.min(nyeIds.length * 10, 500)),
     ]).then(({ documents }) => {
-      const map = {}
-      for (const like of documents) {
-        if (!map[like.post_id]) map[like.post_id] = { count: 0, likedByMe: false }
-        map[like.post_id].count++
-        if (like.user_id === bruger.id) map[like.post_id].likedByMe = true
-      }
-      setPostLikes(map)
+      nyeIds.forEach(id => indlæstePostIds.current.add(id))
+      setPostLikes(prev => {
+        const map = { ...prev }
+        for (const id of nyeIds) {
+          if (!map[id]) map[id] = { count: 0, likedByMe: false }
+        }
+        for (const like of documents) {
+          if (!map[like.post_id]) map[like.post_id] = { count: 0, likedByMe: false }
+          map[like.post_id].count++
+          if (like.user_id === bruger.id) map[like.post_id].likedByMe = true
+        }
+        return map
+      })
     })
   }, [dbPosts, bruger?.id])
 
@@ -484,7 +492,7 @@ function PostKort({ post: p, bruger, likes, onLike, onSlet, onGemRedigering }) {
       {/* ── Billede (1:1) ── */}
       <div style={pk.imgWrap}>
         {p.foto_path ? (
-          <img src={billedeUrl(p.foto_path)} alt={p.opskrift_titel ?? ''} style={pk.img} />
+          <img src={billedeUrl(p.foto_path)} alt={p.opskrift_titel ?? ''} loading="lazy" style={pk.img} />
         ) : (
           <div style={{ ...pk.img, background: grad(opskriftFarve([])) }} />
         )}
@@ -783,6 +791,7 @@ function KommentarSektion({ postId, bruger, t }) {
 
 function PostMenu({ t, onRediger, onSlet, onLuk }) {
   const [bekræfter, setBekræfter] = useState(false)
+  const [sletter, setSletter] = useState(false)
   return (
     <div style={ovl.overlay} onClick={onLuk}>
       <div style={ovl.sheet} onClick={e => e.stopPropagation()}>
@@ -803,7 +812,7 @@ function PostMenu({ t, onRediger, onSlet, onLuk }) {
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button style={ovl.annullerKnap} onClick={() => setBekræfter(false)}>{t('post.fortryd')}</button>
-              <button style={{ ...ovl.primærKnap, background: colors.red }} onClick={onSlet}>{t('post.sletJa')}</button>
+              <button style={{ ...ovl.primærKnap, background: colors.red }} disabled={sletter} onClick={() => { setSletter(true); onSlet() }}>{t('post.sletJa')}</button>
             </div>
           </div>
         )}
@@ -849,10 +858,12 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef, gemte, onTog
   }, [åben])
 
   const filtreret = tekst.trim()
-    ? opskrifter.filter(o =>
-        o.title.toLowerCase().includes(tekst.toLowerCase()) ||
-        (o.tags ?? []).some(tg => tg.toLowerCase().includes(tekst.toLowerCase()))
-      )
+    ? opskrifter.filter(o => {
+        const q = tekst.toLowerCase()
+        return o.title.toLowerCase().includes(q) ||
+          (o.tags ?? []).some(tg => tg.toLowerCase().includes(q)) ||
+          (o.description ?? '').toLowerCase().includes(q)
+      })
     : opskrifter
 
   return (
@@ -929,7 +940,7 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef, gemte, onTog
                       onClick={() => { onLuk(); navigate(`/opskrift/${o.id}`) }}
                     >
                       <div style={{ height: 110, background: grad(farve), overflow: 'hidden', position: 'relative' }}>
-                        {img && <img src={img} alt={o.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                        {img && <img src={img} alt={o.title} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
                       </div>
                       <div style={{ padding: '9px 11px 12px' }}>
                         <p style={{ fontFamily: font.body, fontWeight: 700, fontSize: 13.5, color: colors.text, margin: '0 0 3px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
@@ -1010,7 +1021,7 @@ function RecipeCard({ opskrift, onClick, gemte, onToggleGem }) {
       <button style={{ ...styles.recipeCard, boxShadow: 'none', borderRadius: 0, padding: 0, width: '100%' }} onClick={onClick}>
         <div style={{ ...styles.recipeHero, background: grad(farve) }}>
           {imgUrl ? (
-            <img src={imgUrl} alt={opskrift.title} style={styles.recipeImg} />
+            <img src={imgUrl} alt={opskrift.title} loading="lazy" style={styles.recipeImg} />
           ) : (
             <span style={styles.recipeInitial}>{opskrift.title.charAt(0)}</span>
           )}

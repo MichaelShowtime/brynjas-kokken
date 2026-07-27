@@ -216,7 +216,7 @@ export default function Profil() {
 
     setGemteIds(ids)
     if (!ids.length) { setGemteOpskrifter([]); return }
-    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('$id', ids), Query.limit(ids.length)])
+    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('$id', ids), Query.limit(Math.min(ids.length, 5000))])
       .then(({ documents }) => {
         const sorted = documents.map(d => ({ ...d, id: d.$id }))
           .sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
@@ -498,7 +498,7 @@ export default function Profil() {
                               Query.limit(1),
                             ]).then(({ documents }) => {
                               if (documents[0]) databases.deleteDocument(DB_ID, COL.saved_recipes, documents[0].$id)
-                            }).catch(() => {})
+                            }).catch((e) => console.error('Fjern gemt fejlede:', e))
                           }
                         }}>✕</button>
                       </div>

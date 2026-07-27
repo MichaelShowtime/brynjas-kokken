@@ -169,7 +169,7 @@ export default function MadMatch() {
         if (bruger?.id) {
           databases.createDocument(DB_ID, COL.saved_recipes, ID.unique(), {
             user_id: bruger.id, recipe_id: aktuel.id,
-          }).catch(() => {})
+          }).catch((e) => console.error('Gem opskrift fejlede:', e))
         }
       }
       if (retning === 'left') {
@@ -204,7 +204,7 @@ export default function MadMatch() {
           Query.limit(1),
         ]).then(({ documents }) => {
           if (documents[0]) databases.deleteDocument(DB_ID, COL.saved_recipes, documents[0].$id)
-        }).catch(() => {})
+        }).catch((e) => console.error('Fjern gemt fejlede:', e))
       }
     }
     if (sidst.retning === 'left') {

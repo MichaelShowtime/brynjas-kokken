@@ -137,7 +137,7 @@ export default function BrugerProfil() {
             return (
               <article key={p.id} style={s.post}>
                 {fotoUrl ? (
-                  <img src={fotoUrl} alt={p.opskrift_titel}
+                  <img src={fotoUrl} alt={p.opskrift_titel} loading="lazy"
                     style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} />
                 ) : (
                   <div style={{ ...s.postGradient, background: grad(opskriftFarve([])) }}>

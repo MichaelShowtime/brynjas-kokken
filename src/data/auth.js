@@ -200,6 +200,4 @@ export function erLoggetInd() {
   return !!hentAktivBruger()
 }
 
-export function anmodReset() { return { ok: true, token: null } }
-export function nulstilAdgangskode() { return { ok: false, fejl: 'Brug "Glemt adgangskode".' } }
 export function hentResetToken() { return null }
