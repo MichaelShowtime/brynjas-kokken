@@ -195,12 +195,12 @@ export default function Opskrift() {
     if (!opskrift || !bruger?.showNutrition) return
     let cancelled = false
     setNæringLoading(true)
-    beregnNæringsindhold(opskrift.ingredients ?? [], portioner ?? opskrift.servings ?? 4)
+    beregnNæringsindhold(opskrift.ingredients ?? [], opskrift.servings ?? 4)
       .then(data => { if (!cancelled) setNæring(data ?? false) })
       .catch(() => { if (!cancelled) setNæring(false) })
       .finally(() => { if (!cancelled) setNæringLoading(false) })
     return () => { cancelled = true }
-  }, [opskrift, portioner])
+  }, [opskrift])
 
   useEffect(() => {
     let cancelled = false
