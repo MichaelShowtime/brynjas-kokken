@@ -2,7 +2,6 @@
 import { useNavigate } from 'react-router-dom'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { NotFoundException } from '@zxing/library'
-import Anthropic from '@anthropic-ai/sdk'
 import {
   AlertTriangle, Camera, Search, Trash2,
   Egg, Milk, Carrot, Fish, Leaf, LeafyGreen, Wheat, Snowflake,
@@ -441,19 +440,23 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
         reader.onerror = reject
         reader.readAsDataURL(fil)
       })
-      const anthropic = new Anthropic({ apiKey: import.meta.env.VITE_ANTHROPIC_KEY, dangerouslyAllowBrowser: true })
-      const msg = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: fil.type || 'image/jpeg', data: base64 } },
-            { type: 'text', text: 'Du er en præcis madlager-assistent. Analyser billedet og identificer alle madvarer.\n\nHOVEDREGEL: Identificer altid HVAD produktet er (hovedsubstantiv), ikke HVORDAN det er beskrevet (adjektiv/forstavelse).\n\nEksempler på korrekt navngivning:\n- "Blomster honning" → "Honning"\n- "Basilikum pesto" → "Pesto"\n- "Økologisk mælk" → "Mælk"\n- "Frisk persille" → "Persille"\n- "Hakket oksekød" → "Oksekød"\n- "Røget laks" → "Laks"\n- "Saltede mandler" → "Mandler"\n- "Koncentreret tomatpuré" → "Tomatpuré"\n- "Pesto med basilikum" → "Pesto"\n- "Økologisk græsk yoghurt" → "Græsk yoghurt"\n\nAndre regler:\n- Adjektiver og beskrivende ord (blomster, økologisk, frisk, hakket, røget, saltet) er IKKE produktnavnet\n- Beholder = ikke produktet: beskriv INDHOLDET af krukke/dåse/flaske\n- Brandnavne fjernes: brug generisk navn (fx "Kikærter" ikke "Bonduelle Kikærter")\n- Sæt usikker: true hvis du ikke er 100% sikker\n\nReturner KUN JSON array (navne på dansk):\n[{"navn":"...","mængde":"","enhed":"stk","kategori":"tørvarer","usikker":false}]\nKategorier: grønt, køl, frys, tørvarer, krydderier.' }
-          ]
-        }]
+      const claudeRes = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1024,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: fil.type || 'image/jpeg', data: base64 } },
+              { type: 'text', text: 'Du er en præcis madlager-assistent. Analyser billedet og identificer alle madvarer.\n\nHOVEDREGEL: Identificer altid HVAD produktet er (hovedsubstantiv), ikke HVORDAN det er beskrevet (adjektiv/forstavelse).\n\nEksempler på korrekt navngivning:\n- "Blomster honning" → "Honning"\n- "Basilikum pesto" → "Pesto"\n- "Økologisk mælk" → "Mælk"\n- "Frisk persille" → "Persille"\n- "Hakket oksekød" → "Oksekød"\n- "Røget laks" → "Laks"\n- "Saltede mandler" → "Mandler"\n- "Koncentreret tomatpuré" → "Tomatpuré"\n- "Pesto med basilikum" → "Pesto"\n- "Økologisk græsk yoghurt" → "Græsk yoghurt"\n\nAndre regler:\n- Adjektiver og beskrivende ord (blomster, økologisk, frisk, hakket, røget, saltet) er IKKE produktnavnet\n- Beholder = ikke produktet: beskriv INDHOLDET af krukke/dåse/flaske\n- Brandnavne fjernes: brug generisk navn (fx "Kikærter" ikke "Bonduelle Kikærter")\n- Sæt usikker: true hvis du ikke er 100% sikker\n\nReturner KUN JSON array (navne på dansk):\n[{"navn":"...","mængde":"","enhed":"stk","kategori":"tørvarer","usikker":false}]\nKategorier: grønt, køl, frys, tørvarer, krydderier.' }
+            ]
+          }]
+        }),
       })
-      const tekst = msg.content[0]?.text ?? ''
+      if (!claudeRes.ok) throw new Error(`HTTP ${claudeRes.status}`)
+      const { text: tekst } = await claudeRes.json()
       const jsonMatch = tekst.match(/\[[\s\S]*\]/)
       if (!jsonMatch) throw new Error('Intet JSON i svar')
       const items = JSON.parse(jsonMatch[0])

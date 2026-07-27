@@ -1,6 +1,5 @@
 ﻿import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import Anthropic from '@anthropic-ai/sdk'
 import { databases, DB_ID, COL } from '../lib/appwrite'
 import { hentLager, byggLagerOpslag } from '../data/lager'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad, normaliserOpskrift } from '../lib/recipeUtils'
@@ -193,10 +192,6 @@ export default function Opskrift() {
     setChatInput('')
     setSender(true)
     try {
-      const client = new Anthropic({
-        apiKey: import.meta.env.VITE_ANTHROPIC_KEY,
-        dangerouslyAllowBrowser: true,
-      })
       const systemPrompt = `You are a helpful cooking assistant that EXCLUSIVELY answers questions about this specific recipe. ${t('op.chatLang')}
 
 RECIPE: ${opskrift.title}
@@ -214,13 +209,18 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
         role: m.rolle === 'bruger' ? 'user' : 'assistant',
         content: m.tekst,
       }))
-      const response = await client.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: apiMessages,
+      const claudeRes = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: apiMessages,
+        }),
       })
-      const svar = response.content[0]?.text ?? t('op.chatFejl')
+      if (!claudeRes.ok) throw new Error(`HTTP ${claudeRes.status}`)
+      const { text: svar = t('op.chatFejl') } = await claudeRes.json()
       // Trim til maks 50 beskeder (25 runder) for at undgå hukommelseslæk
       setBeskeder((prev) => {
         const ny = [...prev, { rolle: 'ai', tekst: svar }]

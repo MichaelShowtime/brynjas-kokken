@@ -5,18 +5,11 @@ import { hentKreationer, gemKreation, genererNavn } from '../data/kreationer'
 import { colors, shadow, radius, font } from '../data/theme'
 
 async function analyserMedAI(base64Billede) {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_KEY
-  if (!apiKey) return null
   const mediaType = base64Billede.match(/^data:(image\/[a-z]+);base64,/)?.[1] ?? 'image/jpeg'
   const data = base64Billede.replace(/^data:image\/[a-z]+;base64,/, '')
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/claude', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 600,
@@ -27,11 +20,11 @@ async function analyserMedAI(base64Billede) {
           { type: 'text', text: 'Identificér råvarer eller retten på billedet. Svar KUN med gyldig JSON (ingen markdown):\n{"råvarer":["ingrediens1","ingrediens2"],"ret":"Navn på retten eller forslag på dansk"}\nMax 8 råvarer, alt på dansk.' }
         ]
       }]
-    })
+    }),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const json = await res.json()
-  return JSON.parse(json.content[0].text.trim())
+  const { text } = await res.json()
+  return JSON.parse(text.trim())
 }
 
 export default function Opret() {
