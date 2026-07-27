@@ -14,12 +14,14 @@ export default function Notifikationer() {
   const bruger = hentAktivBruger()
   const [notifs, setNotifs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [hentFejl, setHentFejl] = useState(false)
 
   useEffect(() => {
     if (!bruger?.id) return
     let cancelled = false
 
     async function hent() {
+      try {
       const [følgerRes, minePostsRes] = await Promise.all([
         databases.listDocuments(DB_ID, COL.venner, [
           Query.equal('ven_user_id', bruger.id),
@@ -131,6 +133,12 @@ export default function Notifikationer() {
         setLoading(false)
         localStorage.setItem(SIST_SET_KEY, new Date().toISOString())
       }
+      } catch {
+        if (!cancelled) {
+          setLoading(false)
+          setHentFejl(true)
+        }
+      }
     }
 
     hent()
@@ -147,6 +155,12 @@ export default function Notifikationer() {
       {loading ? (
         <div style={s.center}>
           <p style={s.muted}>{t('notif.henter')}</p>
+        </div>
+      ) : hentFejl ? (
+        <div style={s.center}>
+          <span style={{ fontSize: 40 }}>⚠️</span>
+          <p style={s.tomTitel}>Kunne ikke hente notifikationer</p>
+          <p style={s.tomSub}>Tjek din forbindelse og prøv igen.</p>
         </div>
       ) : notifs.length === 0 ? (
         <div style={s.center}>

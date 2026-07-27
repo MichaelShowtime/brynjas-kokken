@@ -42,6 +42,8 @@ export default function Hjem() {
   const [likes] = useState(() => hentLikes())
   const [dbPosts, setDbPosts] = useState([])
   const [postLikes, setPostLikes] = useState({})
+  const [harFlerPosts, setHarFlerPosts] = useState(false)
+  const [lasterFlerPosts, setLasterFlerPosts] = useState(false)
   const [toast, setToast] = useState(null)
   const toastTimer = useRef(null)
   const [gemte, setGemte] = useState(() => hentGemte())
@@ -131,7 +133,10 @@ export default function Hjem() {
         .filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true })
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .slice(0, 20)
-      if (!cancelled && merged.length) setDbPosts(merged)
+      if (!cancelled && merged.length) {
+        setDbPosts(merged)
+        setHarFlerPosts(merged.length >= 20)
+      }
 
       // Appwrite realtime
       channel = client.subscribe(
@@ -196,14 +201,67 @@ export default function Hjem() {
   }
 
   async function sletPost(postId) {
-    await databases.deleteDocument(DB_ID, COL.posts, postId)
+    const backup = dbPosts.find(p => p.id === postId)
     setDbPosts(prev => prev.filter(p => p.id !== postId))
+    try {
+      await databases.deleteDocument(DB_ID, COL.posts, postId)
+    } catch {
+      if (backup) setDbPosts(prev => [backup, ...prev].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))
+      alert('Posten kunne ikke slettes — prøv igen.')
+    }
   }
 
   async function gemRedigering(postId, nyCitat) {
     const value = nyCitat?.trim() || null
-    await databases.updateDocument(DB_ID, COL.posts, postId, { citat: value })
+    const backup = dbPosts.find(p => p.id === postId)
     setDbPosts(prev => prev.map(p => p.id === postId ? { ...p, citat: value } : p))
+    try {
+      await databases.updateDocument(DB_ID, COL.posts, postId, { citat: value })
+    } catch {
+      if (backup) setDbPosts(prev => prev.map(p => p.id === postId ? backup : p))
+      alert('Ændringen kunne ikke gemmes — prøv igen.')
+    }
+  }
+
+  async function hentÆldrePosts() {
+    if (!bruger?.id || lasterFlerPosts) return
+    const kursor = dbPosts.at(-1)?.created_at
+    if (!kursor) return
+    setLasterFlerPosts(true)
+    const venUserIds = [bruger.id, ...vennerListe.map(v => v.id)].filter(Boolean)
+    const emails = [bruger.email, ...vennerListe.map(v => v.email)].filter(Boolean)
+    try {
+      const [byId, byEmail] = await Promise.all([
+        venUserIds.length
+          ? databases.listDocuments(DB_ID, COL.posts, [
+              Query.equal('user_id', venUserIds),
+              Query.lessThan('created_at', kursor),
+              Query.orderDesc('created_at'),
+              Query.limit(20),
+            ])
+          : Promise.resolve({ documents: [] }),
+        emails.length
+          ? databases.listDocuments(DB_ID, COL.posts, [
+              Query.equal('bruger_email', emails),
+              Query.lessThan('created_at', kursor),
+              Query.orderDesc('created_at'),
+              Query.limit(20),
+            ])
+          : Promise.resolve({ documents: [] }),
+      ])
+      const seen = new Set(dbPosts.map(p => p.id))
+      const ældre = [...byId.documents, ...byEmail.documents]
+        .map(d => ({ ...d, id: d.$id }))
+        .filter(p => !seen.has(p.id))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 20)
+      setDbPosts(prev => [...prev, ...ældre])
+      setHarFlerPosts(ældre.length >= 20)
+    } catch {
+      // silent
+    } finally {
+      setLasterFlerPosts(false)
+    }
   }
 
   const recentPostEmails = useMemo(() => {
@@ -351,6 +409,17 @@ export default function Hjem() {
                 )
             }
           </div>
+          {harFlerPosts && dbPosts.length > 0 && (
+            <div style={{ padding: '4px 20px 20px', textAlign: 'center' }}>
+              <button
+                style={styles.hentÆldreBtn}
+                onClick={hentÆldrePosts}
+                disabled={lasterFlerPosts}
+              >
+                {lasterFlerPosts ? 'Henter…' : 'Hent ældre opslag'}
+              </button>
+            </div>
+          )}
         </div>
 
       {/* ── Mere til dig (base creme) ────────────────────────────────────────── */}
@@ -662,7 +731,7 @@ function KommentarSektion({ postId, bruger, t }) {
       })
     } catch (e) {
       console.error('Kommentar insert fejl:', e)
-      setFejl(e.message)
+      setFejl('Kommentaren kunne ikke sendes — prøv igen.')
       setKommentarer(prev => prev.filter(k => k.id !== tempId))
     }
     setSender(false)
@@ -688,7 +757,7 @@ function KommentarSektion({ postId, bruger, t }) {
       )}
       {fejl && (
         <p style={{ fontFamily: font.body, fontSize: 11, color: colors.red, margin: '4px 12px', padding: '4px 8px', background: 'rgba(194,91,74,0.08)', borderRadius: 6 }}>
-          Fejl: {fejl}
+          {fejl}
         </p>
       )}
       {bruger && (
@@ -894,7 +963,7 @@ function getDagensRet(opskrifter) {
   const aftensmad = opskrifter.filter(o => o.tags?.includes('aftensmad'))
   const pulje = aftensmad.length > 0 ? aftensmad : opskrifter
   if (!pulje.length) return null
-  const dato = new Date().toISOString().split('T')[0]
+  const dato = new Date().toLocaleDateString('sv-SE')
   const seed = parseInt(dato.split('-').join(''), 10)
   const stabil = [...pulje].sort((a, b) => (a.id < b.id ? -1 : 1))
   return stabil[seed % stabil.length]
@@ -1064,6 +1133,7 @@ const styles = {
   feedTomKnapper: { display: 'flex', gap: 10, marginTop: 4 },
   feedTomPrimær: { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: '#fff', background: colors.green, border: 'none', borderRadius: radius.button, padding: '11px 20px', cursor: 'pointer' },
   feedTomSekundær: { fontFamily: font.body, fontWeight: 700, fontSize: 14, color: colors.green, background: 'rgba(47,107,79,0.10)', border: 'none', borderRadius: radius.button, padding: '11px 20px', cursor: 'pointer' },
+  hentÆldreBtn: { fontFamily: font.body, fontWeight: 700, fontSize: 13.5, color: colors.muted, background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: 999, padding: '9px 22px', cursor: 'pointer' },
 
   post: { background: colors.card, borderRadius: radius.card, boxShadow: shadow.card, padding: 14 },
   postHead: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },

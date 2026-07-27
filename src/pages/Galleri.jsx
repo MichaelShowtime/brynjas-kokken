@@ -45,12 +45,17 @@ export default function Galleri() {
 
   async function hentFler() {
     setLasterFler(true)
-    const { documents, total } = await databases.listDocuments(DB_ID, COL.recipes, [
-      Query.limit(PAGE), Query.offset(opskrifter.length),
-    ])
-    setOpskrifter((prev) => [...prev, ...documents.map(d => ({ ...d, id: d.$id }))])
-    setHarFler(total > opskrifter.length + PAGE)
-    setLasterFler(false)
+    try {
+      const { documents, total } = await databases.listDocuments(DB_ID, COL.recipes, [
+        Query.limit(PAGE), Query.offset(opskrifter.length),
+      ])
+      setOpskrifter((prev) => [...prev, ...documents.map(d => ({ ...d, id: d.$id }))])
+      setHarFler(total > opskrifter.length + PAGE)
+    } catch {
+      // knappen bliver klikbar igen via finally
+    } finally {
+      setLasterFler(false)
+    }
   }
 
   function håndterSøg(tekst) {

@@ -78,22 +78,25 @@ export function beregnOpnåedeBadges({ kreationer, gemteAntal, vennerAntal, stre
 
 export async function synkBadges(brugerId, opnåedeIds) {
   if (!brugerId || !opnåedeIds.length) return new Set()
+  try {
+    const res = await databases.listDocuments(DB_ID, COL.user_badges, [
+      Query.equal('user_id', brugerId),
+      Query.limit(200),
+    ])
+    const allerede = new Set(res.documents.map(r => r.badge_id))
+    const nye = opnåedeIds.filter(id => !allerede.has(id))
 
-  const res = await databases.listDocuments(DB_ID, COL.user_badges, [
-    Query.equal('user_id', brugerId),
-    Query.limit(200),
-  ])
-  const allerede = new Set(res.documents.map(r => r.badge_id))
-  const nye = opnåedeIds.filter(id => !allerede.has(id))
+    for (const badge_id of nye) {
+      await databases.createDocument(DB_ID, COL.user_badges, ID.unique(), {
+        user_id: brugerId, badge_id,
+      })
+      allerede.add(badge_id)
+    }
 
-  for (const badge_id of nye) {
-    await databases.createDocument(DB_ID, COL.user_badges, ID.unique(), {
-      user_id: brugerId, badge_id,
-    })
-    allerede.add(badge_id)
+    return allerede
+  } catch {
+    return new Set()
   }
-
-  return allerede
 }
 
 // ── Hent badges fra Appwrite ──────────────────────────────────────────────────

@@ -17,6 +17,7 @@ export default function BrugerProfil() {
   const [kunde, setKunde]   = useState(null)
   const [posts, setPosts]   = useState([])
   const [loading, setLoading] = useState(true)
+  const [hentFejl, setHentFejl] = useState(false)
 
   // Overlay-state
   const [postMenuId,  setPostMenuId]  = useState(null)  // post-id med åben menu
@@ -34,6 +35,9 @@ export default function BrugerProfil() {
       setKunde(kRes.documents[0] ?? null)
       setPosts(pRes.documents.map(d => ({ ...d, id: d.$id })))
       setLoading(false)
+    }).catch(() => {
+      setLoading(false)
+      setHentFejl(true)
     })
   }, [userId])
 
@@ -49,21 +53,42 @@ export default function BrugerProfil() {
 
   async function sletPost() {
     if (!postMenuId) return
-    await databases.deleteDocument(DB_ID, COL.posts, postMenuId)
+    const backup = posts.find(p => p.id === postMenuId)
     setPosts(prev => prev.filter(p => p.id !== postMenuId))
     lukMenu()
+    try {
+      await databases.deleteDocument(DB_ID, COL.posts, postMenuId)
+    } catch {
+      if (backup) setPosts(prev => [...prev, backup].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))
+      alert('Posten kunne ikke slettes — prøv igen.')
+    }
   }
 
   async function gemRedigering(nyCitat) {
     if (!redigerPost) return
     const value = nyCitat?.trim() || null
-    await databases.updateDocument(DB_ID, COL.posts, redigerPost.id, { citat: value })
+    const backup = posts.find(p => p.id === redigerPost.id)
     setPosts(prev => prev.map(p => p.id === redigerPost.id ? { ...p, citat: value } : p))
     setRedigerPost(null)
+    try {
+      await databases.updateDocument(DB_ID, COL.posts, redigerPost.id, { citat: value })
+    } catch {
+      if (backup) setPosts(prev => prev.map(p => p.id === backup.id ? backup : p))
+      alert('Ændringen kunne ikke gemmes — prøv igen.')
+    }
   }
 
   if (loading) {
     return <div style={s.loadPage}><div style={{ fontSize: 40 }}>👤</div></div>
+  }
+
+  if (hentFejl) {
+    return (
+      <div style={s.loadPage}>
+        <p style={s.loadTekst}>Kunne ikke hente profilen. Tjek din forbindelse.</p>
+        <button style={s.tilbage} onClick={() => navigate(-1)}>Gå tilbage</button>
+      </div>
+    )
   }
 
   if (!kunde) {
