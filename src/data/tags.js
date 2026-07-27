@@ -117,4 +117,15 @@ export const ONBOARDING_TRIN = [
       { label: '✅ Ingen — ingen begrænsninger', tags: [] },
     ],
   },
+  {
+    id: 'næring',
+    spørgsmål: 'Vil du se estimeret næringsindhold på opskrifter?',
+    ikon: '📊',
+    multi: false,
+    fieldKey: 'showNutrition',
+    svar: [
+      { label: 'Ja tak — vis kalorier, protein osv.', fieldValue: true,  tags: [] },
+      { label: 'Nej tak — hold det simpelt',          fieldValue: false, tags: [] },
+    ],
+  },
 ]

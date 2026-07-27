@@ -192,6 +192,7 @@ export default function Profil() {
   const [searchParams] = useSearchParams()
   const [tilføjVenÅben, setTilføjVenÅben] = useState(() => searchParams.get('tilføj') === '1')
   const [autoLager, setAutoLagerState] = useState(hentAutoLager)
+  const [visNæring, setVisNæring] = useState(() => hentAktivBruger()?.showNutrition ?? false)
   const [standardPortioner, setStandardPortioner] = useState(() => hentAktivBruger()?.standardPortioner ?? null)
   const [uploadLoader, setUploadLoader] = useState(false)
   const [opnåedeBadges, setOpnåedeBadges] = useState(new Set())
@@ -613,6 +614,23 @@ export default function Profil() {
               const ny = !autoLager
               setAutoLagerState(ny)
               gemAutoLager(ny)
+            }}
+          />
+        </div>
+
+        {/* Næringsindhold toggle */}
+        <div style={{ ...s.indstRække, cursor: 'default' }}>
+          <span style={s.indstEmoji}>📊</span>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <p style={s.indstLabel}>Næringsindhold</p>
+            <p style={s.indstSub}>Vis estimerede kalorier, protein og fedt på opskrifter</p>
+          </div>
+          <Toggle
+            on={visNæring}
+            onToggle={() => {
+              const ny = !visNæring
+              setVisNæring(ny)
+              opdaterBruger({ showNutrition: ny })
             }}
           />
         </div>

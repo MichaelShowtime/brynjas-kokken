@@ -45,6 +45,7 @@ function bygBruger(userId, email, kunde) {
     bio:              kunde?.bio            ?? '',
     avatarUrl:        kunde?.avatar_url     ?? null,
     standardPortioner: bevar?.standardPortioner ?? null,
+    showNutrition:     kunde?.show_nutrition    ?? bevar?.showNutrition ?? false,
   }
 }
 
@@ -190,6 +191,7 @@ export function opdaterBruger(opdatering) {
         avatar_url:      ny.avatarUrl ?? null,
         onboarding_done: ny.onboardingFærdig ?? false,
         username:        ny.username ?? null,
+        show_nutrition:  ny.showNutrition ?? false,
       }).catch(() => {})
     })
   }

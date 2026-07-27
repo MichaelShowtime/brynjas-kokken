@@ -53,18 +53,26 @@ export default function Onboarding() {
   function afslutOnboarding() {
     setAfsluttes(true)
 
-    // Saml alle tags fra alle svar
     const alleTags = new Set(bruger?.tags || [])
+    const ekstraFelter = {}
+
     for (const [trinId, svarIndeks] of Object.entries(valgte)) {
       const trinDef = ONBOARDING_TRIN.find((t) => t.id === trinId)
       if (!trinDef) continue
       for (const idx of svarIndeks) {
         const svar = trinDef.svar[idx]
         svar?.tags?.forEach((tag) => alleTags.add(tag))
+        // Trin med fieldKey gemmer en boolean (fx showNutrition)
+        if (trinDef.fieldKey && svar?.fieldValue !== undefined) {
+          ekstraFelter[trinDef.fieldKey] = svar.fieldValue
+        }
       }
     }
 
-    opdaterBruger({ tags: [...alleTags], onboardingFærdig: true })
+    // Standard: showNutrition = false hvis brugeren springede trin over
+    if (ekstraFelter.showNutrition === undefined) ekstraFelter.showNutrition = false
+
+    opdaterBruger({ tags: [...alleTags], onboardingFærdig: true, ...ekstraFelter })
     setTimeout(() => navigate('/hjem', { replace: true }), 600)
   }
 

@@ -130,6 +130,7 @@ const pv = {
 import { hentNote, gemNote } from '../data/noter'
 import { hentRatingsForOpskrift, gemRating } from '../data/ratings'
 import { hentVennerFraDB } from '../data/venner'
+import { beregnNæringsindhold } from '../data/nutrition'
 
 // ── Hoved-komponent ───────────────────────────────────────────────────────────
 
@@ -153,6 +154,8 @@ export default function Opskrift() {
   const chatBundRef = useRef(null)
   const [indkøbsToast, setIndkøbsToast] = useState(null)
 
+  const [næring, setNæring]           = useState(null)   // null | false | { kalorier, ... }
+  const [næringLoading, setNæringLoading] = useState(false)
   const [alleRatings, setAlleRatings] = useState([])
   const [venner, setVenner]           = useState([])
   const [ratingInput, setRatingInput] = useState(0)
@@ -186,6 +189,18 @@ export default function Opskrift() {
       clearTimeout(debounceRef.current)
     }
   }, [id])
+
+  useEffect(() => {
+    const bruger = hentAktivBruger()
+    if (!opskrift || !bruger?.showNutrition) return
+    let cancelled = false
+    setNæringLoading(true)
+    beregnNæringsindhold(opskrift.ingredients ?? [], portioner ?? opskrift.servings ?? 4)
+      .then(data => { if (!cancelled) setNæring(data ?? false) })
+      .catch(() => { if (!cancelled) setNæring(false) })
+      .finally(() => { if (!cancelled) setNæringLoading(false) })
+    return () => { cancelled = true }
+  }, [opskrift, portioner])
 
   useEffect(() => {
     let cancelled = false
@@ -372,6 +387,10 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
             <span style={s.metaChip}>🍽 {portioner} {portionEnhed}</span>
           )}
         </div>
+
+        {hentAktivBruger()?.showNutrition && (
+          <NæringsPanel næring={næring} loading={næringLoading} portioner={portioner} />
+        )}
 
         {opskrift.source && <p style={s.kilde}>{t('op.fra')} {opskrift.source}</p>}
 
@@ -581,6 +600,106 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
       )}
     </div>
   )
+}
+
+// ── NæringsPanel ──────────────────────────────────────────────────────────────
+
+function NæringsPanel({ næring, loading, portioner }) {
+  const [infoÅben, setInfoÅben] = useState(false)
+
+  if (loading) {
+    return (
+      <div style={np.wrap}>
+        {[1,2,3,4,5].map(i => (
+          <div key={i} style={np.skeleton} />
+        ))}
+      </div>
+    )
+  }
+
+  if (næring === false || næring === null) {
+    return næring === false
+      ? <p style={np.utilgængelig}>Næringsindhold ikke tilgængeligt for denne ret</p>
+      : null
+  }
+
+  const poster = [
+    { label: 'Kalorier', value: næring.kalorier, enhed: 'kcal', fed: true },
+    { label: 'Protein',  value: næring.protein,  enhed: 'g' },
+    { label: 'Kulhyd.',  value: næring.kulhydrat, enhed: 'g' },
+    { label: 'Fedt',     value: næring.fedt,      enhed: 'g' },
+    { label: 'Fibre',    value: næring.fibre,      enhed: 'g' },
+  ]
+
+  return (
+    <div style={np.container}>
+      <div style={np.headerRække}>
+        <span style={np.overskrift}>Per portion</span>
+        <button style={np.infoKnap} onClick={() => setInfoÅben(v => !v)} aria-label="Info om næringsindhold">ⓘ</button>
+      </div>
+      {infoÅben && (
+        <p style={np.infoTekst}>Estimeret næringsindhold baseret på ingredienserne — kan afvige fra det faktiske.</p>
+      )}
+      <div style={np.wrap}>
+        {poster.map(({ label, value, enhed, fed }) => (
+          <div key={label} style={np.celle}>
+            <span style={{ ...np.værdi, ...(fed ? np.kalorie : {}) }}>~{value}</span>
+            <span style={np.enhed}>{enhed}</span>
+            <span style={np.label}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const np = {
+  container: {
+    marginBottom: 16,
+    background: colors.card,
+    borderRadius: 16,
+    boxShadow: shadow.card,
+    padding: '12px 14px',
+  },
+  headerRække: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10,
+  },
+  overskrift: {
+    fontFamily: font.body, fontSize: 12, fontWeight: 700,
+    color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5,
+  },
+  infoKnap: {
+    background: 'none', border: 'none', cursor: 'pointer',
+    fontFamily: font.body, fontSize: 13, color: colors.mutedLight, padding: 0, lineHeight: 1,
+  },
+  infoTekst: {
+    fontFamily: font.body, fontSize: 12, color: colors.muted,
+    margin: '0 0 10px', fontStyle: 'italic', lineHeight: 1.5,
+  },
+  wrap: {
+    display: 'flex', gap: 4, justifyContent: 'space-between',
+  },
+  celle: {
+    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+  },
+  værdi: {
+    fontFamily: font.display, fontWeight: 600, fontSize: 17, color: colors.text,
+  },
+  kalorie: { fontSize: 20, color: colors.green },
+  enhed: {
+    fontFamily: font.body, fontSize: 10, fontWeight: 600, color: colors.muted,
+  },
+  label: {
+    fontFamily: font.body, fontSize: 11, color: colors.mutedLight,
+  },
+  skeleton: {
+    flex: 1, height: 48, background: colors.border,
+    borderRadius: 10, animation: 'pulse 1.4s ease-in-out infinite',
+  },
+  utilgængelig: {
+    fontFamily: font.body, fontSize: 12.5, color: colors.mutedLight,
+    fontStyle: 'italic', margin: '0 0 14px',
+  },
 }
 
 // ── RatingStjerner ────────────────────────────────────────────────────────────
