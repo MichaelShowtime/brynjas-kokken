@@ -5,8 +5,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // Strip usynlige tegn (BOM, zero-width space) og whitespace — API-nøgler er ren ASCII
-  const key = (process.env.ANTHROPIC_KEY ?? '').replace(/[^\x21-\x7E]/g, '')
+  // Strip usynlige tegn (BOM, zero-width space), whitespace og omkransende citationstegn
+  const key = (process.env.ANTHROPIC_KEY ?? '')
+    .replace(/[^\x21-\x7E]/g, '')
+    .replace(/^["']+|["']+$/g, '')
   if (!key) {
     return res.status(500).json({ error: 'Server ikke konfigureret' })
   }
