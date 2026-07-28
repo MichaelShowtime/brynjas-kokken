@@ -326,7 +326,7 @@ export default function Profil() {
     try {
       const fileId = ID.unique()
       await storage.createFile(BUCKET_ID, fileId, fil)
-      const publicUrl = storage.getFileView(BUCKET_ID, fileId).href
+      const publicUrl = storage.getFileView(BUCKET_ID, fileId)
       opdater({ avatarUrl: publicUrl })
     } catch (e) {
       const msg = e.message ?? ''
@@ -819,7 +819,7 @@ function RedigerProfil({ bruger, onGem, onTilbage }) {
       try {
         const fileId = ID.unique()
         await storage.createFile(BUCKET_ID, fileId, avatarFil)
-        nyAvatarUrl = storage.getFileView(BUCKET_ID, fileId).href
+        nyAvatarUrl = storage.getFileView(BUCKET_ID, fileId)
       } catch (e) {
         setGemmer(false)
         const msg = e.message ?? ''

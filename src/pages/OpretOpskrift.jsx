@@ -133,7 +133,7 @@ export default function OpretOpskrift() {
       if (billedeFil) {
         const fileId = ID.unique()
         await storage.createFile(BUCKET_ID, fileId, billedeFil)
-        storageImage = storage.getFileView(BUCKET_ID, fileId).href
+        storageImage = storage.getFileView(BUCKET_ID, fileId)
       }
 
       const gyldigeIng = ingredienser

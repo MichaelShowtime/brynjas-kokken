@@ -111,7 +111,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
       try {
         const fileId = ID.unique()
         await storage.createFile(BUCKET_ID, fileId, foto)
-        publicUrl = storage.getFileView(BUCKET_ID, fileId).href
+        publicUrl = storage.getFileView(BUCKET_ID, fileId)
       } catch {
         setUploadFejl(t('kok.modal.fejl'))
         setUploader(false)
