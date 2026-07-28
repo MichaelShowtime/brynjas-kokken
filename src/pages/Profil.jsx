@@ -4,6 +4,7 @@ import {
   Bell, Globe, Shield, HelpCircle, Trash2, Heart, Camera, ShoppingBasket, UtensilsCrossed, Clock, ImagePlus,
   Leaf, Sprout, Fish, Dumbbell, Flame, Wheat, Zap, Home, BookOpen, Recycle, CalendarDays,
   Milk, ShieldCheck, PiggyBank, Apple, Utensils, Coffee, Salad, Bean, Beef, Sunrise,
+  ChefHat, Pencil, ClipboardCheck,
 } from 'lucide-react'
 
 function tagIkon(id, size = 14) {
@@ -52,6 +53,7 @@ import { hentGemte, toggleGemt } from '../data/gemte'
 import { ALLE_BADGES, beregnOpnåedeBadges, synkBadges, hentBadgesDB } from '../data/badges'
 import { billedeUrl, opskriftFarve, grad, tidLabel } from '../lib/recipeUtils'
 import { hentVenner, hentVennerFraDB, tilføjVenDB, fjernVenDB, hentAntalFølgere, søgBrugere } from '../data/venner'
+import { erAdmin } from '../data/admin'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
 
@@ -181,11 +183,13 @@ export default function Profil() {
   const { t } = useLang()
   const [visning, setVisning] = useState('hoved')
   const [bruger, setBruger] = useState(hentAktivBruger)
-  const [aktivTab, setAktivTab] = useState('likes')
+  const [aktivTab, setAktivTab] = useState(() => new URLSearchParams(window.location.search).get('fane') === 'mine' ? 'mine' : 'likes')
   const [kreationer, setKreationer] = useState([])
   const [likes, setLikes] = useState([])
   const [gemteIds, setGemteIds] = useState(() => hentGemte())
   const [gemteOpskrifter, setGemteOpskrifter] = useState([])
+  const [mineOpskrifter, setMineOpskrifter] = useState([])
+  const [sletDialog, setSletDialog] = useState(null)
   const [venner, setVenner] = useState(() => hentVenner())
   const [antalFølgere, setAntalFølgere] = useState(0)
   const [logUdDialog, setLogUdDialog] = useState(false)
@@ -225,10 +229,21 @@ export default function Profil() {
       })
   }
 
+  async function loadMine() {
+    if (!bruger?.id) { setMineOpskrifter([]); return }
+    const res = await databases.listDocuments(DB_ID, COL.recipes, [
+      Query.equal('created_by', bruger.id),
+      Query.orderDesc('$createdAt'),
+      Query.limit(200),
+    ])
+    setMineOpskrifter(res.documents.map((d) => ({ ...d, id: d.$id })))
+  }
+
   useEffect(() => {
     setKreationer(hentKreationer())
     setLikes(hentLikes())
     loadGemte()
+    loadMine()
   }, [])
 
   // Hent rigtige venner + følgere fra Supabase
@@ -257,8 +272,15 @@ export default function Profil() {
       setLikes(hentLikes())
       setKreationer(hentKreationer())
       loadGemte()
+      loadMine()
     }
   }, [visning])
+
+  async function slettOpskrift(id) {
+    setSletDialog(null)
+    try { await databases.deleteDocument(DB_ID, COL.recipes, id) } catch (e) { console.error('Kunne ikke slette opskrift:', e); return }
+    setMineOpskrifter((liste) => liste.filter((o) => o.id !== id))
+  }
 
   function opdater(data) {
     const ny = opdaterBruger(data)
@@ -377,6 +399,10 @@ export default function Profil() {
           <button style={s.editBtn} onClick={() => setVisning('rediger')}>{t('pf.redigerProfil')}</button>
           <button style={s.shareBtn} onClick={håndterShare}><ShareIcon /></button>
         </div>
+
+        <button style={s.opretOpskriftBtn} onClick={() => navigate('/opret-opskrift')}>
+          <ChefHat size={16} /> Opret opskrift
+        </button>
       </div>
 
       {/* Tags */}
@@ -461,6 +487,7 @@ export default function Profil() {
       <div style={s.tabs}>
         {[
           { id: 'likes',      children: <><Heart size={13} fill="currentColor" style={{ verticalAlign: '-2px' }} /> Gemte ({gemteIds.length})</> },
+          { id: 'mine',       children: <>Mine opskrifter ({mineOpskrifter.length})</> },
           { id: 'kreationer', children: <>{t('pf.kreationer')} ({kreationer.length})</> },
           { id: 'badges',     children: <>{t('pf.badges')}</> },
         ].map((tab) => (
@@ -506,6 +533,57 @@ export default function Profil() {
                       <div style={s.opskriftBody}>
                         <p style={s.opskriftTitel}>{o.title}</p>
                         {tid && <p style={s.opskriftMeta}>⏱ {tid}</p>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          }
+        </div>
+      )}
+
+      {/* Mine opskrifter-tab */}
+      {aktivTab === 'mine' && (
+        <div style={s.tabIndhold}>
+          {mineOpskrifter.length === 0
+            ? <TomTab icon={<ChefHat size={36} color={colors.mutedLight} />} tekst="Du har ikke oprettet nogen opskrifter endnu" knap="Opret din første opskrift" onKnap={() => navigate('/opret-opskrift')} />
+            : (
+              <div style={s.grid2}>
+                {mineOpskrifter.map((o) => {
+                  const farve = opskriftFarve(o.tags ?? [])
+                  const imgUrl = billedeUrl(o.storage_image, o.image_url)
+                  const tid = tidLabel(o.prep_time, o.cook_time)
+                  return (
+                    <div key={o.id} style={s.opskriftKort}>
+                      <div style={{ ...s.opskriftHero, background: grad(farve), position: 'relative', overflow: 'hidden', cursor: 'pointer' }}
+                        onClick={() => o.status === 'approved' && navigate(`/opskrift/${o.id}`)}>
+                        {imgUrl && <img src={imgUrl} alt={o.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                        {o.status === 'pending' && (
+                          <div style={s.statusOverlay}>
+                            <span style={{ ...s.statusBadge, background: '#B5763D' }}>⏳ Afventer godkendelse</span>
+                          </div>
+                        )}
+                        {o.status === 'rejected' && (
+                          <div style={s.statusOverlay}>
+                            <span style={{ ...s.statusBadge, background: colors.red }}>✕ Ikke godkendt</span>
+                          </div>
+                        )}
+                      </div>
+                      <div style={s.opskriftBody}>
+                        <p style={s.opskriftTitel}>{o.title}</p>
+                        {tid && <p style={s.opskriftMeta}>⏱ {tid}</p>}
+                        {o.status === 'rejected' && (
+                          <p style={s.rejectedTekst}>Blev ikke godkendt til offentlig visning — du kan redigere og sende igen.</p>
+                        )}
+                        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                          <button style={s.mineActionBtn} onClick={() => navigate(`/opret-opskrift/${o.id}`)}>
+                            <Pencil size={13} /> Redigér
+                          </button>
+                          <button style={{ ...s.mineActionBtn, color: colors.red }} onClick={() => setSletDialog(o)}>
+                            <Trash2 size={13} /> Slet
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )
@@ -656,6 +734,17 @@ export default function Profil() {
             >+</button>
           </div>
         </div>
+
+        {erAdmin(bruger) && (
+          <button style={s.indstRække} onClick={() => navigate('/admin/opskrifter')}>
+            <span style={s.indstEmoji}><ClipboardCheck size={20} /></span>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <p style={s.indstLabel}>Godkend opskrifter</p>
+              <p style={s.indstSub}>Admin — gennemgå ventende opskrifter</p>
+            </div>
+            <span style={s.indstPil}>›</span>
+          </button>
+        )}
       </div>
 
       <button style={s.logUdBtn} onClick={() => setLogUdDialog(true)}>{t('pf.logUd')}</button>
@@ -677,6 +766,17 @@ export default function Profil() {
           onLuk={() => setTilføjVenÅben(false)}
           onTilføjet={(nyVen) => setVenner((prev) => [...prev, nyVen])}
         />
+      )}
+
+      {sletDialog && (
+        <div style={s.overlay} onClick={() => setSletDialog(null)}>
+          <div style={s.dialog} onClick={(e) => e.stopPropagation()}>
+            <p style={s.dialogTitel}>Slet opskrift?</p>
+            <p style={s.dialogTekst}>"{sletDialog.title}" fjernes permanent, også hvis den allerede er godkendt og vises i appen.</p>
+            <button style={{ ...s.dialogBekræft, background: colors.red }} onClick={() => slettOpskrift(sletDialog.id)}>Slet</button>
+            <button style={s.dialogAnnuller} onClick={() => setSletDialog(null)}>Annullér</button>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -1071,6 +1171,12 @@ const s = {
   btnRow: { display: 'flex', gap: 10 },
   editBtn: { flex: 1, padding: '11px 20px', fontFamily: font.body, fontWeight: 700, fontSize: 14, color: colors.text, background: colors.bg, border: `1.5px solid ${colors.border}`, borderRadius: radius.button },
   shareBtn: { width: 44, height: 44, borderRadius: radius.button, background: colors.bg, border: `1.5px solid ${colors.border}`, color: colors.muted, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  opretOpskriftBtn: { width: '100%', maxWidth: 320, marginTop: 10, padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, fontFamily: font.body, fontWeight: 700, fontSize: 13.5, color: '#fff', background: colors.green, border: 'none', borderRadius: radius.button, cursor: 'pointer' },
+
+  statusOverlay: { position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 },
+  statusBadge: { fontFamily: font.body, fontSize: 11, fontWeight: 700, color: '#fff', padding: '5px 10px', borderRadius: radius.pill, textAlign: 'center', lineHeight: 1.3 },
+  rejectedTekst: { fontFamily: font.body, fontSize: 11, color: colors.red, margin: '4px 0 0', lineHeight: 1.4 },
+  mineActionBtn: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '7px', fontFamily: font.body, fontSize: 11.5, fontWeight: 700, color: colors.muted, background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 10, cursor: 'pointer' },
 
   sektion: { padding: '20px 16px' },
   sektionHeader: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 },

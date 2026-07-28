@@ -377,7 +377,7 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
 
   useEffect(() => {
     if (_katalogCache) return
-    databases.listDocuments(DB_ID, COL.recipes, [Query.limit(1000)]).then(({ documents: data }) => {
+    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('status', 'approved'), Query.limit(1000)]).then(({ documents: data }) => {
       const statiskeNavne = new Set(INGREDIENS_KATALOG.map((i) => i.navn.toLowerCase()))
       const set = new Set(statiskeNavne)
       const ekstra = []

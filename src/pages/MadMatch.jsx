@@ -49,7 +49,7 @@ export default function MadMatch() {
   const [afviste, setAfviste] = useState(() => rydOgHent())
 
   useEffect(() => {
-    databases.listDocuments(DB_ID, COL.recipes, [Query.limit(500)])
+    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('status', 'approved'), Query.limit(500)])
       .then(({ documents }) => {
         const liste = documents.map(d => ({
           ...d,

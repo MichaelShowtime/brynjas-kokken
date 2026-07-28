@@ -35,7 +35,7 @@ export default function Galleri() {
   const PAGE = 300
 
   useEffect(() => {
-    databases.listDocuments(DB_ID, COL.recipes, [Query.limit(PAGE), Query.offset(0)])
+    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('status', 'approved'), Query.limit(PAGE), Query.offset(0)])
       .then(({ documents, total }) => {
         setOpskrifter(documents.map(d => ({ ...d, id: d.$id })))
         setHarFler(total > PAGE)
@@ -47,7 +47,7 @@ export default function Galleri() {
     setLasterFler(true)
     try {
       const { documents, total } = await databases.listDocuments(DB_ID, COL.recipes, [
-        Query.limit(PAGE), Query.offset(opskrifter.length),
+        Query.equal('status', 'approved'), Query.limit(PAGE), Query.offset(opskrifter.length),
       ])
       setOpskrifter((prev) => [...prev, ...documents.map(d => ({ ...d, id: d.$id }))])
       setHarFler(total > opskrifter.length + PAGE)
@@ -85,6 +85,7 @@ export default function Galleri() {
       <div style={s.header}>
         <button style={s.tilbage} onClick={() => navigate('/hjem')}>‹</button>
         <h1 style={s.titel}>Opskrifter</h1>
+        <button style={s.opretBtn} onClick={() => navigate('/opret-opskrift')} aria-label="Opret opskrift">+</button>
       </div>
 
       {/* Søgefelt */}
@@ -219,7 +220,8 @@ const s = {
 
   header: { display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px 8px', position: 'sticky', top: 'env(safe-area-inset-top, 0px)', background: colors.bg, zIndex: 10 },
   tilbage: { background: 'none', border: 'none', fontSize: 28, color: colors.green, padding: '0 6px 0 0', cursor: 'pointer', fontWeight: 700, lineHeight: 1 },
-  titel: { fontFamily: font.display, fontWeight: 600, fontSize: 26, color: colors.text, margin: 0, letterSpacing: -0.5 },
+  titel: { fontFamily: font.display, fontWeight: 600, fontSize: 26, color: colors.text, margin: 0, letterSpacing: -0.5, flex: 1 },
+  opretBtn: { width: 36, height: 36, borderRadius: 999, background: colors.green, color: '#fff', border: 'none', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, lineHeight: 1 },
 
   søgeWrap: { display: 'flex', alignItems: 'center', gap: 10, background: colors.card, borderRadius: 16, boxShadow: shadow.card, padding: '0 14px', margin: '4px 20px 12px', height: 48 },
   søgeIkon: { fontSize: 17, flexShrink: 0, opacity: 0.5 },

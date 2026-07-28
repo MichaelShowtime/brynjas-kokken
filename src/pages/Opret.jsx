@@ -195,6 +195,7 @@ export default function Opret() {
   useEffect(() => {
     if (!visForslag || !query) { setForslagListe([]); return }
     databases.listDocuments(DB_ID, COL.recipes, [
+      Query.equal('status', 'approved'),
       Query.search('title', query),
       Query.limit(8),
     ]).then(({ documents }) =>

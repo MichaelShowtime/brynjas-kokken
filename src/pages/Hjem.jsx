@@ -76,8 +76,9 @@ export default function Hjem() {
     let cancelled = false
     const brugerTags = bruger?.tags ?? []
     databases.listDocuments(DB_ID, COL.recipes, [
+      Query.equal('status', 'approved'),
       Query.limit(1000),
-      Query.select(['$id', 'title', 'image_url', 'storage_image', 'tags', 'prep_time', 'cook_time', 'difficulty', 'description', 'source']),
+      Query.select(['$id', 'title', 'image_url', 'storage_image', 'tags', 'prep_time', 'cook_time', 'difficulty', 'description', 'source', 'created_by', 'author_username']),
     ])
       .then(({ documents }) => {
         if (cancelled) return
@@ -1029,6 +1030,7 @@ function RecipeCard({ opskrift, onClick, gemte, onToggleGem }) {
         <div style={styles.recipeBody}>
           <p style={styles.recipeTitel}>{opskrift.title}</p>
           {meta && <p style={styles.recipeMeta}>{meta}</p>}
+          {opskrift.created_by && <p style={styles.recipeCredit}>Af {opskrift.author_username ?? 'en bruger'}</p>}
         </div>
       </button>
       {onToggleGem && (
@@ -1168,6 +1170,7 @@ const styles = {
   recipeBody: { padding: '10px 12px 14px' },
   recipeTitel: { fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, margin: '0 0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
   recipeMeta: { fontFamily: font.body, fontSize: 12, color: colors.muted, margin: 0 },
+  recipeCredit: { fontFamily: font.body, fontSize: 10.5, color: colors.green, margin: '2px 0 0', fontWeight: 600 },
 }
 
 // ── Kommentar-styles ──────────────────────────────────────────────────────────

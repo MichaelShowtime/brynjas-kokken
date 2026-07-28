@@ -283,7 +283,10 @@ export default function Kok() {
     setFærdig(true)
   }
 
-  if (loading || !opskrift) {
+  const ejerAfOpskrift = opskrift?.created_by && opskrift.created_by === hentAktivBruger()?.id
+  const utilgængelig = opskrift?.status && opskrift.status !== 'approved' && !ejerAfOpskrift
+
+  if (loading || !opskrift || utilgængelig) {
     return (
       <div style={s.loadPage}>
         <div style={{ fontSize: 48 }}>🍳</div>

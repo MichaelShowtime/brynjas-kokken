@@ -324,6 +324,18 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
     )
   }
 
+  // Kun ophavsmanden må se sin egen ventende/afviste opskrift — alle andre ser "ikke tilgængelig"
+  const nuværendeBruger = hentAktivBruger()
+  const erEjer = opskrift.created_by && opskrift.created_by === nuværendeBruger?.id
+  if (opskrift.status && opskrift.status !== 'approved' && !erEjer) {
+    return (
+      <div style={s.loadPage}>
+        <p style={s.loadTekst}>Denne opskrift er ikke tilgængelig endnu.</p>
+        <button style={s.backBtnInline} onClick={() => navigate(-1)}>{t('op.tilbage')}</button>
+      </div>
+    )
+  }
+
   const imgUrl = billedeUrl(opskrift.storage_image, opskrift.image_url)
   const farve = opskriftFarve(opskrift.tags)
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
@@ -392,7 +404,24 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
           <NæringsPanel næring={næring} loading={næringLoading} portioner={portioner} />
         )}
 
-        {opskrift.source && <p style={s.kilde}>{t('op.fra')} {opskrift.source}</p>}
+        {erEjer && opskrift.status !== 'approved' && (
+          <div style={s.statusBanner}>
+            {opskrift.status === 'pending'
+              ? '⏳ Denne opskrift afventer godkendelse og er kun synlig for dig lige nu.'
+              : '✕ Denne opskrift blev ikke godkendt til offentlig visning. Redigér og send igen fra din profil.'}
+          </div>
+        )}
+
+        {opskrift.created_by && (
+          <p style={s.kilde}>
+            Opskrift af{' '}
+            <span style={s.forfatterLink} onClick={() => navigate(`/bruger/${opskrift.created_by}`)}>
+              {opskrift.author_username ?? 'en bruger'}
+            </span>
+          </p>
+        )}
+
+        {opskrift.source && !opskrift.created_by && <p style={s.kilde}>{t('op.fra')} {opskrift.source}</p>}
 
         {opskrift.description && (
           <p style={s.beskrivelse}>{opskrift.description}</p>
@@ -928,6 +957,12 @@ const s = {
 
   kilde: {
     fontFamily: font.body, fontSize: 12.5, color: colors.mutedLight, margin: '8px 0 14px',
+  },
+  forfatterLink: { color: colors.green, fontWeight: 700, cursor: 'pointer' },
+  statusBanner: {
+    fontFamily: font.body, fontSize: 13, fontWeight: 600, color: '#8A5A2B',
+    background: 'rgba(181,118,61,0.12)', border: '1px solid rgba(181,118,61,0.3)',
+    borderRadius: 12, padding: '10px 14px', margin: '10px 0', lineHeight: 1.5,
   },
 
   beskrivelse: {
