@@ -535,6 +535,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
             {noteStatus === 'gemt' && <span style={{ fontFamily: font.body, fontSize: 12, color: colors.green }}>Gemt ✓</span>}
             {noteStatus === 'gemmer' && <span style={{ fontFamily: font.body, fontSize: 12, color: colors.muted }}>Gemmer…</span>}
           </div>
+          <p style={s.privatNoteHint}>Kun synligt for dig — til egne huskesedler og justeringer</p>
           <textarea
             value={noter}
             onChange={(e) => {
@@ -804,10 +805,11 @@ function RatingSektion({ alleRatings, venner, ratingInput, noteInput, gemmerRati
         {bruger && ratingInput > 0 && (
           <>
             <div style={rs.noteWrap}>
+              <p style={rs.noteHint}>Vises for dine venner sammen med din rating</p>
               <textarea
                 value={noteInput}
                 onChange={(e) => onNoteChange(e.target.value.slice(0, MAX_NOTE))}
-                placeholder="Din note (valgfrit) — hvad syntes du? Tips? Ændringer?"
+                placeholder="Kort kommentar til venner (valgfrit) — fx hvad du synes om retten"
                 style={rs.noteFelt}
                 rows={3}
               />
@@ -871,6 +873,7 @@ const rs = {
   },
   label: { fontFamily: font.body, fontSize: 13, fontWeight: 600, color: colors.muted, margin: 0 },
 
+  noteHint: { fontFamily: font.body, fontSize: 11.5, color: colors.mutedLight, margin: '10px 0 6px' },
   noteWrap: { position: 'relative' },
   noteFelt: {
     width: '100%', padding: '11px 12px', paddingBottom: 22,
@@ -1046,6 +1049,7 @@ const s = {
     padding: '14px 0', borderTop: `1px solid ${colors.border}`, marginTop: 8,
   },
 
+  privatNoteHint: { fontFamily: font.body, fontSize: 11.5, color: colors.mutedLight, margin: '2px 0 8px' },
   noterFelt: {
     width: '100%', minHeight: 100, padding: '13px 14px',
     fontFamily: font.body, fontSize: 14.5, color: colors.text, lineHeight: 1.55,
