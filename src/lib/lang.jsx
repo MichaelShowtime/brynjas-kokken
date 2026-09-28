@@ -9,7 +9,6 @@ const T = {
     // Nav
     'nav.hjem':     'Hjem',
     'nav.madmatch': 'Mad-match',
-    'nav.opret':    'Opret',
     'nav.lager':    'Lager',
     'nav.profil':   'Profil',
 
@@ -190,8 +189,8 @@ const T = {
     'pf.annuller':        'Annullér',
     'pf.swipeTip':        'Swipe højre i Mad-match for at gemme retter her.',
     'pf.åbnMadMatch':     'Åbn Mad-match',
-    'pf.tagBillede':      'Tag et billede og skab din første kreation.',
-    'pf.gåTilOpret':      'Gå til Opret',
+    'pf.tagBillede':      'Lav en ret for at se din første kreation her.',
+    'pf.gåTilOpret':      'Find en ret',
     // Rediger profil
     'pf.re.titel':        'Rediger profil',
     'pf.re.email':        'E-mail',
@@ -371,7 +370,6 @@ const T = {
     // Nav
     'nav.hjem':     'Home',
     'nav.madmatch': 'Food Match',
-    'nav.opret':    'Create',
     'nav.lager':    'Pantry',
     'nav.profil':   'Profile',
 
@@ -552,8 +550,8 @@ const T = {
     'pf.annuller':        'Cancel',
     'pf.swipeTip':        'Swipe right in Food Match to save dishes here.',
     'pf.åbnMadMatch':     'Open Food Match',
-    'pf.tagBillede':      'Take a photo and create your first dish.',
-    'pf.gåTilOpret':      'Go to Create',
+    'pf.tagBillede':      'Cook something to see your first creation here.',
+    'pf.gåTilOpret':      'Find a dish',
     // Edit profile
     'pf.re.titel':        'Edit profile',
     'pf.re.email':        'Email',

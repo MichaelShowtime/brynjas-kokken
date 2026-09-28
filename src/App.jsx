@@ -6,7 +6,6 @@ import BottomNav from './components/BottomNav'
 import Hjem from './pages/Hjem'
 import MadMatch from './pages/MadMatch'
 import Opskrift from './pages/Opskrift'
-import Opret from './pages/Opret'
 import OpretOpskrift from './pages/OpretOpskrift'
 import AdminOpskrifter from './pages/AdminOpskrifter'
 import Lager from './pages/Lager'
@@ -68,7 +67,6 @@ export default function App() {
         <Route path="/opskrift/:id"   element={<ProtectedRoute><Opskrift /></ProtectedRoute>} />
         <Route path="/kok/:id"        element={<ProtectedRoute><Kok /></ProtectedRoute>} />
         <Route path="/madmatch"       element={<ProtectedRoute><MadMatch /></ProtectedRoute>} />
-        <Route path="/opret"          element={<ProtectedRoute><Opret /></ProtectedRoute>} />
         <Route path="/opret-opskrift"     element={<ProtectedRoute><OpretOpskrift /></ProtectedRoute>} />
         <Route path="/opret-opskrift/:id" element={<ProtectedRoute><OpretOpskrift /></ProtectedRoute>} />
         <Route path="/admin/opskrifter"   element={<ProtectedRoute><AdminOpskrifter /></ProtectedRoute>} />

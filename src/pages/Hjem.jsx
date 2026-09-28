@@ -74,6 +74,20 @@ export default function Hjem() {
     ]).then(({ total }) => { if (total > 0) setHarUlæste(true) })
   }, [bruger?.id])
 
+  // Gemte-tal kan mangle lokalt (fx ny enhed) — merge med kontoens rigtige liste
+  useEffect(() => {
+    if (!bruger?.id) return
+    databases.listDocuments(DB_ID, COL.saved_recipes, [
+      Query.equal('user_id', bruger.id), Query.limit(200),
+    ]).then(({ documents }) => {
+      if (!documents.length) return
+      const dbIds = documents.map(r => r.recipe_id)
+      const ny = [...new Set([...dbIds, ...hentGemte()])]
+      try { localStorage.setItem('simmer_gemte_v1', JSON.stringify(ny)) } catch {}
+      setGemte(ny)
+    }).catch(() => {})
+  }, [bruger?.id])
+
   useEffect(() => {
     let cancelled = false
     const brugerTags = bruger?.tags ?? []
@@ -336,7 +350,7 @@ export default function Hjem() {
             <Stat tal={gemte.length} label="gemte" ikon={<Bookmark size={15} />} onClick={() => navigate('/gemte')} />
           </div>
         ) : (
-          <button style={styles.startCta} onClick={() => navigate('/opret')}>
+          <button style={styles.startCta} onClick={() => navigate('/madmatch')}>
             <UtensilsCrossed size={16} color={colors.green} />
             <span>{t('hjem.startCta')}</span>
           </button>
@@ -416,7 +430,7 @@ export default function Hjem() {
                     <ChefHat size={36} color={colors.mutedLight} strokeWidth={1.5} />
                     <p style={styles.feedTomTitel}>{t('hjem.feedStilleTitel')}</p>
                     <p style={styles.feedTomTekst}>{t('hjem.feedStilleTekst')}</p>
-                    <button style={styles.feedTomPrimær} onClick={() => navigate('/opret')}>{t('nav.opret')}</button>
+                    <button style={styles.feedTomPrimær} onClick={() => navigate('/madmatch')}>Find en ret</button>
                   </div>
                 )
             }

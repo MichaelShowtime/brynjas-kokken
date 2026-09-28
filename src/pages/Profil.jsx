@@ -598,7 +598,7 @@ export default function Profil() {
       {aktivTab === 'kreationer' && (
         <div style={s.tabIndhold}>
           {kreationer.length === 0
-            ? <TomTab icon={<Camera size={36} color={colors.mutedLight} />} tekst={t('pf.tagBillede')} knap={t('pf.gåTilOpret')} onKnap={() => navigate('/opret')} />
+            ? <TomTab icon={<Camera size={36} color={colors.mutedLight} />} tekst={t('pf.tagBillede')} knap={t('pf.gåTilOpret')} onKnap={() => navigate('/madmatch')} />
             : kreationer.map((k) => {
               const fotoSrc = k.foto
                 ? (k.foto.startsWith('blob:') ? k.foto : billedeUrl(k.foto))
