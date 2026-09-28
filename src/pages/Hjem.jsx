@@ -10,6 +10,7 @@ import { colors, shadow, radius, font } from '../data/theme'
 import { databases, client, DB_ID, COL, Query, ID } from '../lib/appwrite'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
 import { useLang, relativTidLang, datoLinjeLang } from '../lib/lang'
+import RecipeThumbCard from '../components/RecipeThumbCard'
 
 function hilsen(t, h) {
   if (h < 10) return t('hjem.godmorgen')
@@ -279,7 +280,7 @@ export default function Hjem() {
   }, [dbPosts])
 
   const featured = getDagensRet(opskrifter)
-  const anbefalet = opskrifter.slice(0, 6).filter(o => o.id !== featured?.id)
+  const anbefalet = dagensAnbefalinger(opskrifter, 6, featured?.id)
 
   return (
     <div style={styles.page}>
@@ -931,34 +932,17 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef, gemte, onTog
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {filtreret.map(o => {
-                const img = billedeUrl(o.storage_image, o.image_url)
-                const farve = opskriftFarve(o.tags)
                 const tid = tidLabel(o.prep_time, o.cook_time)
                 return (
-                  <div key={o.id} style={{ background: colors.card, borderRadius: 16, boxShadow: shadow.card, overflow: 'hidden', position: 'relative' }}>
-                    <button
-                      style={{ display: 'block', width: '100%', border: 'none', padding: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
-                      onClick={() => { onLuk(); navigate(`/opskrift/${o.id}`) }}
-                    >
-                      <div style={{ height: 110, background: grad(farve), overflow: 'hidden', position: 'relative' }}>
-                        {img && <img src={img} alt={o.title} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-                      </div>
-                      <div style={{ padding: '9px 11px 12px' }}>
-                        <p style={{ fontFamily: font.body, fontWeight: 700, fontSize: 13.5, color: colors.text, margin: '0 0 3px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
-                          {o.title}
-                        </p>
-                        {tid && <p style={{ fontFamily: font.body, fontSize: 11.5, color: colors.muted, margin: 0 }}>⏱ {tid}</p>}
-                      </div>
-                    </button>
-                    <button
-                      style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,0.88)', border: 'none', borderRadius: 999, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
-                      onClick={e => { e.stopPropagation(); onToggleGem(o.id) }}
-                    >
-                      {gemte?.includes(o.id)
-                        ? <BookmarkCheck size={14} color={colors.green} />
-                        : <Bookmark size={14} color={colors.muted} />}
-                    </button>
-                  </div>
+                  <RecipeThumbCard
+                    key={o.id}
+                    opskrift={o}
+                    compact
+                    onClick={() => { onLuk(); navigate(`/opskrift/${o.id}`) }}
+                    meta={tid ? `⏱ ${tid}` : null}
+                    gemt={gemte?.includes(o.id)}
+                    onToggleGem={onToggleGem}
+                  />
                 )
               })}
             </div>
@@ -979,6 +963,19 @@ function getDagensRet(opskrifter) {
   const seed = parseInt(dato.split('-').join(''), 10)
   const stabil = [...pulje].sort((a, b) => (a.id < b.id ? -1 : 1))
   return stabil[seed % stabil.length]
+}
+
+// Roterer "Mere til dig" til et nyt udsnit hver dag, i stedet for altid de samme
+// første opskrifter. Deterministisk pr. dag (samme for alle brugere den dag).
+function dagensAnbefalinger(opskrifter, antal, ekskluderId) {
+  const pulje = opskrifter.filter(o => o.id !== ekskluderId)
+  if (!pulje.length) return []
+  const dato = new Date().toLocaleDateString('sv-SE')
+  const seed = parseInt(dato.split('-').join(''), 10)
+  const stabil = [...pulje].sort((a, b) => (a.id < b.id ? -1 : 1))
+  const start = seed % stabil.length
+  const antalReelt = Math.min(antal, stabil.length)
+  return Array.from({ length: antalReelt }, (_, i) => stabil[(start + i) % stabil.length])
 }
 
 function FeaturedCard({ opskrift, onClick }) {
@@ -1010,40 +1007,19 @@ function FeaturedCard({ opskrift, onClick }) {
 }
 
 function RecipeCard({ opskrift, onClick, gemte, onToggleGem }) {
-  const imgUrl = billedeUrl(opskrift.storage_image, opskrift.image_url)
-  const farve = opskriftFarve(opskrift.tags)
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const sværhed = sværhedLabel(opskrift.difficulty)
   const meta = [tid, sværhed].filter(Boolean).join(' · ')
-  const erGemt = gemte?.includes(opskrift.id)
 
   return (
-    <div style={{ ...styles.recipeCard, position: 'relative' }}>
-      <button style={{ ...styles.recipeCard, boxShadow: 'none', borderRadius: 0, padding: 0, width: '100%' }} onClick={onClick}>
-        <div style={{ ...styles.recipeHero, background: grad(farve) }}>
-          {imgUrl ? (
-            <img src={imgUrl} alt={opskrift.title} loading="lazy" style={styles.recipeImg} />
-          ) : (
-            <span style={styles.recipeInitial}>{opskrift.title.charAt(0)}</span>
-          )}
-        </div>
-        <div style={styles.recipeBody}>
-          <p style={styles.recipeTitel}>{opskrift.title}</p>
-          {meta && <p style={styles.recipeMeta}>{meta}</p>}
-          {opskrift.created_by && <p style={styles.recipeCredit}>Af {opskrift.author_username ?? 'en bruger'}</p>}
-        </div>
-      </button>
-      {onToggleGem && (
-        <button
-          style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,255,255,0.85)', border: 'none', borderRadius: 999, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
-          onClick={e => { e.stopPropagation(); onToggleGem(opskrift.id) }}
-        >
-          {erGemt
-            ? <BookmarkCheck size={15} color={colors.green} />
-            : <Bookmark size={15} color={colors.muted} />}
-        </button>
-      )}
-    </div>
+    <RecipeThumbCard
+      opskrift={opskrift}
+      onClick={onClick}
+      meta={meta}
+      credit={opskrift.created_by ? `Af ${opskrift.author_username ?? 'en bruger'}` : null}
+      gemt={gemte?.includes(opskrift.id)}
+      onToggleGem={onToggleGem}
+    />
   )
 }
 
