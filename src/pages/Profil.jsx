@@ -47,7 +47,7 @@ import { hentAutoLager, gemAutoLager } from '../data/lager'
 import { databases, storage, DB_ID, COL, Query, ID, BUCKET_ID } from '../lib/appwrite'
 import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
 import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
-import { hentKreationer, sletKreation } from '../data/kreationer'
+import { hentKreationer, sletKreationDB, synkKreationer } from '../data/kreationer'
 import { hentLikes, fjernLike } from '../data/likes'
 import { hentGemte, toggleGemt } from '../data/gemte'
 import { ALLE_BADGES, beregnOpnåedeBadges, synkBadges, hentBadgesDB } from '../data/badges'
@@ -229,6 +229,12 @@ export default function Profil() {
       })
   }
 
+  // Hent/migrér kreationer fra kontoen, så telefon og pc viser det samme
+  async function loadKreationer() {
+    setKreationer(hentKreationer())
+    setKreationer(await synkKreationer(bruger?.id))
+  }
+
   async function loadMine() {
     if (!bruger?.id) { setMineOpskrifter([]); return }
     const res = await databases.listDocuments(DB_ID, COL.recipes, [
@@ -240,7 +246,7 @@ export default function Profil() {
   }
 
   useEffect(() => {
-    setKreationer(hentKreationer())
+    loadKreationer()
     setLikes(hentLikes())
     loadGemte()
     loadMine()
@@ -270,7 +276,7 @@ export default function Profil() {
     if (visning === 'hoved') {
       setBruger(hentAktivBruger())
       setLikes(hentLikes())
-      setKreationer(hentKreationer())
+      loadKreationer()
       loadGemte()
       loadMine()
     }
@@ -618,7 +624,7 @@ export default function Profil() {
                   </div>
                   <button
                     style={s.kreationSletBtn}
-                    onClick={() => setKreationer(sletKreation(k.id))}
+                    onClick={() => setKreationer(sletKreationDB(bruger?.id, k.id))}
                     aria-label="Slet kreation"
                   >
                     <Trash2 size={18} />

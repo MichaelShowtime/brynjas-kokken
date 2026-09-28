@@ -10,8 +10,9 @@ import {
 import {
   hentLager, gemLager, sletFraLager, opdaterUdløb, opdaterVare,
   KATEGORIER, INGREDIENS_KATALOG, ENHEDER, kanoniselér,
-  hentAutoLager, gemAutoLager,
+  hentAutoLager, gemAutoLager, synkLager, skubLagerTilServer,
 } from '../data/lager'
+import { hentAktivBruger } from '../data/auth'
 import { databases, DB_ID, COL, Query } from '../lib/appwrite'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
@@ -69,15 +70,33 @@ function udløbsInfo(udløbDato, t) {
 export default function Lager() {
   const navigate = useNavigate()
   const { t } = useLang()
+  const bruger = hentAktivBruger()
   const [lager, setLager]           = useState(hentLager)
   const [tilføjOpen, setTilføjOpen] = useState(false)
   const [udløbEdit, setUdløbEdit]   = useState(null)
   const [redigerVare, setRedigerVare] = useState(null)
   const [autoLager, setAutoLager]   = useState(hentAutoLager)
   const indkøbsAntal = hentIndkøbsliste().length
+  const synkVersion = useRef(0)
 
-  // Opdatér state + localStorage
-  function opdater(nyListe) { setLager(nyListe); gemLager(nyListe) }
+  // Hent/migrér lager fra kontoen ved åbning, så telefon og pc viser det samme
+  useEffect(() => {
+    if (!bruger?.id) return
+    synkLager(bruger.id).then(setLager)
+  }, [bruger?.id])
+
+  // Opdatér state + localStorage, og synk til kontoen i baggrunden.
+  // synkVersion sikrer at et langsomt svar ikke overskriver en nyere ændring.
+  function opdater(nyListe) {
+    setLager(nyListe)
+    gemLager(nyListe)
+    if (bruger?.id) {
+      const version = ++synkVersion.current
+      skubLagerTilServer(bruger.id, nyListe).then((synket) => {
+        if (synkVersion.current === version) setLager(synket)
+      })
+    }
+  }
 
   function slet(id)           { opdater(sletFraLager(id)); setRedigerVare(null) }
   function sætUdløb(id, dato) { setUdløbEdit(null); opdater(opdaterUdløb(id, dato)) }

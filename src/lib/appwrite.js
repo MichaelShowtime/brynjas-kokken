@@ -23,6 +23,8 @@ export const COL = {
   noter:           import.meta.env.VITE_APPWRITE_COL_NOTER,
   user_badges:     import.meta.env.VITE_APPWRITE_COL_USER_BADGES,
   ratings:         import.meta.env.VITE_APPWRITE_COL_RATINGS,
+  lager:           import.meta.env.VITE_APPWRITE_COL_LAGER,
+  kreationer:      import.meta.env.VITE_APPWRITE_COL_KREATIONER,
 }
 
 export const BUCKET_ID = import.meta.env.VITE_APPWRITE_BUCKET_ID

@@ -1,5 +1,8 @@
-// Lager-data med localStorage-persistens.
+// Lager-data med localStorage-persistens, synkroniseret til Appwrite så det
+// deles på tværs af enheder (localStorage forbliver den hurtige lokale cache).
 // Hvert element: { id, navn, mængde, enhed, kategori, emoji, udløb|null, snartTom }
+
+import { databases, DB_ID, COL, Query, ID } from '../lib/appwrite'
 
 const KEY = 'simmer_lager'
 
@@ -38,6 +41,101 @@ export function opdaterVare(id, opdatering) {
   const liste = hentLager().map((v) => v.id === id ? { ...v, ...opdatering } : v)
   gemLager(liste)
   return liste
+}
+
+// ── Appwrite-synk ─────────────────────────────────────────────────────────────
+// Lokale varer har et numerisk id (Date.now()) indtil de er oprettet på
+// serveren, hvorefter id'et erstattes med Appwrites $id (streng). Det bruges
+// til at afgøre om en vare skal oprettes eller opdateres ved synk.
+
+function fraDokument(d) {
+  return {
+    id: d.$id,
+    navn: d.navn,
+    mængde: d.maengde ?? '',
+    enhed: d.enhed ?? '',
+    kategori: d.kategori ?? '',
+    emoji: d.emoji ?? null,
+    udløb: d.udloeb || null,
+    snartTom: !!d.snart_tom,
+  }
+}
+
+function tilFelter(vare) {
+  return {
+    navn: vare.navn,
+    maengde: vare.mængde ?? '',
+    enhed: vare.enhed ?? '',
+    kategori: vare.kategori ?? '',
+    emoji: vare.emoji ?? null,
+    udloeb: vare.udløb || null,
+    snart_tom: !!vare.snartTom,
+  }
+}
+
+// Henter brugerens lager fra Appwrite ved app-start. Er der intet på
+// serveren endnu, men noget lokalt (fx fra før synk fandtes), migreres det op
+// én gang. Ellers er serveren autoritativ, så alle enheder konvergerer.
+export async function synkLager(brugerId) {
+  if (!brugerId) return hentLager()
+  try {
+    const res = await databases.listDocuments(DB_ID, COL.lager, [
+      Query.equal('user_id', brugerId), Query.limit(500),
+    ])
+    if (res.documents.length > 0) {
+      const server = res.documents.map(fraDokument)
+      gemLager(server)
+      return server
+    }
+    const lokale = hentLager()
+    if (!lokale.length) return lokale
+    const oprettet = await Promise.all(lokale.map(async (v) => {
+      try {
+        const d = await databases.createDocument(DB_ID, COL.lager, ID.unique(), { user_id: brugerId, ...tilFelter(v) })
+        return fraDokument(d)
+      } catch { return v }
+    }))
+    gemLager(oprettet)
+    return oprettet
+  } catch {
+    return hentLager()
+  }
+}
+
+// Reconciler hele listen mod serveren efter en lokal ændring: opretter nye
+// varer (numerisk id), opdaterer eksisterende, sletter dem der ikke længere
+// er med. Fire-and-forget-venlig — kald uden at afvente hvis UI'et allerede
+// er opdateret optimistisk lokalt.
+export async function skubLagerTilServer(brugerId, liste) {
+  if (!brugerId) return liste
+  try {
+    const res = await databases.listDocuments(DB_ID, COL.lager, [
+      Query.equal('user_id', brugerId), Query.limit(500),
+    ])
+    const lokaleIds = new Set(liste.filter(v => typeof v.id === 'string').map(v => v.id))
+    await Promise.all(res.documents
+      .filter(d => !lokaleIds.has(d.$id))
+      .map(d => databases.deleteDocument(DB_ID, COL.lager, d.$id).catch(() => {})))
+
+    const serverIds = new Set(res.documents.map(d => d.$id))
+    let ændret = false
+    const ny = await Promise.all(liste.map(async (v) => {
+      const felter = { user_id: brugerId, ...tilFelter(v) }
+      if (typeof v.id === 'string' && serverIds.has(v.id)) {
+        await databases.updateDocument(DB_ID, COL.lager, v.id, felter).catch(() => {})
+        return v
+      }
+      try {
+        const d = await databases.createDocument(DB_ID, COL.lager, ID.unique(), felter)
+        ændret = true
+        return { ...v, id: d.$id }
+      } catch { return v }
+    }))
+    if (ændret) gemLager(ny)
+    return ny
+  } catch {
+    return liste
+  }
 }
 
 // ── Auto-lager indstilling ────────────────────────────────────────────────────

@@ -2,8 +2,8 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { databases, storage, DB_ID, COL, BUCKET_ID, ID } from '../lib/appwrite'
 import { billedeUrl, opskriftFarve, tidLabel, grad, normaliserOpskrift } from '../lib/recipeUtils'
-import { gemKreation } from '../data/kreationer'
-import { matchIngredienserMedLager, fjernFraLagerVedIds, hentAutoLager } from '../data/lager'
+import { gemKreationDB } from '../data/kreationer'
+import { matchIngredienserMedLager, fjernFraLagerVedIds, hentAutoLager, hentLager, skubLagerTilServer } from '../data/lager'
 import { hentAktivBruger } from '../data/auth'
 import { hentNote } from '../data/noter'
 import { colors, shadow, radius, font } from '../data/theme'
@@ -119,7 +119,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
       }
     }
     const noter = await hentNote(opskrift.id)
-    gemKreation({
+    await gemKreationDB(bruger?.id, {
       id:         Date.now().toString(),
       titel:      opskrift.title,
       opskriftId: opskrift.id,
@@ -272,7 +272,9 @@ export default function Kok() {
       const matches = matchIngredienserMedLager(ingredienser)
       if (matches.length > 0) {
         if (hentAutoLager()) {
+          const bruger = hentAktivBruger()
           fjernFraLagerVedIds(matches.map((m) => m.lagerItem.id))
+          if (bruger?.id) skubLagerTilServer(bruger.id, hentLager())
           setFærdig(true)
         } else {
           setLagerMatches(matches)
@@ -419,6 +421,8 @@ export default function Kok() {
           t={t}
           onJa={(ids) => {
             fjernFraLagerVedIds(ids)
+            const bruger = hentAktivBruger()
+            if (bruger?.id) skubLagerTilServer(bruger.id, hentLager())
             setLagerMatches(null)
             setFærdig(true)
           }}

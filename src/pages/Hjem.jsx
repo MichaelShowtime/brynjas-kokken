@@ -4,7 +4,7 @@ import { Heart, MessageCircle, Pencil, Trash2, Search, Bookmark, UtensilsCrossed
 import { hentGemte, toggleGemt } from '../data/gemte'
 import { hentVenner, hentVennerFraDB } from '../data/venner'
 import { hentAktivBruger } from '../data/auth'
-import { hentKreationer } from '../data/kreationer'
+import { hentKreationer, synkKreationer } from '../data/kreationer'
 import { hentLikes } from '../data/likes'
 import { colors, shadow, radius, font } from '../data/theme'
 import { databases, client, DB_ID, COL, Query, ID } from '../lib/appwrite'
@@ -39,7 +39,7 @@ export default function Hjem() {
   const [opskrifter, setOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
   const [vennerListe, setVennerListe] = useState(() => hentVenner())
-  const [kreationer] = useState(() => hentKreationer())
+  const [kreationer, setKreationer] = useState(() => hentKreationer())
   const [likes] = useState(() => hentLikes())
   const [dbPosts, setDbPosts] = useState([])
   const [postLikes, setPostLikes] = useState({})
@@ -86,6 +86,12 @@ export default function Hjem() {
       try { localStorage.setItem('simmer_gemte_v1', JSON.stringify(ny)) } catch {}
       setGemte(ny)
     }).catch(() => {})
+  }, [bruger?.id])
+
+  // Kreationer (streak/"retter lavet") kan også mangle lokalt på tværs af enheder
+  useEffect(() => {
+    if (!bruger?.id) return
+    synkKreationer(bruger.id).then(setKreationer)
   }, [bruger?.id])
 
   useEffect(() => {
