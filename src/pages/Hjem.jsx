@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Heart, MessageCircle, Pencil, Trash2, Search, Bookmark, UtensilsCrossed, MoreHorizontal, ChefHat, BookmarkCheck } from 'lucide-react'
+import { Heart, MessageCircle, Pencil, Trash2, Search, Bookmark, UtensilsCrossed, MoreHorizontal, ChefHat, Flame, Users } from 'lucide-react'
 import { hentGemte, toggleGemt } from '../data/gemte'
 import { hentVenner, hentVennerFraDB } from '../data/venner'
 import { hentAktivBruger } from '../data/auth'
@@ -54,6 +54,7 @@ export default function Hjem() {
 
   const bruger = hentAktivBruger()
   const streak = beregnStreak(kreationer)
+  const harMadData = streak > 0 || kreationer.length > 0 || gemte.length > 0
   const [harUlæste, setHarUlæste] = useState(false)
   const [time, setTime] = useState(() => new Date().getHours())
 
@@ -309,7 +310,7 @@ export default function Hjem() {
           <div>
             <p style={styles.eyebrow}>{datoLinjeLang(lang)}</p>
             <h1 style={styles.title}>
-              {hilsen(t, time)},<br />{bruger?.navn ?? 'Kok'} 👋
+              {hilsen(t, time)},<br />{bruger?.navn ?? 'Kok'}
             </h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -328,11 +329,18 @@ export default function Hjem() {
           </div>
         </header>
 
-        <div style={styles.stats}>
-          <Stat tal={streak > 0 ? streak : '—'} label={streak > 0 ? t('hjem.streakLabel') : 'Start en streak!'} ikon={<span style={{ opacity: streak > 0 ? 1 : 0.4 }}>🔥</span>} fremhæv={streak > 0} />
-          <Stat tal={kreationer.length || '—'} label={t('pf.retterLavet')} ikon={<UtensilsCrossed size={15} />} />
-          <Stat tal={gemte.length || '—'} label="gemte" ikon={<Bookmark size={15} />} onClick={() => navigate('/gemte')} />
-        </div>
+        {harMadData ? (
+          <div style={styles.stats}>
+            <Stat tal={streak} label={streak > 0 ? t('hjem.streakLabel') : 'Start en streak!'} ikon={<Flame size={15} />} fremhæv={streak > 0} />
+            <Stat tal={kreationer.length} label={t('pf.retterLavet')} ikon={<UtensilsCrossed size={15} />} />
+            <Stat tal={gemte.length} label="gemte" ikon={<Bookmark size={15} />} onClick={() => navigate('/gemte')} />
+          </div>
+        ) : (
+          <button style={styles.startCta} onClick={() => navigate('/opret')}>
+            <UtensilsCrossed size={16} color={colors.green} />
+            <span>{t('hjem.startCta')}</span>
+          </button>
+        )}
 
         <div style={{ ...styles.søgeWrap, cursor: 'pointer' }} onClick={() => { setSøgeÅben(true); søgeInputRef.current?.focus() }}>
           <Search size={17} color={colors.muted} style={{ opacity: 0.6, flexShrink: 0 }} />
@@ -341,15 +349,9 @@ export default function Hjem() {
           </span>
         </div>
 
-        <Section titel={t('hjem.aktivNu')} handling={t('pf.tilføj')} onHandling={() => navigate('/profil?tilføj=1')} />
-        {(
-          vennerListe.length === 0 ? (
-            <div style={styles.tomVenner}>
-              <span style={{ fontSize: 28 }}>👥</span>
-              <p style={styles.tomVennerTekst}>{t('hjem.ingenAktive')}</p>
-              <button style={styles.tilføjVenBtn} onClick={() => navigate('/profil?tilføj=1')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
-            </div>
-          ) : (
+        {vennerListe.length > 0 && (
+          <>
+            <Section titel={t('hjem.aktivNu')} handling={t('pf.tilføj')} onHandling={() => navigate('/profil?tilføj=1')} />
             <div style={styles.scrollRow}>
               {vennerListe.map((v) => {
                 const erAktiv = recentPostEmails.has(v.email)
@@ -367,7 +369,7 @@ export default function Hjem() {
                 )
               })}
             </div>
-          )
+          </>
         )}
       </div>
 
@@ -399,10 +401,10 @@ export default function Hjem() {
               ))
               : vennerListe.length === 0
                 ? (
-                  <div style={styles.feedTom}>
-                    <span style={{ fontSize: 40 }}>👨‍👩‍👧</span>
-                    <p style={styles.feedTomTitel}>{t('hjem.ingenFeed')}</p>
-                    <p style={styles.feedTomTekst}>{t('hjem.ingenFeedSub')}</p>
+                  <div style={styles.venCta}>
+                    <div style={styles.venCtaIkon}><Users size={22} color={colors.green} /></div>
+                    <p style={styles.venCtaTitel}>{t('hjem.venCtaTitel')}</p>
+                    <p style={styles.venCtaTekst}>{t('hjem.venCtaTekst')}</p>
                     <div style={styles.feedTomKnapper}>
                       <button style={styles.feedTomPrimær} onClick={() => navigate('/profil?tilføj=1')}>+ {t('pf.tilføjFørste').replace('+ ', '')}</button>
                       <button style={styles.feedTomSekundær} onClick={() => navigate('/madmatch')}>Find en ret</button>
@@ -411,9 +413,9 @@ export default function Hjem() {
                 )
                 : (
                   <div style={styles.feedTom}>
-                    <span style={{ fontSize: 40 }}>🍳</span>
-                    <p style={styles.feedTomTitel}>{t('hjem.ingenFeed')}</p>
-                    <p style={styles.feedTomTekst}>{t('hjem.ingenFeedSub')}</p>
+                    <ChefHat size={36} color={colors.mutedLight} strokeWidth={1.5} />
+                    <p style={styles.feedTomTitel}>{t('hjem.feedStilleTitel')}</p>
+                    <p style={styles.feedTomTekst}>{t('hjem.feedStilleTekst')}</p>
                     <button style={styles.feedTomPrimær} onClick={() => navigate('/opret')}>{t('nav.opret')}</button>
                   </div>
                 )
@@ -1024,7 +1026,7 @@ function RecipeCard({ opskrift, onClick, gemte, onToggleGem }) {
 }
 
 function Stat({ tal, label, ikon, fremhæv, onClick }) {
-  const base = { ...styles.stat, ...(fremhæv ? { background: colors.green } : null), ...(onClick ? { cursor: 'pointer' } : null) }
+  const base = { ...styles.stat, ...(fremhæv ? { background: colors.green, border: 'none' } : null), ...(onClick ? { cursor: 'pointer' } : null) }
   const inner = (
     <>
       <span style={{ ...styles.statTal, color: fremhæv ? '#fff' : colors.text, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1034,7 +1036,7 @@ function Stat({ tal, label, ikon, fremhæv, onClick }) {
     </>
   )
   return onClick
-    ? <button style={{ ...base, border: 'none', textAlign: 'left' }} onClick={onClick}>{inner}</button>
+    ? <button style={{ ...base, textAlign: 'left', fontFamily: 'inherit' }} onClick={onClick}>{inner}</button>
     : <div style={base}>{inner}</div>
 }
 
@@ -1074,9 +1076,11 @@ const styles = {
   badge: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 999, background: colors.red, border: `2px solid ${colors.bg}` },
 
   stats: { display: 'flex', gap: 10, margin: '20px 0 4px' },
-  stat: { flex: 1, background: colors.card, borderRadius: 16, boxShadow: shadow.card, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2 },
+  stat: { flex: 1, background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: 16, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2 },
   statTal: { fontFamily: font.display, fontWeight: 600, fontSize: 18 },
   statLabel: { fontFamily: font.body, fontSize: 11.5, fontWeight: 600 },
+
+  startCta: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'rgba(47,107,79,0.08)', border: 'none', borderRadius: 16, padding: '13px 14px', margin: '20px 0 4px', cursor: 'pointer', fontFamily: font.body, fontSize: 13.5, fontWeight: 700, color: colors.green, textAlign: 'left' },
 
   sectionHead: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '16px 0 12px' },
   sectionTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 19, color: colors.text, margin: 0, letterSpacing: -0.3 },
@@ -1093,9 +1097,10 @@ const styles = {
   søgeNavn: { fontFamily: font.body, fontWeight: 700, fontSize: 14.5, color: colors.text, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   søgeMeta: { fontFamily: font.body, fontSize: 12.5, color: colors.muted, margin: '2px 0 0' },
 
-  tomVenner: { background: colors.card, borderRadius: 16, boxShadow: shadow.card, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' },
-  tomVennerTekst: { fontFamily: font.body, fontSize: 14, color: colors.muted, margin: 0, lineHeight: 1.5 },
-  tilføjVenBtn: { fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green, background: 'rgba(47,107,79,0.10)', border: 'none', borderRadius: 999, padding: '9px 16px', cursor: 'pointer' },
+  venCta: { background: 'rgba(47,107,79,0.06)', borderRadius: radius.card, padding: '26px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' },
+  venCtaIkon: { width: 44, height: 44, borderRadius: 999, background: 'rgba(47,107,79,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  venCtaTitel: { fontFamily: font.display, fontWeight: 600, fontSize: 17, color: colors.text, margin: 0, letterSpacing: -0.3 },
+  venCtaTekst: { fontFamily: font.body, fontSize: 13.5, color: colors.muted, margin: 0, lineHeight: 1.5, maxWidth: 260 },
 
   scrollRow: { display: 'flex', gap: 14, overflowX: 'auto', padding: '4px 0 8px', margin: '0 -20px', paddingLeft: 20, paddingRight: 20, scrollbarWidth: 'none' },
   swipeRække: { display: 'flex', gap: 14, overflowX: 'auto', padding: '4px 0 12px', margin: '0 -20px', paddingLeft: 20, paddingRight: 20, scrollbarWidth: 'none', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' },
@@ -1105,9 +1110,9 @@ const styles = {
   storyAvatar: { flex: 1, borderRadius: 999, background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, border: `2px solid ${colors.card}` },
   storyNavn: { fontFamily: font.body, fontSize: 12, fontWeight: 600, color: colors.text },
 
-  featured: { width: '100%', textAlign: 'left', border: 'none', borderRadius: radius.card, boxShadow: shadow.card, padding: 0, overflow: 'hidden', background: colors.card, cursor: 'pointer' },
-  featuredSkeleton: { width: '100%', height: 300, borderRadius: radius.card, background: colors.border },
-  featuredHero: { width: '100%', height: 200, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  featured: { width: '100%', textAlign: 'left', border: 'none', borderRadius: radius.card, boxShadow: '0 14px 32px rgba(31,36,33,0.12)', padding: 0, overflow: 'hidden', background: colors.card, cursor: 'pointer' },
+  featuredSkeleton: { width: '100%', height: 340, borderRadius: radius.card, background: colors.border },
+  featuredHero: { width: '100%', height: 260, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   featuredImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
   featuredBadge: { position: 'absolute', top: 14, left: 14, fontFamily: font.body, fontSize: 12, fontWeight: 700, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(6px)', color: '#fff', padding: '5px 11px', borderRadius: 999, zIndex: 1 },
   featuredBody: { padding: '16px 18px 20px' },
