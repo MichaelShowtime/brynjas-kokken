@@ -207,7 +207,7 @@ export default function Profil() {
   async function loadGemte() {
     let ids = hentGemte()
 
-    // Hent fra Supabase saved_recipes og merge med localStorage
+    // Hent fra Appwrite saved_recipes og merge med localStorage
     if (bruger?.id) {
       const res = await databases.listDocuments(DB_ID, COL.saved_recipes, [
         Query.equal('user_id', bruger.id), Query.limit(200),
@@ -246,7 +246,7 @@ export default function Profil() {
     loadMine()
   }, [])
 
-  // Hent rigtige venner + følgere fra Supabase
+  // Hent rigtige venner + følgere fra Appwrite
   useEffect(() => {
     if (bruger?.id) {
       hentVennerFraDB(bruger.id).then((liste) => { if (liste.length) setVenner(liste) })

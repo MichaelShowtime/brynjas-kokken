@@ -17,6 +17,7 @@ import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
 import { gætKategori, gætEmoji, gætEnhed } from '../lib/ingrediensUtils'
 import { hentIndkøbsliste } from '../data/indkøbsliste'
+import { kaldClaude } from '../lib/aiClient'
 
 // Module-level cache — survives re-renders, re-fetches only on hard reload
 let _katalogCache = null
@@ -516,23 +517,17 @@ UDELAD:
 Returner KUN et JSON array uden forklaring:
 [{"navn":"Mælk","mængde":"5","enhed":"dl","kategori":"køl","usikker":false}]`
 
-      const claudeRes = await fetch('/api/claude', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 2048,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: komprimeret.type || 'image/jpeg', data: base64 } },
-              { type: 'text', text: prompt },
-            ]
-          }]
-        }),
+      const { text: tekst } = await kaldClaude({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2048,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: komprimeret.type || 'image/jpeg', data: base64 } },
+            { type: 'text', text: prompt },
+          ]
+        }]
       })
-      if (!claudeRes.ok) throw new Error(`HTTP ${claudeRes.status}`)
-      const { text: tekst } = await claudeRes.json()
 
       // Robust JSON-udtræk: prøv rå tekst, derefter regex
       let items

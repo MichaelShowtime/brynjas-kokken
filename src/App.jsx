@@ -48,7 +48,7 @@ export default function App() {
   const [klar, setKlar] = useState(false)
   const visNav = !INGEN_NAV.some((p) => pathname.startsWith(p))
 
-  // Synkronisér Supabase-session med localStorage ved app-start
+  // Synkronisér Appwrite-session med localStorage ved app-start
   useEffect(() => {
     syncSession().finally(() => setKlar(true))
   }, [])
