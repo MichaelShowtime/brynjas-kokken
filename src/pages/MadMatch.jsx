@@ -49,7 +49,13 @@ export default function MadMatch() {
   const [afviste, setAfviste] = useState(() => rydOgHent())
 
   useEffect(() => {
-    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('status', 'approved'), Query.limit(500)])
+    // Hent et tilfældigt udsnit af biblioteket hver gang (ikke altid de samme første 500)
+    const UDSNIT = 300
+    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('status', 'approved'), Query.limit(1), Query.select(['$id'])])
+      .then(({ total }) => {
+        const offset = Math.floor(Math.random() * Math.max(1, total - UDSNIT + 1))
+        return databases.listDocuments(DB_ID, COL.recipes, [Query.equal('status', 'approved'), Query.limit(UDSNIT), Query.offset(offset)])
+      })
       .then(({ documents }) => {
         const liste = documents.map(d => ({
           ...d,

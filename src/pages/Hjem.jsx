@@ -125,13 +125,19 @@ export default function Hjem() {
       .then(({ documents }) => {
         if (cancelled) return
         const alle = documents.map(d => ({ ...d, id: d.$id }))
+        // Bland først, så rækkefølgen ikke er den samme hver gang (sort er stabil)
+        const blandet = [...alle]
+        for (let i = blandet.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[blandet[i], blandet[j]] = [blandet[j], blandet[i]]
+        }
         const sorteret = brugerTags.length > 0
-          ? [...alle].sort((a, b) => {
+          ? [...blandet].sort((a, b) => {
               const aMatch = (a.tags ?? []).filter(tg => brugerTags.includes(tg)).length
               const bMatch = (b.tags ?? []).filter(tg => brugerTags.includes(tg)).length
               return bMatch - aMatch
             })
-          : alle
+          : blandet
         if (!cancelled) { setOpskrifter(sorteret); setLoading(false) }
       })
     return () => { cancelled = true }
@@ -362,7 +368,15 @@ export default function Hjem() {
   }, [dbPosts])
 
   const featured = getDagensRet(opskrifter)
-  const anbefalet = dagensAnbefalinger(opskrifter, 6, featured?.id)
+  // "Mere til dig": 6 tilfældige blandt de ~40 bedste matches — ny blanding ved hver visning
+  const anbefalet = useMemo(() => {
+    const pulje = opskrifter.filter(o => o.id !== featured?.id).slice(0, 40)
+    for (let i = pulje.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[pulje[i], pulje[j]] = [pulje[j], pulje[i]]
+    }
+    return pulje.slice(0, 6)
+  }, [opskrifter, featured?.id])
 
   return (
     <div style={styles.page}>
@@ -1067,19 +1081,6 @@ function getDagensRet(opskrifter) {
   const seed = parseInt(dato.split('-').join(''), 10)
   const stabil = [...pulje].sort((a, b) => (a.id < b.id ? -1 : 1))
   return stabil[seed % stabil.length]
-}
-
-// Roterer "Mere til dig" til et nyt udsnit hver dag, i stedet for altid de samme
-// første opskrifter. Deterministisk pr. dag (samme for alle brugere den dag).
-function dagensAnbefalinger(opskrifter, antal, ekskluderId) {
-  const pulje = opskrifter.filter(o => o.id !== ekskluderId)
-  if (!pulje.length) return []
-  const dato = new Date().toLocaleDateString('sv-SE')
-  const seed = parseInt(dato.split('-').join(''), 10)
-  const stabil = [...pulje].sort((a, b) => (a.id < b.id ? -1 : 1))
-  const start = seed % stabil.length
-  const antalReelt = Math.min(antal, stabil.length)
-  return Array.from({ length: antalReelt }, (_, i) => stabil[(start + i) % stabil.length])
 }
 
 function FeaturedCard({ opskrift, onClick }) {
