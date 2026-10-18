@@ -19,6 +19,7 @@ import { useLang } from '../lib/lang'
 import { gætKategori, gætEmoji, gætEnhed } from '../lib/ingrediensUtils'
 import { hentIndkøbsliste } from '../data/indkøbsliste'
 import { kaldClaude } from '../lib/aiClient'
+import { hentIngrediensKatalog } from '../lib/ingrediensKatalog'
 
 // Module-level cache — survives re-renders, re-fetches only on hard reload
 let _katalogCache = null
@@ -412,34 +413,7 @@ function TilføjSheet({ onTilføj, onLuk, t, KATEGORI_LABELS }) {
 
   useEffect(() => {
     if (_katalogCache) return
-    databases.listDocuments(DB_ID, COL.recipes, [Query.equal('status', 'approved'), Query.limit(1000)]).then(({ documents: data }) => {
-      const statiskeNavne = new Set(INGREDIENS_KATALOG.map((i) => i.navn.toLowerCase()))
-      const set = new Set(statiskeNavne)
-      const ekstra = []
-      for (const r of data ?? []) {
-        const ings = r.ingredients_json ? JSON.parse(r.ingredients_json) : (r.ingredients ?? [])
-        for (const ing of ings) {
-          // Normaliser råt ingrediensnavn til et rent pantry-navn
-          const rå = (ing.name ?? '').trim()
-          if (!rå) continue
-
-          // Split "Mandelsmør eller peanutbutter" → to separate varer
-          const dele = rå.split(/\s+eller\s+/i)
-
-          for (const del of dele) {
-            // Fuld kanonisering: strip parentes, komma/dash, adjektiver, præpositionsled
-            const raw = kanoniselér(del)
-            if (!raw || raw.length < 2) continue
-            // Kapitalisér til display (kanoniselér returnerer lowercase)
-            const navn = raw.charAt(0).toUpperCase() + raw.slice(1)
-            if (set.has(navn.toLowerCase())) continue
-            set.add(navn.toLowerCase())
-            ekstra.push({ navn, kategori: gætKategori(navn), emoji: gætEmoji(navn), standardEnhed: gætEnhed(navn) })
-          }
-        }
-      }
-      ekstra.sort((a, b) => a.navn.localeCompare(b.navn, 'da'))
-      const kombineret = [...INGREDIENS_KATALOG, ...ekstra]
+    hentIngrediensKatalog().then((kombineret) => {
       _katalogCache = kombineret
       setKatalog(kombineret)
       setIndlæser(false)

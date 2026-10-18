@@ -4,6 +4,7 @@ import { Plus, X, Camera, ImagePlus, ChevronLeft } from 'lucide-react'
 import { databases, storage, DB_ID, COL, ID, BUCKET_ID, Permission, Role } from '../lib/appwrite'
 import { hentAktivBruger } from '../data/auth'
 import { ENHEDER } from '../data/lager'
+import { hentIngrediensKatalog, søgKatalog } from '../lib/ingrediensKatalog'
 import { colors, shadow, radius, font } from '../data/theme'
 
 const SVÆRHEDER = [
@@ -20,7 +21,7 @@ const TILGÆNGELIGE_TAGS = [
   'suppe', 'salat', 'dessert', 'bagning', 'børnevenlig',
 ]
 
-const TOM_INGREDIENS = () => ({ name: '', amount: '', unit: 'stk' })
+const TOM_INGREDIENS = () => ({ name: '', amount: '', unit: 'stk', valgt: false })
 
 async function sendGodkendelsesMail(titel, recipeId) {
   try {
@@ -58,6 +59,8 @@ export default function OpretOpskrift() {
   const [tags, setTags] = useState([])
   const [ingredienser, setIngredienser] = useState([TOM_INGREDIENS()])
   const [trin, setTrin] = useState([''])
+  const [katalog, setKatalog] = useState([])
+  useEffect(() => { hentIngrediensKatalog().then(setKatalog) }, [])
 
   const billedeInputRef = useRef(null)
 
@@ -77,7 +80,7 @@ export default function OpretOpskrift() {
       setOprindeligStatus(doc.status ?? 'pending')
       try {
         const ing = JSON.parse(doc.ingredients_json ?? '[]')
-        setIngredienser(ing.length ? ing : [TOM_INGREDIENS()])
+        setIngredienser(ing.length ? ing.map((i) => ({ ...i, valgt: true })) : [TOM_INGREDIENS()])
       } catch { setIngredienser([TOM_INGREDIENS()]) }
       try {
         const st = JSON.parse(doc.steps_json ?? '[]')
@@ -116,6 +119,8 @@ export default function OpretOpskrift() {
     if (!titel.trim()) return 'Opskriften skal have en titel'
     const gyldigeIng = ingredienser.filter((i) => i.name.trim())
     if (gyldigeIng.length < 1) return 'Tilføj mindst én ingrediens'
+    const ikkeValgt = gyldigeIng.find((i) => !i.valgt)
+    if (ikkeValgt) return `Vælg "${ikkeValgt.name.trim()}" fra listen under ingrediensfeltet, så appen kan matche den med dit lager`
     const gyldigeTrin = trin.filter((s) => s.trim())
     if (gyldigeTrin.length < 1) return 'Tilføj mindst ét fremgangsmåde-trin'
     return null
@@ -275,8 +280,13 @@ export default function OpretOpskrift() {
       <label style={{ ...s.feltLabel, marginTop: 22 }}>Ingredienser</label>
       {ingredienser.map((ing, i) => (
         <div key={i} style={s.ingRække}>
-          <input value={ing.name} onChange={(e) => opdaterIngrediens(i, 'name', e.target.value)}
-            placeholder="Ingrediens" style={{ ...s.input, flex: 1, marginBottom: 0 }} />
+          <IngrediensFelt
+            ing={ing}
+            katalog={katalog}
+            inputStyle={{ ...s.input, flex: 1, marginBottom: 0 }}
+            onTekst={(tekst) => setIngredienser((l) => l.map((x, idx) => idx === i ? { ...x, name: tekst, valgt: false } : x))}
+            onVælg={(navn, enhed) => setIngredienser((l) => l.map((x, idx) => idx === i ? { ...x, name: navn, unit: enhed ?? x.unit, valgt: true } : x))}
+          />
           <input value={ing.amount} onChange={(e) => opdaterIngrediens(i, 'amount', e.target.value)}
             placeholder="Mængde" style={{ ...s.input, width: 64, marginBottom: 0 }} />
           <select value={ing.unit} onChange={(e) => opdaterIngrediens(i, 'unit', e.target.value)} style={s.enhedSelect}>
@@ -302,6 +312,43 @@ export default function OpretOpskrift() {
       <button style={{ ...s.primærBtn, opacity: gemmer ? 0.7 : 1 }} onClick={gem} disabled={gemmer}>
         {gemmer ? 'Gemmer…' : erRedigering ? 'Gem ændringer' : 'Send til godkendelse'}
       </button>
+    </div>
+  )
+}
+
+// Ingrediensfelt med søgning — man vælger fra kendte ingredienser (så navnene matcher lageret)
+function IngrediensFelt({ ing, katalog, inputStyle, onTekst, onVælg }) {
+  const [fokus, setFokus] = useState(false)
+  const forslag = fokus && !ing.valgt ? søgKatalog(katalog, ing.name) : []
+  const tekst = ing.name.trim()
+  const visAlligevel = fokus && !ing.valgt && tekst.length > 1 && !forslag.some((f) => f.navn.toLowerCase() === tekst.toLowerCase())
+
+  return (
+    <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+      <input
+        value={ing.name}
+        onChange={(e) => onTekst(e.target.value)}
+        onFocus={() => setFokus(true)}
+        onBlur={() => setTimeout(() => setFokus(false), 150)}
+        placeholder="Søg ingrediens, fx hakket oksekød"
+        style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', borderColor: ing.valgt ? colors.green : (inputStyle.borderColor ?? undefined) }}
+      />
+      {(forslag.length > 0 || visAlligevel) && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, background: colors.card, border: `1px solid ${colors.border}`, borderRadius: 12, boxShadow: shadow.card, marginTop: 4, overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
+          {forslag.map((f) => (
+            <button key={f.navn} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onVælg(f.navn, f.standardEnhed); setFokus(false) }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderBottom: `1px solid ${colors.border}`, padding: '10px 12px', fontFamily: font.body, fontSize: 14.5, color: colors.text, cursor: 'pointer' }}>
+              {f.navn}
+            </button>
+          ))}
+          {visAlligevel && (
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onVælg(tekst.charAt(0).toUpperCase() + tekst.slice(1), null); setFokus(false) }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '10px 12px', fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green, cursor: 'pointer' }}>
+              Brug "{tekst}" alligevel
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
