@@ -10,6 +10,7 @@ const T = {
     'nav.hjem':     'Hjem',
     'nav.madmatch': 'Mad-match',
     'nav.lager':    'Lager',
+    'nav.indkøb':   'Indkøb',
     'nav.profil':   'Profil',
 
     // Relative time
@@ -372,6 +373,7 @@ const T = {
     'nav.hjem':     'Home',
     'nav.madmatch': 'Food Match',
     'nav.lager':    'Pantry',
+    'nav.indkøb':   'Shopping',
     'nav.profil':   'Profile',
 
     // Relative time

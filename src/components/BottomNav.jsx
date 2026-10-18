@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { colors, font } from '../data/theme'
 import { useLang } from '../lib/lang'
+import { hentIndkøbsliste } from '../data/indkøbsliste'
 
 // --- Ikoner (stroke-baserede SVG'er, arver currentColor) ---
 
@@ -40,6 +41,16 @@ function PantryIcon({ size = 24 }) {
   )
 }
 
+function CartIcon({ size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+    </svg>
+  )
+}
+
 function PersonIcon({ size = 24 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -56,16 +67,17 @@ export default function BottomNav() {
     { to: '/hjem',     labelKey: 'nav.hjem',    Icon: HouseIcon },
     { to: '/madmatch', labelKey: 'nav.madmatch', Icon: SwipeIcon },
     { to: '/lager',    labelKey: 'nav.lager',    Icon: PantryIcon },
+    { to: '/indkøbsliste', labelKey: 'nav.indkøb', Icon: CartIcon, badge: hentIndkøbsliste().length },
     { to: '/profil',   labelKey: 'nav.profil',   Icon: PersonIcon },
   ]
   return (
     <nav style={styles.nav}>
       <div style={styles.inner}>
-        {tabs.map(({ to, labelKey, Icon }) => {
+        {tabs.map(({ to, labelKey, Icon, badge }) => {
           const label = t(labelKey)
           return (
           <NavLink key={to} to={to} style={styles.link}>
-            {({ isActive }) => <RegularTab Icon={Icon} label={label} isActive={isActive} />}
+            {({ isActive }) => <RegularTab Icon={Icon} label={label} isActive={isActive} badge={badge} />}
           </NavLink>
         )})}
       </div>
@@ -73,11 +85,14 @@ export default function BottomNav() {
   )
 }
 
-function RegularTab({ Icon, label, isActive }) {
+function RegularTab({ Icon, label, isActive, badge }) {
   const color = isActive ? colors.green : colors.mutedLight
   return (
     <div style={{ ...styles.tab, color }}>
-      <Icon size={24} />
+      <span style={{ position: 'relative', display: 'flex' }}>
+        <Icon size={24} />
+        {badge > 0 && <span style={styles.badge}>{badge > 99 ? '99+' : badge}</span>}
+      </span>
       <span style={{ ...styles.label, color }}>{label}</span>
     </div>
   )
@@ -115,6 +130,11 @@ const styles = {
     alignItems: 'center',
     gap: 4,
     userSelect: 'none',
+  },
+  badge: {
+    position: 'absolute', top: -5, right: -9, minWidth: 16, height: 16, padding: '0 4px', boxSizing: 'border-box',
+    borderRadius: 999, background: colors.terracotta, color: '#fff', fontFamily: font.body, fontSize: 10, fontWeight: 700,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   label: {
     fontFamily: font.body,

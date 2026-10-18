@@ -78,6 +78,8 @@ export default function Lager() {
   const [autoLager, setAutoLager]   = useState(hentAutoLager)
   const indkøbsAntal = hentIndkøbsliste().length
   const synkVersion = useRef(0)
+  const [tilføjetBesked, setTilføjetBesked] = useState(null)
+  const beskedTimer = useRef(null)
 
   // Hent/migrér lager fra kontoen ved åbning, så telefon og pc viser det samme
   useEffect(() => {
@@ -107,6 +109,9 @@ export default function Lager() {
     const ny = [...varer.map((v, i) => ({ ...v, id: Date.now() + i })), ...lager]
     opdater(ny)
     setTilføjOpen(false)
+    setTilføjetBesked(varer.length === 1 ? `${varer[0].navn} er lagt i lageret` : `${varer.length} varer er lagt i lageret`)
+    if (beskedTimer.current) clearTimeout(beskedTimer.current)
+    beskedTimer.current = setTimeout(() => setTilføjetBesked(null), 8000)
   }
 
   // Grupper lager per kategori
@@ -151,6 +156,16 @@ export default function Lager() {
           <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> {t('lag.tilføj').replace('+ ', '')}
         </button>
       </div>
+
+      {/* Bekræftelse efter tilføjelse til lager */}
+      {tilføjetBesked && (
+        <div style={s.tilføjetBanner}>
+          <span style={s.tilføjetTekst}>{tilføjetBesked}</span>
+          <button style={s.tilføjetKnap} onClick={() => navigate('/indkøbsliste')}>
+            Gå til indkøbsliste{indkøbsAntal > 0 ? ` (${indkøbsAntal})` : ''}
+          </button>
+        </div>
+      )}
 
       {/* Udløbs-advarsel */}
       {true && (
@@ -1038,6 +1053,9 @@ function fremhæv(tekst, søgning) {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const s = {
+  tilføjetBanner: { margin: '0 16px 12px', background: 'rgba(47,107,79,0.12)', border: `1px solid rgba(47,107,79,0.3)`, borderRadius: 14, padding: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  tilføjetTekst: { fontFamily: font.body, fontSize: 13.5, fontWeight: 600, color: colors.green },
+  tilføjetKnap: { fontFamily: font.body, fontSize: 12.5, fontWeight: 700, color: '#fff', background: colors.green, border: 'none', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', flexShrink: 0 },
   page: { maxWidth: 480, margin: '0 auto', padding: '0 0 120px', minHeight: '100%' },
 
   // Header

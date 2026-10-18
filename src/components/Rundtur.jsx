@@ -12,7 +12,7 @@ const TRIN = [
   { Ikon: Home, titel: 'Velkommen til Brynjas Køkken', tekst: 'Her på forsiden finder du dagens ret, tips til hvad du kan lave, og hvad dine madvenner har lavet.' },
   { Ikon: Layers, titel: 'Mad-match', tekst: 'Swipe dig til aftensmaden. Højre gemmer retten, venstre springer over. Du vælger selv hvilken slags retter du er i humør til.' },
   { Ikon: Refrigerator, titel: 'Dit lager', tekst: 'Skriv hvad du har i skabene, så kan appen vise hvilke retter du allerede har ingredienserne til.' },
-  { Ikon: ShoppingBasket, titel: 'Indkøbsliste', tekst: 'Mangler du noget? Tilføj det med ét tryk fra en opskrift. Du finder listen fra Lager-fanen.' },
+  { Ikon: ShoppingBasket, titel: 'Indkøbsliste', tekst: 'Mangler du noget? Tilføj det med ét tryk fra en opskrift. Du finder listen under fanen Indkøb.' },
   { Ikon: ChefHat, titel: 'Lav maden', tekst: 'Åbn en opskrift, vælg antal personer og tryk "Start tilberedning". Her får du trin for trin og timere.' },
   { Ikon: User, titel: 'Din profil', tekst: 'Her ser du dine gemte retter, kreationer, badges og venner. Du kan altid ændre dine madpræferencer.' },
 ]
