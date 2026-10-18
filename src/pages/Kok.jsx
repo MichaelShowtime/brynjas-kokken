@@ -238,6 +238,13 @@ export default function Kok() {
   const [visAfslut, setVisAfslut] = useState(false)
   const [færdig, setFærdig] = useState(false)
   const [delt, setDelt] = useState(false)
+
+  // Delt med fællesskabet → send brugeren videre til forsiden efter et kort øjeblik
+  useEffect(() => {
+    if (!(færdig && delt)) return
+    const timer = setTimeout(() => navigate('/hjem'), 2000)
+    return () => clearTimeout(timer)
+  }, [færdig, delt, navigate])
   const [lagerMatches, setLagerMatches] = useState(null)
   const { sekunder, kører, start, pause, stop, format } = useTimer()
 
