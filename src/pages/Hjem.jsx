@@ -43,6 +43,7 @@ export default function Hjem() {
   const [likes] = useState(() => hentLikes())
   const [dbPosts, setDbPosts] = useState([])
   const [postLikes, setPostLikes] = useState({})
+  const [kommMap, setKommMap] = useState({})
   const [harFlerPosts, setHarFlerPosts] = useState(false)
   const [lasterFlerPosts, setLasterFlerPosts] = useState(false)
   const [toast, setToast] = useState(null)
@@ -71,7 +72,26 @@ export default function Hjem() {
       Query.equal('ven_user_id', bruger.id),
       Query.greaterThan('created_at', cutoff),
       Query.limit(1),
-    ]).then(({ total }) => { if (total > 0) setHarUlæste(true) })
+    ]).then(({ total }) => { if (total > 0) setHarUlæste(true) }).catch(() => {})
+
+    // Nye likes/kommentarer fra andre på mine opslag giver også ulæst-prik
+    databases.listDocuments(DB_ID, COL.posts, [
+      Query.equal('user_id', bruger.id), Query.limit(50),
+    ]).then(async ({ documents }) => {
+      const ids = documents.map(d => d.$id)
+      if (!ids.length) return
+      const [kom, lik] = await Promise.all([
+        databases.listDocuments(DB_ID, COL.post_kommentarer, [
+          Query.equal('post_id', ids), Query.notEqual('user_id', bruger.id),
+          Query.greaterThan('created_at', cutoff), Query.limit(1),
+        ]),
+        databases.listDocuments(DB_ID, COL.post_likes, [
+          Query.equal('post_id', ids), Query.notEqual('user_id', bruger.id),
+          Query.greaterThan('created_at', cutoff), Query.limit(1),
+        ]),
+      ])
+      if (kom.total > 0 || lik.total > 0) setHarUlæste(true)
+    }).catch(() => {})
   }, [bruger?.id])
 
   // Gemte-tal kan mangle lokalt (fx ny enhed) — merge med kontoens rigtige liste
@@ -215,6 +235,47 @@ export default function Hjem() {
       })
     })
   }, [dbPosts, bruger?.id])
+
+  // Seneste kommentarer pr. opslag, så de kan ses uden at åbne kommentarfeltet
+  useEffect(() => {
+    if (!dbPosts.length) return
+    databases.listDocuments(DB_ID, COL.post_kommentarer, [
+      Query.equal('post_id', dbPosts.map(p => p.id)),
+      Query.orderAsc('created_at'),
+      Query.limit(200),
+    ]).then(({ documents }) => {
+      const map = {}
+      for (const d of documents) (map[d.post_id] ??= []).push({ ...d, id: d.$id })
+      setKommMap(map)
+    }).catch(() => {})
+  }, [dbPosts.length])
+
+  // Live-notifikation når en anden kommenterer på ét af mine opslag
+  const mineOpslagIds = useRef(new Set())
+  useEffect(() => {
+    mineOpslagIds.current = new Set(dbPosts.filter(p => p.user_id === bruger?.id).map(p => p.id))
+  }, [dbPosts, bruger?.id])
+  useEffect(() => {
+    if (!bruger?.id) return
+    const unsub = client.subscribe(
+      `databases.${DB_ID}.collections.${COL.post_kommentarer}.documents`,
+      (response) => {
+        if (!response.events.some(e => e.includes('.create'))) return
+        const k = response.payload
+        if (k.user_id === bruger.id || !mineOpslagIds.current.has(k.post_id)) return
+        tilføjKommLokalt(k.post_id, { ...k, id: k.$id })
+        setHarUlæste(true)
+        setToast({ tekst: `${k.bruger_navn} kommenterede: ${k.tekst}`, avatar: k.bruger_avatar ?? '🧑‍🍳' })
+        if (toastTimer.current) clearTimeout(toastTimer.current)
+        toastTimer.current = setTimeout(() => setToast(null), 4500)
+      }
+    )
+    return () => { if (unsub) unsub() }
+  }, [bruger?.id])
+
+  function tilføjKommLokalt(postId, kom) {
+    setKommMap(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), kom] }))
+  }
 
   async function toggleLike(postId) {
     if (!bruger?.id) return
@@ -414,6 +475,8 @@ export default function Hjem() {
                   post={p}
                   bruger={bruger}
                   likes={postLikes[p.id]}
+                  kommentarer={kommMap[p.id] ?? []}
+                  onNyKom={tilføjKommLokalt}
                   onLike={toggleLike}
                   onSlet={sletPost}
                   onGemRedigering={gemRedigering}
@@ -481,7 +544,7 @@ export default function Hjem() {
 
 // ── PostKort ──────────────────────────────────────────────────────────────────
 
-function PostKort({ post: p, bruger, likes, onLike, onSlet, onGemRedigering }) {
+function PostKort({ post: p, bruger, likes, kommentarer = [], onNyKom, onLike, onSlet, onGemRedigering }) {
   const { t } = useLang()
   const navigate = useNavigate()
   const [visKommentarer, setVisKommentarer] = useState(false)
@@ -554,7 +617,22 @@ function PostKort({ post: p, bruger, likes, onLike, onSlet, onGemRedigering }) {
         )}
       </div>
 
-      {visKommentarer && <KommentarSektion postId={p.id} bruger={bruger} t={t} />}
+      {!visKommentarer && kommentarer.length > 0 && (
+        <div style={pk.komPreview}>
+          {kommentarer.length > 2 && (
+            <button style={pk.seAlle} onClick={() => setVisKommentarer(true)}>
+              Se alle {kommentarer.length} kommentarer
+            </button>
+          )}
+          {kommentarer.slice(-2).map(k => (
+            <p key={k.id} style={pk.komLinje}>
+              <span style={pk.captionNavn}>{k.bruger_navn} </span>{k.tekst}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {visKommentarer && <KommentarSektion postId={p.id} bruger={bruger} t={t} onNy={(k) => onNyKom?.(p.id, k)} />}
 
       {visMenu && (
         <PostMenu
@@ -709,11 +787,14 @@ const pk = {
   captionNavn: {
     fontWeight: 700,
   },
+  komPreview: { padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 3 },
+  komLinje: { fontFamily: font.body, fontSize: 12.5, color: colors.text, margin: 0, lineHeight: 1.4 },
+  seAlle: { background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: font.body, fontSize: 12, color: colors.muted, cursor: 'pointer' },
 }
 
 // ── KommentarSektion ──────────────────────────────────────────────────────────
 
-function KommentarSektion({ postId, bruger, t }) {
+function KommentarSektion({ postId, bruger, t, onNy }) {
   const [kommentarer, setKommentarer] = useState([])
   const [loading, setLoading] = useState(true)
   const [tekst, setTekst] = useState('')
@@ -750,6 +831,7 @@ function KommentarSektion({ postId, bruger, t }) {
       created_at: new Date().toISOString(),
     }
     setKommentarer(prev => [...prev, optimistisk])
+    onNy?.(optimistisk)
     setTekst('')
     setSender(true)
     try {
