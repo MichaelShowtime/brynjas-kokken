@@ -117,6 +117,7 @@ const T = {
     'kok.færdig.titel':  'Godt klaret! 🎉',
     'kok.færdig.tekst':  'Din kreation er gemt.',
     'kok.færdig.tilbage':'Tilbage til opskriften',
+    'kok.færdig.tilHjem':'Se det på forsiden',
 
     // Lager
     'lag.titel':      'Lager',
@@ -478,6 +479,7 @@ const T = {
     'kok.færdig.titel':  'Well done! 🎉',
     'kok.færdig.tekst':  'Your creation has been saved.',
     'kok.færdig.tilbage':'Back to recipe',
+    'kok.færdig.tilHjem':'See it on the home page',
 
     // Lager / Pantry
     'lag.titel':      'Pantry',

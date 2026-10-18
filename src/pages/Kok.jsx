@@ -146,7 +146,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
     }
 
     setUploader(false)
-    onGem(publicUrl ?? fotoUrl)
+    onGem(publicUrl ?? fotoUrl, del)
   }
 
   return (
@@ -237,6 +237,7 @@ export default function Kok() {
   const [tjeklisteMarkeret, setTjeklisteMarkeret] = useState({})
   const [visAfslut, setVisAfslut] = useState(false)
   const [færdig, setFærdig] = useState(false)
+  const [delt, setDelt] = useState(false)
   const [lagerMatches, setLagerMatches] = useState(null)
   const { sekunder, kører, start, pause, stop, format } = useTimer()
 
@@ -266,7 +267,8 @@ export default function Kok() {
     setVisAfslut(true)
   }
 
-  function handleGem(fotoUrl) {
+  function handleGem(fotoUrl, blevDelt) {
+    if (blevDelt) setDelt(true)
     setVisAfslut(false)
     stop()
     const ingredienser = opskrift?.ingredients ?? []
@@ -404,7 +406,9 @@ export default function Kok() {
         <div style={s.succesBesked}>
           <span style={{ fontSize: 28 }}>🎉</span>
           <span style={s.succesTekst}>{t('kok.færdig.titel')}</span>
-          <button style={s.tilbageKnap} onClick={() => navigate(-1)}>{t('kok.færdig.tilbage')}</button>
+          {delt
+            ? <button style={s.tilbageKnap} onClick={() => navigate('/hjem')}>{t('kok.færdig.tilHjem')}</button>
+            : <button style={s.tilbageKnap} onClick={() => navigate(-1)}>{t('kok.færdig.tilbage')}</button>}
         </div>
       )}
 
