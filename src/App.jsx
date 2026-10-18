@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { hentAktivBruger, syncSession } from './data/auth'
 import { LangProvider } from './lib/lang'
 import BottomNav from './components/BottomNav'
+import Rundtur, { skalViseRundtur } from './components/Rundtur'
 import Hjem from './pages/Hjem'
 import MadMatch from './pages/MadMatch'
 import Opskrift from './pages/Opskrift'
@@ -45,6 +46,7 @@ function OnboardingRoute({ children }) {
 export default function App() {
   const { pathname } = useLocation()
   const [klar, setKlar] = useState(false)
+  const [visRundtur, setVisRundtur] = useState(skalViseRundtur)
   const visNav = !INGEN_NAV.some((p) => pathname.startsWith(p))
 
   // Synkronisér Appwrite-session med localStorage ved app-start
@@ -82,6 +84,7 @@ export default function App() {
       </Routes>
 
       {visNav && hentAktivBruger()?.onboardingFærdig && <BottomNav />}
+      {visNav && visRundtur && hentAktivBruger()?.onboardingFærdig && <Rundtur onLuk={() => setVisRundtur(false)} />}
     </div>
     </LangProvider>
   )
