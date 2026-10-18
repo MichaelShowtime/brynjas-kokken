@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { databases, storage, DB_ID, COL, BUCKET_ID, ID } from '../lib/appwrite'
 import { billedeUrl, opskriftFarve, tidLabel, grad, normaliserOpskrift } from '../lib/recipeUtils'
 import { gemKreationDB } from '../data/kreationer'
@@ -8,6 +8,7 @@ import { hentAktivBruger } from '../data/auth'
 import { hentNote } from '../data/noter'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
+import { skalér } from '../lib/skalering'
 
 // ── Timer-hook ──────────────────────────────────────────────────────────────
 
@@ -228,6 +229,7 @@ function AfslutModal({ opskrift, tidBrugt, onGem, onFortsæt, t }) {
 
 export default function Kok() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { t } = useLang()
   const [opskrift, setOpskrift] = useState(null)
@@ -302,6 +304,9 @@ export default function Kok() {
   const tid = tidLabel(opskrift.prep_time, opskrift.cook_time)
   const ingredienser = opskrift.ingredients ?? []
   const trin = opskrift.steps ?? []
+  // Portionstal fra opskriftssiden (?p=2) — skalér mængderne, så de ikke nulstilles til originalen
+  const valgtPortioner = parseInt(searchParams.get('p'), 10)
+  const faktor = valgtPortioner > 0 && opskrift.servings ? valgtPortioner / opskrift.servings : 1
 
   return (
     <div style={s.page}>
@@ -350,7 +355,7 @@ export default function Kok() {
                 <div key={idx} style={s.ingrediensBrik}>
                   <span style={s.ingrediensNavn}>{i.name}</span>
                   {(i.amount || i.unit) && (
-                    <span style={s.ingrediensMeta}>{[i.amount, i.unit].filter(Boolean).join(' ')}</span>
+                    <span style={s.ingrediensMeta}>{[skalér(i.amount, faktor), i.unit].filter(Boolean).join(' ')}</span>
                   )}
                 </div>
               ))}
