@@ -27,7 +27,8 @@ export default function MadMatch() {
   const { t } = useLang()
   const [alleOpskrifter, setAlleOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
-  const [brugLager, setBrugLager] = useState(true)
+  const [brugLager, setBrugLager] = useState(false)
+  const [startet, setStartet] = useState(false) // false = vis "hvad vil du finde mad til?"
   const [kunKanLaves, setKunKanLaves] = useState(false)
   const [shuffled, setShuffled] = useState([])
 
@@ -316,9 +317,46 @@ export default function MadMatch() {
     fisk:    t('mm.fisk'),
   }
 
+  function vælgStart(valg) {
+    setMealFilter(valg.meal ?? null)
+    setBrugLager(!!valg.lager)
+    setStartet(true)
+    nulstilStak()
+  }
+
+  if (!startet) {
+    const VALG = [
+      { label: 'Morgenmad', meal: 'morgenmad' },
+      { label: 'Frokost', meal: 'frokost' },
+      { label: 'Aftensmad', meal: 'aftensmad' },
+      { label: 'Det jeg har i mit lager', lager: true },
+      { label: 'Overrask mig — alt muligt' },
+    ]
+    return (
+      <div style={styles.page}>
+        <header style={styles.header}>
+          <h1 style={styles.title}>Hvad vil du finde mad til?</h1>
+          <p style={styles.subtitle}>Vælg et udgangspunkt — du kan altid skifte bagefter.</p>
+        </header>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+          {VALG.map((v) => (
+            <button
+              key={v.label}
+              style={{ fontFamily: font.body, fontSize: 16, fontWeight: 700, color: colors.text, background: colors.card, border: `1px solid ${colors.border}`, borderRadius: radius.button, padding: '17px 18px', textAlign: 'left', cursor: 'pointer', boxShadow: shadow.card }}
+              onClick={() => vælgStart(v)}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={styles.page}>
       <header style={styles.header}>
+        <button style={{ background: 'none', border: 'none', padding: 0, marginBottom: 6, fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green, cursor: 'pointer' }} onClick={() => setStartet(false)}>← Skift valg</button>
         <h1 style={styles.title}>{t('mm.titel')}</h1>
         <p style={styles.subtitle}>{t('mm.subtitle')}</p>
       </header>
