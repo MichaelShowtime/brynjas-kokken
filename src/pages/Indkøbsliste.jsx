@@ -5,7 +5,8 @@ import {
   toggleTjekket, rydTjekkede, flytTjekkede,
   tilføjTilIndkøbsliste,
 } from '../data/indkøbsliste'
-import { tilføjTilLager } from '../data/lager'
+import { tilføjTilLager, hentLager, skubLagerTilServer } from '../data/lager'
+import { hentAktivBruger } from '../data/auth'
 import { useLang } from '../lib/lang'
 import { colors, shadow, radius, font } from '../data/theme'
 import { gætEmoji, gætKategori, gætEnhed } from '../lib/ingrediensUtils'
@@ -36,6 +37,9 @@ export default function Indkøbsliste() {
       if (!resultat) { visToast('Ingen tjekkede varer at flytte'); setFlyttes(false); return }
       const { ryddet, lagerVarer } = resultat
       for (const v of lagerVarer) tilføjTilLager(v)
+      // Synk de nye lager-varer til kontoen (ellers overskrives de næste gang Lager åbnes)
+      const bruger = hentAktivBruger()
+      if (bruger?.id) skubLagerTilServer(bruger.id, hentLager())
       setListe(ryddet)
       const antal = lagerVarer.length
       visToast(`${antal} ${antal === 1 ? t('il.flytToastEn') : t('il.flytToast')}`)

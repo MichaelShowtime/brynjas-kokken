@@ -10,7 +10,7 @@ import {
 import {
   hentLager, gemLager, sletFraLager, opdaterUdløb, opdaterVare,
   KATEGORIER, INGREDIENS_KATALOG, enhederFor, kanoniselér,
-  hentAutoLager, gemAutoLager, synkLager, skubLagerTilServer,
+  hentAutoLager, gemAutoLager, synkLager, skubLagerTilServer, nytLagerId,
 } from '../data/lager'
 import { hentAktivBruger } from '../data/auth'
 import { databases, DB_ID, COL, Query } from '../lib/appwrite'
@@ -106,7 +106,7 @@ export default function Lager() {
 
   function tilføj(vare) {
     const varer = Array.isArray(vare) ? vare : [vare]
-    const ny = [...varer.map((v, i) => ({ ...v, id: Date.now() + i })), ...lager]
+    const ny = [...varer.map((v) => ({ ...v, id: nytLagerId() })), ...lager]
     opdater(ny)
     setTilføjOpen(false)
     setTilføjetBesked(varer.length === 1 ? `${varer[0].navn} er lagt i lageret` : `${varer.length} varer er lagt i lageret`)

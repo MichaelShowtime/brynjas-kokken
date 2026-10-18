@@ -6,10 +6,33 @@ import { databases, DB_ID, COL, Query, ID } from '../lib/appwrite'
 
 const KEY = 'simmer_lager'
 
+// Unikt, stigende numerisk id — Date.now() alene giver ens id'er når flere varer
+// tilføjes i samme millisekund (så rammer fx en udløbsdato alle varerne).
+let sidsteId = 0
+export function nytLagerId() {
+  const nu = Date.now()
+  sidsteId = nu > sidsteId ? nu : sidsteId + 1
+  return sidsteId
+}
+
 export function hentLager() {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const liste = JSON.parse(raw)
+      // Reparér eksisterende dublet-id'er fra tidligere fejl
+      const set = new Set()
+      let rettet = false
+      const ren = liste.map((v) => {
+        if (!set.has(v.id)) { set.add(v.id); return v }
+        rettet = true
+        const id = nytLagerId()
+        set.add(id)
+        return { ...v, id }
+      })
+      if (rettet) gemLager(ren)
+      return ren
+    }
   } catch {}
   return []
 }
@@ -20,7 +43,7 @@ export function gemLager(liste) {
 
 export function tilføjTilLager(vare) {
   const liste = hentLager()
-  const ny = [{ ...vare, id: Date.now() }, ...liste]
+  const ny = [{ ...vare, id: nytLagerId() }, ...liste]
   gemLager(ny)
   return ny
 }
