@@ -1,4 +1,23 @@
+import { kanonisk, tilBase } from './lager'
+import { parseMængde, formatMængde } from '../lib/skalering'
+
 const KEY = 'simmer_indkøbsliste'
+
+// Faktor til basisenhed (g / ml) — bruges til at lægge mængder sammen på tværs af enheder
+const FAKTOR = { g: 1, kg: 1000, ml: 1, cl: 10, dl: 100, l: 1000, tsk: 5, spsk: 15 }
+
+// Læg to mængder sammen hvis de kan sammenlignes; ellers returnér null
+function lægSammen(eksM, eksE, nyM, nyE) {
+  const a = parseMængde(eksM), b = parseMængde(nyM)
+  if (a === null || b === null) return null
+  const ee = (eksE ?? '').toLowerCase(), ne = (nyE ?? '').toLowerCase()
+  if (ee === ne) return { mængde: formatMængde(a + b), enhed: eksE }
+  const ba = tilBase(a, ee), bb = tilBase(b, ne)
+  if (ba && bb && ba.type === bb.type && ba.type !== 'count' && FAKTOR[ee]) {
+    return { mængde: formatMængde((ba.val + bb.val) / FAKTOR[ee]), enhed: eksE }
+  }
+  return null
+}
 
 export function hentIndkøbsliste() {
   try { return JSON.parse(localStorage.getItem(KEY)) ?? [] } catch { return [] }
@@ -14,7 +33,7 @@ export function tilføjTilIndkøbsliste(nyeVarer) {
   const opdateret = [...liste]
   for (const ny of nyeVarer) {
     const eksIdx = opdateret.findIndex(
-      (v) => v.navn.toLowerCase() === ny.navn.toLowerCase() && !v.tjekket
+      (v) => kanonisk(v.navn) === kanonisk(ny.navn) && !v.tjekket
     )
     if (eksIdx >= 0) {
       // Eksisterende — tilføj opskrift-reference hvis ikke allerede der
@@ -23,7 +42,8 @@ export function tilføjTilIndkøbsliste(nyeVarer) {
       if (ny.opskriftTitel && !refs.some((r) => r.id === ny.opskriftId)) {
         refs.push({ titel: ny.opskriftTitel, id: ny.opskriftId })
       }
-      opdateret[eksIdx] = { ...eks, opskriftRefs: refs }
+      const sum = lægSammen(eks.mængde, eks.enhed, ny.mængde, ny.enhed)
+      opdateret[eksIdx] = { ...eks, ...(sum ?? {}), opskriftRefs: refs }
     } else {
       opdateret.push({
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,

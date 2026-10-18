@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import {
   hentLager, gemLager, sletFraLager, opdaterUdløb, opdaterVare,
-  KATEGORIER, INGREDIENS_KATALOG, ENHEDER, kanoniselér,
+  KATEGORIER, INGREDIENS_KATALOG, enhederFor, kanoniselér,
   hentAutoLager, gemAutoLager, synkLager, skubLagerTilServer,
 } from '../data/lager'
 import { hentAktivBruger } from '../data/auth'
@@ -833,7 +833,7 @@ Returner KUN et JSON array uden forklaring:
                   onChange={(e) => setEnhed(e.target.value)}
                   style={s.enhedSelect}
                 >
-                  {ENHEDER.map((e) => <option key={e} value={e}>{e}</option>)}
+                  {enhederFor(valgt?.navn ?? søgning).map((e) => <option key={e} value={e}>{e}</option>)}
                 </select>
               </div>
 
@@ -898,7 +898,7 @@ function BilledeReview({ items, onOpdater, onFjern, onTilføjAlle, onAnnuller })
                     onChange={(e) => onOpdater(i, 'enhed', e.target.value)}
                     style={{ fontFamily: font.body, fontSize: 12.5, color: colors.muted, border: `1px solid ${colors.border}`, borderRadius: 6, padding: '3px 6px', background: colors.card }}
                   >
-                    {ENHEDER.map((e) => <option key={e} value={e}>{e}</option>)}
+                    {enhederFor(item.navn).map((e) => <option key={e} value={e}>{e}</option>)}
                   </select>
                 </div>
               </div>
@@ -959,7 +959,7 @@ function RedigerSheet({ vare, onGem, onSlet, onLuk, t }) {
             autoFocus
           />
           <select value={enhed} onChange={(e) => setEnhed(e.target.value)} style={s.enhedSelect}>
-            {ENHEDER.map((e) => <option key={e} value={e}>{e}</option>)}
+            {enhederFor(vare.navn).map((e) => <option key={e} value={e}>{e}</option>)}
           </select>
         </div>
 

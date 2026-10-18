@@ -272,7 +272,7 @@ export const ENHEDER = ['g', 'kg', 'stk', 'dl', 'l', 'ml', 'spsk', 'tsk', 'fed',
 
 // ── Mængde-sammenligning ──────────────────────────────────────────────────────
 
-function _tilBase(mængde, enhed) {
+export function tilBase(mængde, enhed) {
   // Udtræk første tal fra streng (håndterer "~1", "ca. 2", osv.)
   const m = String(mængde ?? '').replace(',', '.').match(/[\d.]+/)
   if (!m) return null
@@ -350,6 +350,10 @@ const SYNONYMER = [
   ['parmesan', 'parmesanost', 'revet parmesan'],
   ['mozzarella', 'frisk mozzarella', 'buffelmozzarella'],
   ['kyllingebryst', 'kyllingefilet', 'kylling filet'],
+  ['gær', 'tørgær', 'tørrgær', 'hurtiggær', 'frisk gær', 'tørret gær', 'tørgær hurtig'],
+  ['salt', 'groft salt', 'fint salt', 'havsalt', 'havesalt', 'groft havsalt', 'grovsalt', 'kokkesalt', 'kosher salt', 'kosjersalt', 'flagesalt', 'bordsalt'],
+  ['sukker', 'fint sukker', 'hvidt sukker', 'strøsukker', 'almindeligt sukker'],
+  ['hvedemel', 'hvid hvedemel', 'almindeligt hvedemel', 'mel'],
 ]
 
 // Byg opslag: kanonisk navn → gruppeindeks
@@ -368,6 +372,21 @@ function findSynonym(lager, ingNavn) {
   if (idx === undefined) return undefined
   const gruppe = new Set(SYNONYMER[idx].map(n => n.toLowerCase()))
   return lager.find(v => gruppe.has(v.navn.toLowerCase()))
+}
+
+// Kanonisk nøgle til sammenlægning: synonymer → samme gruppe, ellers kernenavn
+export function kanonisk(navn) {
+  const n = (navn ?? '').toLowerCase().trim()
+  const idx = SYNONYM_OPSLAG.get(n) ?? SYNONYM_OPSLAG.get(kanoniselér(n))
+  return idx !== undefined ? `gruppe:${idx}` : kanoniselér(n)
+}
+
+// Enheder der giver mening for en vare: tørvarer/krydderier måles aldrig i liter
+const TØR_VARE = /salt|sukker|mel|hvedemel|rugmel|havregryn|gær|bagepulver|natron|peber|kanel|karry|paprika|gurkemeje|oregano|timian|rosmarin|kakao|pulver|mysli|nødder|mandler|linser|bønner|kikærter|ris|pasta|spaghetti|couscous|kød|bacon|skinke|pølse|laks|fisk|rejer|ost|smør|chokolade|rosiner/
+const VÆSKE_ENHEDER = new Set(['l', 'dl', 'ml'])
+export function enhederFor(navn) {
+  if (TØR_VARE.test((navn ?? '').toLowerCase())) return ENHEDER.filter((e) => !VÆSKE_ENHEDER.has(e))
+  return ENHEDER
 }
 
 // ── Ordgrænse-matching med undtagelser ────────────────────────────────────────
@@ -402,8 +421,8 @@ export function byggLagerOpslag(lager) {
 
   function tjekMængde(vare, mængde, enhed) {
     if (!vare.mængde || !String(vare.mængde).trim()) return { nok: true, delvist: false }
-    const lagerBase = _tilBase(vare.mængde, vare.enhed)
-    const behovBase = _tilBase(mængde, enhed)
+    const lagerBase = tilBase(vare.mængde, vare.enhed)
+    const behovBase = tilBase(mængde, enhed)
     if (!lagerBase || !behovBase || lagerBase.type !== behovBase.type) return { nok: true, delvist: false }
     const nok = lagerBase.val >= behovBase.val
     return { nok, delvist: !nok && lagerBase.val > 0 }
@@ -439,7 +458,7 @@ export function byggLagerOpslag(lager) {
           for (const i of idxs) res[i] = { fundet: true, nok: true }
           continue
         }
-        const lagerBase = _tilBase(vare.mængde, vare.enhed)
+        const lagerBase = tilBase(vare.mængde, vare.enhed)
         if (!lagerBase) {
           for (const i of idxs) res[i] = { fundet: true, nok: true }
           continue
@@ -447,7 +466,7 @@ export function byggLagerOpslag(lager) {
         // Fordel lagerets mængde i rækkefølge
         let rest = lagerBase.val
         for (const i of idxs) {
-          const b = _tilBase(ingredienser[i].amount, ingredienser[i].unit)
+          const b = tilBase(ingredienser[i].amount, ingredienser[i].unit)
           if (!b || b.type !== lagerBase.type) {
             res[i] = { fundet: true, nok: true } // usammenlignelig enhed → antag nok
             continue
