@@ -9,6 +9,7 @@ import { hentNote } from '../data/noter'
 import { colors, shadow, radius, font } from '../data/theme'
 import { useLang } from '../lib/lang'
 import { skalér } from '../lib/skalering'
+import KøkkenTimere from '../components/KøkkenTimere'
 
 // ── Timer-hook ──────────────────────────────────────────────────────────────
 
@@ -255,7 +256,6 @@ export default function Kok() {
       .then((doc) => {
         setOpskrift(normaliserOpskrift(doc))
         setLoading(false)
-        setTimeout(() => start(), 300)
       })
       .catch(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -343,6 +343,9 @@ export default function Kok() {
           </button>
         </div>
       </div>
+
+      {/* Flere navngivne timere (starter først når man trykker start) */}
+      <KøkkenTimere />
 
       {/* Fremgangsbjælke */}
       {antalTrin > 0 && (
