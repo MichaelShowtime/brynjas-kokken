@@ -85,11 +85,11 @@ export default function Galleri() {
       <div style={s.header}>
         <button style={s.tilbage} onClick={() => navigate('/hjem')}>‹</button>
         <h1 style={s.titel}>Opskrifter</h1>
-        <button style={s.opretBtn} onClick={() => navigate('/opret-opskrift')} aria-label="Opret opskrift">+</button>
+        <button style={s.opretBtn} data-tour="galleri-opret" onClick={() => navigate('/opret-opskrift')} aria-label="Opret opskrift">+</button>
       </div>
 
       {/* Søgefelt */}
-      <div style={s.søgeWrap}>
+      <div style={s.søgeWrap} data-tour="galleri-soeg">
         <span style={s.søgeIkon}>🔍</span>
         <input
           type="search"
@@ -105,7 +105,7 @@ export default function Galleri() {
 
       {/* Kategori-chips */}
       {!søgerAktivt && (
-        <div style={s.chips}>
+        <div style={s.chips} data-tour="galleri-chips">
           {SEKTIONER.map(sek => (
             <button
               key={sek.id}
@@ -186,7 +186,7 @@ function GalleriKort({ opskrift, onClick, erGemt, onToggleGem }) {
   const sværhed = sværhedLabel(opskrift.difficulty)
 
   return (
-    <div style={{ ...s.kort, position: 'relative' }}>
+    <div style={{ ...s.kort, position: 'relative' }} data-tour="galleri-kort">
       <button
         style={{ display: 'block', width: '100%', border: 'none', padding: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
         onClick={onClick}

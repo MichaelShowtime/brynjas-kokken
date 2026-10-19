@@ -47,7 +47,7 @@ export default function Gemte() {
 
   return (
     <div style={s.page}>
-      <header style={s.header}>
+      <header style={s.header} data-tour="gemte-top">
         <button style={s.backBtn} onClick={() => navigate(-1)}>←</button>
         <h1 style={s.titel}>{lang === 'en' ? 'Saved recipes' : 'Gemte opskrifter'}</h1>
       </header>

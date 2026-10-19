@@ -67,7 +67,7 @@ export default function KøkkenTimere() {
   const fjern = (id) => setTimere((prev) => prev.filter((t) => t.id !== id))
 
   return (
-    <div style={s.wrap}>
+    <div style={s.wrap} data-tour="kok-timere">
       {timere.map((t) => (
         <div key={t.id} style={{ ...s.række, ...(t.færdig ? s.rækkeFærdig : null) }}>
           <div style={{ flex: 1, minWidth: 0 }}>

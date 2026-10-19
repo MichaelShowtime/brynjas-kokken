@@ -71,7 +71,7 @@ export default function BottomNav() {
     { to: '/profil',   labelKey: 'nav.profil',   Icon: PersonIcon },
   ]
   return (
-    <nav style={styles.nav}>
+    <nav style={styles.nav} data-tour="nav">
       <div style={styles.inner}>
         {tabs.map(({ to, labelKey, Icon, badge }) => {
           const label = t(labelKey)

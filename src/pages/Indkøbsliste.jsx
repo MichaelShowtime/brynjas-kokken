@@ -90,7 +90,7 @@ export default function Indkøbsliste() {
       {toast && <div style={s.toast}>{toast}</div>}
 
       {/* Header */}
-      <header style={s.header}>
+      <header style={s.header} data-tour="indkob-top">
         <button style={s.backBtn} onClick={() => navigate(-1)}>←</button>
         <h1 style={s.titel}>{t('il.titel')}</h1>
         {harTjekkede && (
@@ -170,7 +170,7 @@ export default function Indkøbsliste() {
           </div>
         </div>
       ) : (
-        <button style={s.tilføjManuelBtn} onClick={() => setManuelÅben(true)}>
+        <button style={s.tilføjManuelBtn} data-tour="indkob-tilfoej" onClick={() => setManuelÅben(true)}>
           {t('il.tilføjManuelt')}
         </button>
       )}
@@ -196,6 +196,7 @@ function VareRæk({ vare, onToggle, erSidst, t }) {
 
   return (
     <button
+      data-tour="indkob-vare"
       style={{
         ...s.vareRæk,
         borderBottom: erSidst ? 'none' : `1px solid ${colors.border}`,

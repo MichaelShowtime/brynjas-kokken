@@ -25,7 +25,7 @@ function PortionVælger({ portioner, original, onChange, t }) {
   const enhed = original > 8 ? t('op.stk') : t('op.pers')
 
   return (
-    <div style={pv.wrap}>
+    <div style={pv.wrap} data-tour="opskrift-portioner">
       <span style={pv.label}>{t('op.tilpasMængde')}</span>
       <div style={pv.kontrol}>
         <button
@@ -320,6 +320,8 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
         {imgUrl && <img src={imgUrl} alt={opskrift.title} style={s.heroImg} />}
         <button style={s.backBtn} onClick={() => navigate(-1)}>←</button>
         <button
+          data-tour="opskrift-gem"
+          aria-label="Gem opskrift"
           style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.88)', border: 'none', borderRadius: 999, width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(6px)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
           onClick={() => { const ny = toggleGemt(id); setGemt(ny) }}
         >
@@ -399,7 +401,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
               />
             )}
 
-            <div style={s.ingrediensListe}>
+            <div style={s.ingrediensListe} data-tour="opskrift-ingredienser">
               {ingredienser.map((i, idx) => {
                 const r = lagerRes[idx]
                 const nok = r.fundet && r.nok
@@ -422,6 +424,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
             {ingredienser.length > 0 && (
               <button
                 style={s.indkøbsKnap}
+                data-tour="opskrift-indkoeb"
                 onClick={() => {
                   const køb = mangler.length > 0 ? mangler : ingredienser
                   const varer = køb.map((i) => ({
@@ -452,7 +455,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
         {opskrift.steps?.length > 0 && (
           <section style={s.sektion}>
             <h2 style={s.sektionTitel}>{t('op.fremgangsmåde')}</h2>
-            <div style={s.stepsListe}>
+            <div style={s.stepsListe} data-tour="opskrift-trin">
               {opskrift.steps.map((trin, idx) => (
                 <div key={idx} style={s.trin}>
                   <div style={s.trinNr}>{idx + 1}</div>
@@ -488,6 +491,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
           </div>
           <p style={s.privatNoteHint}>Kun synligt for dig — til egne huskesedler og justeringer</p>
           <textarea
+            data-tour="opskrift-noter"
             value={noter}
             onChange={(e) => {
               const val = e.target.value
@@ -513,7 +517,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
         )}
 
         {/* Start cook mode */}
-        <button style={s.startKnap} onClick={() => navigate(`/kok/${opskrift.id}?p=${portioner}`)}>
+        <button style={s.startKnap} data-tour="opskrift-start" onClick={() => navigate(`/kok/${opskrift.id}?p=${portioner}`)}>
           {t('op.startKnap')}
         </button>
       </div>
@@ -528,7 +532,7 @@ IMPORTANT RULE: You MAY ONLY answer questions related to this specific recipe �
       `}</style>
 
       {!chatÅben && (
-        <button style={s.chatFab} onClick={() => setChatÅben(true)} aria-label="Spørg AI om opskriften">
+        <button style={s.chatFab} data-tour="opskrift-chat" onClick={() => setChatÅben(true)} aria-label="Spørg AI om opskriften">
           💬
         </button>
       )}
@@ -742,7 +746,7 @@ function RatingSektion({ alleRatings, venner, ratingInput, noteInput, gemmerRati
       </div>
 
       {/* ── Min rating ── */}
-      <div style={rs.kortWrap}>
+      <div style={rs.kortWrap} data-tour="opskrift-rating">
         <p style={rs.label}>{bruger ? 'Din rating' : 'Log ind for at rate'}</p>
         <RatingStjerner
           value={ratingInput}

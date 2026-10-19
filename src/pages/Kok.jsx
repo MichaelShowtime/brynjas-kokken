@@ -331,7 +331,7 @@ export default function Kok() {
       </div>
 
       {/* Timer */}
-      <div style={s.timerBoks}>
+      <div style={s.timerBoks} data-tour="kok-timer">
         <span style={s.timerDisplay}>{format(sekunder)}</span>
         <div style={s.timerKnapper}>
           {kører
@@ -379,7 +379,7 @@ export default function Kok() {
         {trin.length > 0 && (
           <section style={s.sektion}>
             <h2 style={s.sektionTitel}>{t('op.fremgangsmåde')}</h2>
-            <div style={s.trinListe}>
+            <div style={s.trinListe} data-tour="kok-trin">
               {trin.map((tekst, idx) => {
                 const gjort = !!tjeklisteMarkeret[idx]
                 return (
@@ -405,7 +405,7 @@ export default function Kok() {
       {/* Afslut-knap */}
       {!færdig && (
         <div style={s.afslutBar}>
-          <button style={s.afslutKnap} onClick={handleAfslut}>
+          <button style={s.afslutKnap} data-tour="kok-afslut" onClick={handleAfslut}>
             {t('kok.afslut')}
           </button>
         </div>

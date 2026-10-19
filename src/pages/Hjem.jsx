@@ -11,6 +11,7 @@ import { databases, client, DB_ID, COL, Query, ID } from '../lib/appwrite'
 import { billedeUrl, opskriftFarve, tidLabel, sværhedLabel, grad } from '../lib/recipeUtils'
 import { useLang, relativTidLang, datoLinjeLang } from '../lib/lang'
 import RecipeThumbCard from '../components/RecipeThumbCard'
+import { useRundvisning } from '../tour/rundvisningContext'
 
 function hilsen(t, h) {
   if (h < 10) return t('hjem.godmorgen')
@@ -36,6 +37,7 @@ function beregnStreak(kreationer) {
 export default function Hjem() {
   const navigate = useNavigate()
   const { t, lang } = useLang()
+  const { start: startRundvisning } = useRundvisning()
   const [opskrifter, setOpskrifter] = useState([])
   const [loading, setLoading] = useState(true)
   const [vennerListe, setVennerListe] = useState(() => hentVenner())
@@ -409,14 +411,22 @@ export default function Hjem() {
             </h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button style={styles.klokkeBtn} onClick={() => { setHarUlæste(false); navigate('/notifikationer') }}>
+            <button
+              style={{ ...styles.klokkeBtn, fontFamily: font.display, fontWeight: 700, fontSize: 20 }}
+              data-tour="hjem-hjaelp"
+              aria-label="Vis rundvisning i appen"
+              onClick={startRundvisning}
+            >
+              ?
+            </button>
+            <button style={styles.klokkeBtn} data-tour="hjem-klokke" aria-label="Beskeder" onClick={() => { setHarUlæste(false); navigate('/notifikationer') }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
               {harUlæste && <span style={styles.badge} />}
             </button>
-            <button style={{ ...styles.avatar, border: 'none', cursor: 'pointer', padding: 0 }} onClick={() => navigate('/profil')}>
+            <button style={{ ...styles.avatar, border: 'none', cursor: 'pointer', padding: 0 }} data-tour="hjem-avatar" aria-label="Min profil" onClick={() => navigate('/profil')}>
               {bruger?.avatarUrl
                 ? <img src={bruger.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 999 }} />
                 : bruger?.avatar ?? '🧑‍🍳'}
@@ -425,19 +435,19 @@ export default function Hjem() {
         </header>
 
         {harMadData ? (
-          <div style={styles.stats}>
+          <div style={styles.stats} data-tour="hjem-tal">
             <Stat tal={streak} label={streak > 0 ? t('hjem.streakLabel') : 'Start en streak!'} ikon={<Flame size={15} />} fremhæv={streak > 0} />
             <Stat tal={kreationer.length} label={t('pf.retterLavet')} ikon={<UtensilsCrossed size={15} />} />
             <Stat tal={gemte.length} label="gemte" ikon={<Bookmark size={15} />} onClick={() => navigate('/gemte')} />
           </div>
         ) : (
-          <button style={styles.startCta} onClick={() => navigate('/madmatch')}>
+          <button style={styles.startCta} data-tour="hjem-tal" onClick={() => navigate('/madmatch')}>
             <UtensilsCrossed size={16} color={colors.green} />
             <span>{t('hjem.startCta')}</span>
           </button>
         )}
 
-        <div style={{ ...styles.søgeWrap, cursor: 'pointer' }} onClick={() => { setSøgeÅben(true); søgeInputRef.current?.focus() }}>
+        <div style={{ ...styles.søgeWrap, cursor: 'pointer' }} data-tour="hjem-soeg" onClick={() => { setSøgeÅben(true); søgeInputRef.current?.focus() }}>
           <Search size={17} color={colors.muted} style={{ opacity: 0.6, flexShrink: 0 }} />
           <span style={{ ...styles.søgeInput, color: colors.mutedLight, lineHeight: '1', display: 'flex', alignItems: 'center' }}>
             {t('hjem.søgPlaceholder').replace('🔍 ', '')}
@@ -447,7 +457,7 @@ export default function Hjem() {
         {vennerListe.length > 0 && (
           <>
             <Section titel={t('hjem.aktivNu')} handling={t('pf.tilføj')} onHandling={() => navigate('/profil?tilføj=1')} />
-            <div style={styles.scrollRow}>
+            <div style={styles.scrollRow} data-tour="hjem-venner">
               {vennerListe.map((v) => {
                 const erAktiv = recentPostEmails.has(v.email)
                 return (
@@ -480,7 +490,7 @@ export default function Hjem() {
 
       {/* ── Seneste retter (varm creme) ─────────────────────────────────────── */}
       <div style={styles.sektionCreme}>
-          <Section titel={t('hjem.senesteFeed')} handling={lang === 'en' ? 'Follow more' : 'Følg flere'} onHandling={() => navigate('/profil')} />
+          <Section tour="hjem-feed" titel={t('hjem.senesteFeed')} handling={lang === 'en' ? 'Follow more' : 'Følg flere'} onHandling={() => navigate('/profil')} />
           <div style={styles.feed}>
             {dbPosts.length > 0
               ? dbPosts.map((p) => (
@@ -533,7 +543,7 @@ export default function Hjem() {
 
       {/* ── Mere til dig (base creme) ────────────────────────────────────────── */}
       <div style={styles.sektionBund}>
-        <Section titel={lang === 'en' ? 'More for you' : 'Mere til dig'} handling={lang === 'en' ? 'See all' : 'Se alle'} onHandling={() => navigate('/galleri')} />
+        <Section tour="hjem-mere" titel={lang === 'en' ? 'More for you' : 'Mere til dig'} handling={lang === 'en' ? 'See all' : 'Se alle'} onHandling={() => navigate('/galleri')} />
         <div style={styles.swipeRække}>
           {loading
             ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={styles.recipeCardSkeleton} />)
@@ -601,7 +611,7 @@ function PostKort({ post: p, bruger, likes, kommentarer = [], onNyKom, onLike, o
       </div>
 
       {/* ── Handlinger ── */}
-      <div style={pk.actions}>
+      <div style={pk.actions} data-tour="hjem-post-handlinger">
         <button style={pk.actionBtn} onClick={() => onLike(p.id)}>
           <Heart size={22} fill={likedByMe ? colors.red : 'none'} color={likedByMe ? colors.red : colors.text} strokeWidth={2} />
         </button>
@@ -997,7 +1007,7 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef, gemte, onTog
         }}
         onClick={onLuk}
       />
-      <div style={{
+      <div data-tour="hjem-soeg-modal" style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, height: '92vh',
         background: colors.bg, borderRadius: '22px 22px 0 0',
         zIndex: 201, display: 'flex', flexDirection: 'column', overflow: 'hidden',
@@ -1012,7 +1022,7 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef, gemte, onTog
 
         {/* Søgefelt + luk */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 16px 10px' }}>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: colors.card, borderRadius: 14, padding: '0 14px', height: 46, boxShadow: shadow.card }}>
+          <div data-tour="hjem-soeg-felt" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: colors.card, borderRadius: 14, padding: '0 14px', height: 46, boxShadow: shadow.card }}>
             <Search size={16} color={colors.muted} style={{ opacity: 0.6, flexShrink: 0 }} />
             <input
               ref={inputRef}
@@ -1028,6 +1038,7 @@ function SøgeModal({ åben, onLuk, opskrifter, navigate, inputRef, gemte, onTog
           </div>
           <button
             onClick={onLuk}
+            data-tour="hjem-soeg-luk"
             style={{ fontFamily: font.body, fontSize: 14, fontWeight: 700, color: colors.green, background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', whiteSpace: 'nowrap' }}
           >
             Luk
@@ -1093,7 +1104,7 @@ function FeaturedCard({ opskrift, onClick }) {
   const datoLabel = new Date().toLocaleDateString(lang === 'en' ? 'en-GB' : 'da-DK', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
-    <button style={styles.featured} onClick={onClick}>
+    <button style={styles.featured} data-tour="hjem-dagens-ret" onClick={onClick}>
       <div style={{ ...styles.featuredHero, background: grad(farve) }}>
         {imgUrl && <img src={imgUrl} alt={opskrift.title} style={styles.featuredImg} />}
         <span style={styles.featuredBadge}>{datoLabel}</span>
@@ -1143,9 +1154,9 @@ function Stat({ tal, label, ikon, fremhæv, onClick }) {
     : <div style={base}>{inner}</div>
 }
 
-function Section({ titel, handling, onHandling }) {
+function Section({ titel, handling, onHandling, tour }) {
   return (
-    <div style={styles.sectionHead}>
+    <div style={styles.sectionHead} data-tour={tour}>
       <h2 style={styles.sectionTitel}>{titel}</h2>
       {handling && <button style={styles.sectionLink} onClick={onHandling}>{handling}</button>}
     </div>

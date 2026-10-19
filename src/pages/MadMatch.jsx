@@ -338,10 +338,11 @@ export default function MadMatch() {
           <h1 style={styles.title}>Hvad vil du finde mad til?</h1>
           <p style={styles.subtitle}>Vælg et udgangspunkt — du kan altid skifte bagefter.</p>
         </header>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }} data-tour="mm-valg">
           {VALG.map((v) => (
             <button
               key={v.label}
+              data-tour={v.label.startsWith('Overrask') ? 'mm-valg-overrask' : undefined}
               style={{ fontFamily: font.body, fontSize: 16, fontWeight: 700, color: colors.text, background: colors.card, border: `1px solid ${colors.border}`, borderRadius: radius.button, padding: '17px 18px', textAlign: 'left', cursor: 'pointer', boxShadow: shadow.card }}
               onClick={() => vælgStart(v)}
             >
@@ -356,12 +357,13 @@ export default function MadMatch() {
   return (
     <div style={styles.page}>
       <header style={styles.header}>
-        <button style={{ background: 'none', border: 'none', padding: 0, marginBottom: 6, fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green, cursor: 'pointer' }} onClick={() => setStartet(false)}>← Skift valg</button>
+        <button data-tour="mm-skift-valg" style={{ background: 'none', border: 'none', padding: 0, marginBottom: 6, fontFamily: font.body, fontSize: 13, fontWeight: 700, color: colors.green, cursor: 'pointer' }} onClick={() => setStartet(false)}>← Skift valg</button>
         <h1 style={styles.title}>{t('mm.titel')}</h1>
         <p style={styles.subtitle}>{t('mm.subtitle')}</p>
       </header>
 
       {/* Filter-chips — række 1 */}
+      <div data-tour="mm-filtre">
       <div style={styles.filterRow}>
         <button
           style={{ ...styles.filterChip, ...(brugLager ? styles.filterChipAktiv : null) }}
@@ -410,9 +412,10 @@ export default function MadMatch() {
           </button>
         ))}
       </div>
+      </div>
 
       {/* Kortstak */}
-      <div style={styles.deck}>
+      <div style={styles.deck} data-tour="mm-kort">
         {loading ? (
           <div style={styles.loadCard}>
             <span style={{ fontSize: 48 }}>🍳</span>
@@ -452,7 +455,7 @@ export default function MadMatch() {
 
       {/* Handlingsknapper */}
       {!loading && !slut && (
-        <div style={styles.actions}>
+        <div style={styles.actions} data-tour="mm-knapper">
           <button
             onClick={() => fuldførSwipe('left')}
             disabled={animating}

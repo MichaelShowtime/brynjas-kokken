@@ -143,9 +143,9 @@ export default function Lager() {
     <div style={s.page}>
 
       {/* Header */}
-      <div style={s.header}>
+      <div style={s.header} data-tour="lager-top">
         <h1 style={s.titel}>{t('lag.titel')}</h1>
-        <button style={s.indkøbsBtn} onClick={() => navigate('/indkøbsliste')}>
+        <button style={s.indkøbsBtn} data-tour="lager-indkoeb" onClick={() => navigate('/indkøbsliste')}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
@@ -153,7 +153,7 @@ export default function Lager() {
           Indkøb
           {indkøbsAntal > 0 && <span style={s.indkøbsBadge}>{indkøbsAntal}</span>}
         </button>
-        <button style={s.tilføjBtn} onClick={() => setTilføjOpen(true)}>
+        <button style={s.tilføjBtn} data-tour="lager-tilfoej" onClick={() => setTilføjOpen(true)}>
           <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> {t('lag.tilføj').replace('+ ', '')}
         </button>
       </div>
@@ -195,7 +195,7 @@ export default function Lager() {
                   const erSidst = i === g.varer.length - 1
                   return (
                     <div key={v.id}>
-                      <div style={s.vareRække}>
+                      <div style={s.vareRække} data-tour="lager-vare">
                         {/* Thumbnail */}
                         <div style={s.thumb}><VareIkon vare={v} /></div>
 
@@ -228,7 +228,7 @@ export default function Lager() {
                         <span style={s.mængde}>
                           {v.mængde ? `${v.mængde} ${v.enhed}` : v.enhed}
                         </span>
-                        <button style={s.editBtn} onClick={() => setRedigerVare(v)} aria-label="Rediger">
+                        <button style={s.editBtn} data-tour="lager-rediger" onClick={() => setRedigerVare(v)} aria-label="Rediger">
                           <PencilIcon />
                         </button>
                       </div>
@@ -255,6 +255,7 @@ export default function Lager() {
 
       {/* Auto-opdater lager */}
       <div
+        data-tour="lager-auto"
         style={{
           margin: '20px 16px 8px',
           background: autoLager ? colors.card : '#FEF3EC',
@@ -655,7 +656,7 @@ Returner KUN et JSON array uden forklaring:
   }
 
   return (
-    <div style={s.overlay} onClick={onLuk}>
+    <div style={s.overlay} data-tour="lager-dialog" onClick={onLuk}>
       <div style={s.sheet} onClick={(e) => e.stopPropagation()}>
 
         {/* Greb */}
@@ -663,7 +664,7 @@ Returner KUN et JSON array uden forklaring:
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <h2 style={s.sheetTitel}>{t('lag.tilføjDialog.titel')}</h2>
-          <button style={s.lukBtn} onClick={onLuk}>✕</button>
+          <button style={s.lukBtn} data-tour="lager-dialog-luk" aria-label="Luk" onClick={onLuk}>✕</button>
         </div>
 
         {/* Billede-analyse-spinner */}
@@ -689,7 +690,7 @@ Returner KUN et JSON array uden forklaring:
 
           {/* Scan-knapper */}
           {!valgt && !scanMode && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }} data-tour="lager-scan">
               <button
                 style={{ ...s.scanKnap, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flex: 1 }}
                 onClick={() => setScanMode(true)}
@@ -728,6 +729,7 @@ Returner KUN et JSON array uden forklaring:
             <div style={s.søgeWrap}>
               <Search size={16} color={colors.muted} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.6 }} />
               <input
+                data-tour="lager-soeg-felt"
                 ref={søgeRef}
                 value={søgning}
                 onChange={(e) => { setSøgning(e.target.value); setValgt(null) }}
@@ -752,7 +754,7 @@ Returner KUN et JSON array uden forklaring:
               ) : resultater.length === 0 ? (
                 <div style={s.ingenResultater}>
                   Ingen ingredienser fundet —{' '}
-                  <button style={s.manueltLink}
+                  <button style={s.manueltLink} data-tour="lager-manuelt"
                     onClick={() => setValgt({
                       navn: søgning.trim(),
                       emoji: gætEmoji(søgning.trim()),
@@ -764,7 +766,7 @@ Returner KUN et JSON array uden forklaring:
                 </div>
               ) : (
                 resultater.map((item, i) => (
-                  <button key={i} style={s.resultatItem} onClick={() => vælgIngrediens(item)}>
+                  <button key={i} style={s.resultatItem} data-tour="lager-resultat" onClick={() => vælgIngrediens(item)}>
                     <span style={{ width: 30, display: 'flex', justifyContent: 'center', color: colors.muted }}><VareIkon vare={item} size={18} /></span>
                     <div style={{ flex: 1, textAlign: 'left' }}>
                       <p style={s.resultatNavn}>{fremhæv(item.navn, søgning)}</p>
@@ -787,12 +789,12 @@ Returner KUN et JSON array uden forklaring:
                   <p style={s.valgtNavn}>{valgt.navn}</p>
                   <p style={s.valgtKategori}>{KATEGORI_LABELS[valgt.kategori]}</p>
                 </div>
-                <button style={s.skiftBtn} onClick={() => setValgt(null)}>Skift</button>
+                <button style={s.skiftBtn} data-tour="lager-skift" onClick={() => setValgt(null)}>Skift</button>
               </div>
 
               {/* Mængde + enhed */}
               <label style={s.feltLabel}>{t('lag.mængde')}</label>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10 }} data-tour="lager-maengde">
                 <input
                   type="number"
                   inputMode="decimal"
@@ -803,6 +805,7 @@ Returner KUN et JSON array uden forklaring:
                   autoFocus
                 />
                 <select
+                  data-tour="lager-enhed"
                   value={enhed}
                   onChange={(e) => setEnhed(e.target.value)}
                   style={s.enhedSelect}
@@ -814,6 +817,7 @@ Returner KUN et JSON array uden forklaring:
               {/* Udløbsdato */}
               <label style={s.feltLabel}>{t('lag.udløber')}</label>
               <input
+                data-tour="lager-udloeb"
                 type="date"
                 value={udløb}
                 onChange={(e) => setUdløb(e.target.value)}
@@ -822,6 +826,7 @@ Returner KUN et JSON array uden forklaring:
               />
 
               <button
+                data-tour="lager-gem"
                 style={{ ...s.primærBtn, opacity: valgt ? 1 : 0.5 }}
                 onClick={håndterTilføj}
               >
@@ -911,7 +916,7 @@ function RedigerSheet({ vare, onGem, onSlet, onLuk, t }) {
   }
 
   return (
-    <div style={s.overlay} onClick={onLuk}>
+    <div style={s.overlay} data-tour="lager-rediger-dialog" onClick={onLuk}>
       <div style={s.sheet} onClick={(e) => e.stopPropagation()}>
         <div style={s.greb} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -919,7 +924,7 @@ function RedigerSheet({ vare, onGem, onSlet, onLuk, t }) {
             <span style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.muted }}><VareIkon vare={vare} size={22} /></span>
             <h2 style={s.sheetTitel}>{vare.navn}</h2>
           </div>
-          <button style={s.lukBtn} onClick={onLuk}>✕</button>
+          <button style={s.lukBtn} data-tour="lager-rediger-luk" aria-label="Luk" onClick={onLuk}>✕</button>
         </div>
 
         {/* Mængde + enhed */}
@@ -956,7 +961,7 @@ function RedigerSheet({ vare, onGem, onSlet, onLuk, t }) {
             </button>
           </div>
         ) : (
-          <button style={{ ...s.ghostBtn, color: colors.red, marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          <button data-tour="lager-slet" style={{ ...s.ghostBtn, color: colors.red, marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             onClick={() => setBekræftSlet(true)}>
             <Trash2 size={16} /> {t('lag.slet')}
           </button>

@@ -206,7 +206,7 @@ export default function OpretOpskrift() {
 
   return (
     <div style={s.page}>
-      <div style={s.header}>
+      <div style={s.header} data-tour="opret-top">
         <button style={s.tilbageBtn} onClick={() => navigate(-1)}><ChevronLeft size={20} /> Tilbage</button>
         <h1 style={s.titel}>{erRedigering ? 'Redigér opskrift' : 'Opret opskrift'}</h1>
         <p style={s.subtitel}>
@@ -221,7 +221,7 @@ export default function OpretOpskrift() {
       {/* Billede */}
       <label style={s.feltLabel}>Billede (valgfrit)</label>
       <input ref={billedeInputRef} type="file" accept="image/*" onChange={vælgBillede} style={{ display: 'none' }} />
-      <button style={s.billedeVælger} onClick={() => billedeInputRef.current?.click()}>
+      <button style={s.billedeVælger} data-tour="opret-billede" onClick={() => billedeInputRef.current?.click()}>
         {visBillede ? (
           <img src={visBillede} alt="" style={s.billedePreview} />
         ) : (
@@ -235,14 +235,14 @@ export default function OpretOpskrift() {
 
       {/* Titel + beskrivelse */}
       <label style={s.feltLabel}>Titel</label>
-      <input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="Fx Boller i karry" style={s.input} />
+      <input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="Fx Boller i karry" style={s.input} data-tour="opret-titel" />
 
       <label style={s.feltLabel}>Beskrivelse (valgfrit)</label>
       <textarea value={beskrivelse} onChange={(e) => setBeskrivelse(e.target.value)}
-        placeholder="Kort om retten — hvorfor er den god?" style={{ ...s.input, height: 70, resize: 'none' }} />
+        placeholder="Kort om retten — hvorfor er den god?" style={{ ...s.input, height: 70, resize: 'none' }} data-tour="opret-beskrivelse" />
 
       {/* Meta-række */}
-      <div style={s.metaRow}>
+      <div style={s.metaRow} data-tour="opret-meta">
         <div style={{ flex: 1 }}>
           <label style={s.feltLabel}>Portioner</label>
           <input type="number" min="1" max="20" value={servings} onChange={(e) => setServings(e.target.value)} style={s.input} />
@@ -254,7 +254,7 @@ export default function OpretOpskrift() {
       </div>
 
       <label style={s.feltLabel}>Sværhedsgrad</label>
-      <div style={s.chipRow}>
+      <div style={s.chipRow} data-tour="opret-svaerhed">
         {SVÆRHEDER.map((sv) => (
           <button key={sv.id} onClick={() => setDifficulty(sv.id)}
             style={{ ...s.chip, ...(difficulty === sv.id ? s.chipAktiv : {}) }}>
@@ -264,10 +264,10 @@ export default function OpretOpskrift() {
       </div>
 
       <label style={s.feltLabel}>Køkken (valgfrit)</label>
-      <input value={cuisine} onChange={(e) => setCuisine(e.target.value)} placeholder="fx dansk, italiensk" style={s.input} />
+      <input value={cuisine} onChange={(e) => setCuisine(e.target.value)} placeholder="fx dansk, italiensk" style={s.input} data-tour="opret-koekken" />
 
       <label style={s.feltLabel}>Tags (vælg op til 6)</label>
-      <div style={s.chipRow}>
+      <div style={s.chipRow} data-tour="opret-tags">
         {TILGÆNGELIGE_TAGS.map((tag) => (
           <button key={tag} onClick={() => toggleTag(tag)}
             style={{ ...s.chip, ...(tags.includes(tag) ? s.chipAktiv : {}) }}>
@@ -288,14 +288,14 @@ export default function OpretOpskrift() {
             onVælg={(navn, enhed) => setIngredienser((l) => l.map((x, idx) => idx === i ? { ...x, name: navn, unit: enhed ?? x.unit, valgt: true } : x))}
           />
           <input value={ing.amount} onChange={(e) => opdaterIngrediens(i, 'amount', e.target.value)}
-            placeholder="Mængde" style={{ ...s.input, width: 64, marginBottom: 0 }} />
-          <select value={ing.unit} onChange={(e) => opdaterIngrediens(i, 'unit', e.target.value)} style={s.enhedSelect}>
+            placeholder="Mængde" style={{ ...s.input, width: 64, marginBottom: 0 }} data-tour="opret-maengde" />
+          <select value={ing.unit} onChange={(e) => opdaterIngrediens(i, 'unit', e.target.value)} style={s.enhedSelect} data-tour="opret-enhed">
             {ENHEDER.map((e) => <option key={e} value={e}>{e}</option>)}
           </select>
           <button style={s.fjernRækkeBtn} onClick={() => fjernIngrediens(i)} aria-label="Fjern ingrediens"><X size={16} /></button>
         </div>
       ))}
-      <button style={s.tilføjRækkeBtn} onClick={tilføjIngrediens}><Plus size={15} /> Tilføj ingrediens</button>
+      <button style={s.tilføjRækkeBtn} data-tour="opret-tilfoej-ing" onClick={tilføjIngrediens}><Plus size={15} /> Tilføj ingrediens</button>
 
       {/* Fremgangsmåde */}
       <label style={{ ...s.feltLabel, marginTop: 22 }}>Fremgangsmåde</label>
@@ -303,13 +303,13 @@ export default function OpretOpskrift() {
         <div key={i} style={s.trinRække}>
           <span style={s.trinNr}>{i + 1}</span>
           <textarea value={t} onChange={(e) => opdaterTrin(i, e.target.value)}
-            placeholder={`Trin ${i + 1}`} style={{ ...s.input, flex: 1, marginBottom: 0, height: 44, resize: 'vertical' }} />
+            placeholder={`Trin ${i + 1}`} style={{ ...s.input, flex: 1, marginBottom: 0, height: 44, resize: 'vertical' }} data-tour="opret-trin" />
           <button style={s.fjernRækkeBtn} onClick={() => fjernTrin(i)} aria-label="Fjern trin"><X size={16} /></button>
         </div>
       ))}
-      <button style={s.tilføjRækkeBtn} onClick={tilføjTrin}><Plus size={15} /> Tilføj trin</button>
+      <button style={s.tilføjRækkeBtn} data-tour="opret-tilfoej-trin" onClick={tilføjTrin}><Plus size={15} /> Tilføj trin</button>
 
-      <button style={{ ...s.primærBtn, opacity: gemmer ? 0.7 : 1 }} onClick={gem} disabled={gemmer}>
+      <button style={{ ...s.primærBtn, opacity: gemmer ? 0.7 : 1 }} data-tour="opret-send" onClick={gem} disabled={gemmer}>
         {gemmer ? 'Gemmer…' : erRedigering ? 'Gem ændringer' : 'Send til godkendelse'}
       </button>
     </div>
@@ -324,7 +324,7 @@ function IngrediensFelt({ ing, katalog, inputStyle, onTekst, onVælg }) {
   const visAlligevel = fokus && !ing.valgt && tekst.length > 1 && !forslag.some((f) => f.navn.toLowerCase() === tekst.toLowerCase())
 
   return (
-    <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+    <div style={{ position: 'relative', flex: 1, minWidth: 0 }} data-tour="opret-ingrediens">
       <input
         value={ing.name}
         onChange={(e) => onTekst(e.target.value)}

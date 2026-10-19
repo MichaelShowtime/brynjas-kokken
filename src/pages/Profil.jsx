@@ -46,6 +46,7 @@ function tagIkon(id, size = 14) {
 import { hentAutoLager, gemAutoLager } from '../data/lager'
 import { databases, storage, DB_ID, COL, Query, ID, BUCKET_ID } from '../lib/appwrite'
 import { hentAktivBruger, opdaterBruger, logUd } from '../data/auth'
+import { useRundvisning } from '../tour/rundvisningContext'
 import { ALLE_TAGS, TAG_KATEGORIER } from '../data/tags'
 import { hentKreationer, sletKreationDB, synkKreationer } from '../data/kreationer'
 import { hentLikes, fjernLike } from '../data/likes'
@@ -126,12 +127,12 @@ function TilføjVenDialog({ brugerId, onLuk, onTilføjet }) {
   }
 
   return (
-    <div style={s.overlay} onClick={onLuk}>
+    <div style={s.overlay} data-tour="profil-ven-dialog" onClick={onLuk}>
       <div style={s.dialog} onClick={e => e.stopPropagation()}>
         <p style={s.dialogTitel}>{t('pf.tv.titel')}</p>
         <p style={s.dialogTekst}>{t('pf.tv.tekst')}</p>
 
-        <div style={{ position: 'relative', marginBottom: 6 }}>
+        <div style={{ position: 'relative', marginBottom: 6 }} data-tour="profil-ven-felt">
           <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontFamily: font.body, fontSize: 15, color: colors.mutedLight, pointerEvents: 'none' }}>@</span>
           <input
             value={input}
@@ -163,7 +164,7 @@ function TilføjVenDialog({ brugerId, onLuk, onTilføjet }) {
           onClick={håndterTilføj} disabled={loading}>
           {loading ? t('pf.tv.tilføjer') : t('pf.tv.følg')}
         </button>
-        <button style={s.dialogAnnuller} onClick={onLuk}>{t('pf.tv.annuller')}</button>
+        <button style={s.dialogAnnuller} data-tour="profil-ven-annuller" onClick={onLuk}>{t('pf.tv.annuller')}</button>
       </div>
     </div>
   )
@@ -176,11 +177,15 @@ const FAQ = [
   { q: 'Kan jeg bruge appen offline?', a: 'Ja, dine data gemmes lokalt på enheden.' },
 ]
 
+// data-tour på faneknapper, så rundvisningen kan åbne dem
+const TAB_TOUR = { likes: 'profil-tab-gemte', badges: 'profil-tab-badges' }
+
 // ─── Hoved-komponent ────────────────────────────────────────────────────────
 
 export default function Profil() {
   const navigate = useNavigate()
   const { t } = useLang()
+  const { start: startRundvisning } = useRundvisning()
   const [visning, setVisning] = useState('hoved')
   const [bruger, setBruger] = useState(hentAktivBruger)
   const [aktivTab, setAktivTab] = useState(() => new URLSearchParams(window.location.search).get('fane') === 'mine' ? 'mine' : 'likes')
@@ -373,7 +378,7 @@ export default function Profil() {
       )}
 
       {/* Hero */}
-      <div style={s.hero}>
+      <div style={s.hero} data-tour="profil-top">
         <div style={s.avatarWrap}>
           <div style={s.avatar}>
             {bruger.avatarUrl
@@ -402,17 +407,17 @@ export default function Profil() {
         </div>
 
         <div style={s.btnRow}>
-          <button style={s.editBtn} onClick={() => setVisning('rediger')}>{t('pf.redigerProfil')}</button>
+          <button style={s.editBtn} data-tour="profil-rediger" onClick={() => setVisning('rediger')}>{t('pf.redigerProfil')}</button>
           <button style={s.shareBtn} onClick={håndterShare}><ShareIcon /></button>
         </div>
 
-        <button style={s.opretOpskriftBtn} onClick={() => navigate('/opret-opskrift')}>
+        <button style={s.opretOpskriftBtn} data-tour="profil-opret" onClick={() => navigate('/opret-opskrift')}>
           <ChefHat size={16} /> Opret opskrift
         </button>
       </div>
 
       {/* Tags */}
-      <div style={s.sektion}>
+      <div style={s.sektion} data-tour="profil-tags">
         <div style={s.sektionHeader}>
           <h2 style={s.sektionTitel}>{t('pf.mineTags')}</h2>
           <button style={s.redigerTagsBtn} onClick={() => setVisning('tags')}>{t('pf.rediger')}</button>
@@ -435,16 +440,16 @@ export default function Profil() {
       </div>
 
       {/* Venner */}
-      <div style={s.kort}>
+      <div style={s.kort} data-tour="profil-venner">
         <div style={s.kortHeader}>
           <p style={s.kortTitel}>{t('pf.madvenner')} {venner.length > 0 ? `(${venner.length})` : ''}</p>
-          {venner.length > 0 && <button style={s.seeAll} onClick={() => setTilføjVenÅben(true)}>{t('pf.tilføj')}</button>}
+          {venner.length > 0 && <button style={s.seeAll} data-tour="profil-tilfoej-ven" onClick={() => setTilføjVenÅben(true)}>{t('pf.tilføj')}</button>}
         </div>
         {venner.length === 0 ? (
           <div style={s.inviterBoks}>
             <span style={{ fontSize: 32 }}>👥</span>
             <p style={s.inviterTekst}>{t('pf.inviterTekst')}</p>
-            <button style={s.inviterKnap} onClick={() => setTilføjVenÅben(true)}>{t('pf.tilføjFørste')}</button>
+            <button style={s.inviterKnap} data-tour="profil-tilfoej-ven" onClick={() => setTilføjVenÅben(true)}>{t('pf.tilføjFørste')}</button>
           </div>
         ) : (
           <div style={s.vennerRække}>
@@ -467,7 +472,7 @@ export default function Profil() {
       </div>
 
       {/* Statistik */}
-      <div style={s.kort}>
+      <div style={s.kort} data-tour="profil-statistik">
         <p style={{ ...s.kortTitel, marginBottom: 14 }}>{t('pf.statistik')}</p>
         <div style={s.statGrid}>
           <div style={s.statBox}>
@@ -490,7 +495,7 @@ export default function Profil() {
       </div>
 
       {/* Tabs */}
-      <div style={s.tabs}>
+      <div style={s.tabs} data-tour="profil-tabs">
         {[
           { id: 'likes',      children: <><Heart size={13} fill="currentColor" style={{ verticalAlign: '-2px' }} /> Gemte ({gemteIds.length})</> },
           { id: 'mine',       children: <>Mine opskrifter ({mineOpskrifter.length})</> },
@@ -498,6 +503,7 @@ export default function Profil() {
           { id: 'badges',     children: <>{t('pf.badges')}</> },
         ].map((tab) => (
           <button key={tab.id} onClick={() => setAktivTab(tab.id)}
+            data-tour={TAB_TOUR[tab.id]}
             style={{ ...s.tab, ...(aktivTab === tab.id ? s.tabAktiv : {}) }}>
             {tab.children}
           </button>
@@ -639,7 +645,7 @@ export default function Profil() {
       {/* Badges-tab */}
       {aktivTab === 'badges' && (
         <div style={{ ...s.tabIndhold, padding: '12px 16px 16px' }}>
-          <p style={{ fontFamily: font.body, fontSize: 12.5, color: colors.muted, margin: '0 0 14px', textAlign: 'center' }}>
+          <p data-tour="profil-badges-antal" style={{ fontFamily: font.body, fontSize: 12.5, color: colors.muted, margin: '0 0 14px', textAlign: 'center' }}>
             {opnåedeBadges.size} / {ALLE_BADGES.length} badges optjent
           </p>
           {/* Optjente badges først */}
@@ -674,17 +680,20 @@ export default function Profil() {
       {/* Indstillinger */}
       <div style={s.sektion}>
         <h2 style={s.sektionTitel}>{t('pf.indstillinger')}</h2>
-        {INDST.map((item) => (
-          <button key={item.side} style={s.indstRække} onClick={() => setVisning(item.side)}>
-            <span style={s.indstEmoji}>{item.icon}</span>
-            <div style={{ flex: 1, textAlign: 'left' }}>
-              <p style={s.indstLabel}>{t(item.labelKey)}</p>
-              {item.subKey && <p style={s.indstSub}>{t(item.subKey)}</p>}
-            </div>
-            <span style={s.indstPil}>›</span>
-          </button>
-        ))}
+        <div data-tour="profil-indst">
+          {INDST.map((item) => (
+            <button key={item.side} style={s.indstRække} onClick={() => setVisning(item.side)}>
+              <span style={s.indstEmoji}>{item.icon}</span>
+              <div style={{ flex: 1, textAlign: 'left' }}>
+                <p style={s.indstLabel}>{t(item.labelKey)}</p>
+                {item.subKey && <p style={s.indstSub}>{t(item.subKey)}</p>}
+              </div>
+              <span style={s.indstPil}>›</span>
+            </button>
+          ))}
+        </div>
 
+        <div data-tour="profil-indst-valg">
         {/* Auto-opdater lager toggle */}
         <div style={{ ...s.indstRække, cursor: 'default' }}>
           <span style={s.indstEmoji}><ShoppingBasket size={20} /></span>
@@ -740,6 +749,16 @@ export default function Profil() {
             >+</button>
           </div>
         </div>
+        </div>
+
+        <button style={s.indstRække} data-tour="profil-rundvisning" onClick={startRundvisning}>
+          <span style={s.indstEmoji}><HelpCircle size={20} /></span>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <p style={s.indstLabel}>Vis rundvisning igen</p>
+            <p style={s.indstSub}>Gennemgå appen trin for trin</p>
+          </div>
+          <span style={s.indstPil}>›</span>
+        </button>
 
         {erAdmin(bruger) && (
           <button style={s.indstRække} onClick={() => navigate('/admin/opskrifter')}>

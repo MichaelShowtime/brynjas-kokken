@@ -147,7 +147,7 @@ export default function Notifikationer() {
 
   return (
     <div style={s.page}>
-      <header style={s.header}>
+      <header style={s.header} data-tour="notif-top">
         <button style={s.backBtn} onClick={() => navigate(-1)}>←</button>
         <h1 style={s.titel}>{t('notif.titel')}</h1>
       </header>
