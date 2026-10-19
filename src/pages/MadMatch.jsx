@@ -86,39 +86,50 @@ export default function MadMatch() {
     [lagerOpslag]
   )
 
-  const kort = useMemo(() => {
+  const { kort, delvist } = useMemo(() => {
     // Start med shuffled liste som base — det sikrer tilfældig rækkefølge også med filtre
-    let liste = [...shuffled]
-
     // Fjern ikke-retter (0 ingredienser) og afviste (nej inden for 7 dage)
-    liste = liste.filter((o) => (o.ingredients?.length ?? 0) > 0 && !afviste.has(o.id))
+    const basis = shuffled.filter((o) => (o.ingredients?.length ?? 0) > 0 && !afviste.has(o.id))
 
-    // Anvend filtre
-    if (tagFilter) liste = liste.filter((o) => o.tags?.includes(tagFilter))
-    if (mealFilter) liste = liste.filter((o) => o.tags?.includes(mealFilter))
-    if (under30) liste = liste.filter((o) => {
+    // Filtre som enkeltstående krav, så vi også kan se hvor mange en ret opfylder
+    const krav = []
+    if (tagFilter) krav.push((o) => o.tags?.includes(tagFilter))
+    if (mealFilter) krav.push((o) => o.tags?.includes(mealFilter))
+    if (under30) krav.push((o) => {
       const min = tidMinutter(o.prep_time, o.cook_time)
       return min > 0 && min <= 30
     })
+    if (brugLager && kunKanLaves) krav.push((o) => analyser(o).kanLaves)
+
+    let liste = basis.filter((o) => krav.every((k) => k(o)))
+    let delvist = false
+
+    // Ingen ret opfylder alle filtre: vis dem der kommer tættest på i stedet for en tom skærm
+    const filterScore = (o) => krav.filter((k) => k(o)).length
+    if (liste.length === 0 && krav.length > 0 && basis.length > 0) {
+      const nære = basis.filter((o) => filterScore(o) > 0)
+      liste = nære.length > 0 ? nære : [...basis]
+      delvist = true
+    }
 
     // Præference-score: antal af brugerens tags der matcher opskriftens tags
     const pScore = (o) => (o.tags ?? []).filter((t) => brugerTags.has(t)).length
-
-    if (brugLager) {
-      if (kunKanLaves) {
-        liste = liste.filter((o) => analyser(o).kanLaves)
+    const sorter = (a, b) => {
+      if (delvist) {
+        const f = filterScore(b) - filterScore(a)
+        if (f !== 0) return f
       }
-      // Primær: færreste manglende ingredienser. Sekundær: præference-match
-      liste.sort((a, b) => {
+      if (brugLager) {
+        // Færreste manglende ingredienser først
         const mDiff = analyser(a).mangler.length - analyser(b).mangler.length
-        return mDiff !== 0 ? mDiff : pScore(b) - pScore(a)
-      })
-    } else if (brugerTags.size > 0) {
-      // Uden lager: præference-sort, tilfældig rækkefølge inden for samme score
-      liste.sort((a, b) => pScore(b) - pScore(a))
+        if (mDiff !== 0) return mDiff
+      }
+      return pScore(b) - pScore(a)
     }
+    // Uden lager og uden tags bevares den tilfældige rækkefølge
+    if (delvist || brugLager || brugerTags.size > 0) liste.sort(sorter)
 
-    return liste
+    return { kort: liste, delvist }
   }, [brugLager, kunKanLaves, shuffled, tagFilter, mealFilter, under30, analyser, afviste, brugerTags])
 
   // Nulstil top-kortets inline transform når index skifter (inkl. fortryd)
@@ -413,6 +424,12 @@ export default function MadMatch() {
         ))}
       </div>
       </div>
+
+      {delvist && !loading && !slut && (
+        <p style={{ fontFamily: font.body, fontSize: 13.5, fontWeight: 600, color: colors.terracotta, background: '#FEF3EC', borderRadius: 12, padding: '9px 13px', margin: '10px 0 0', lineHeight: 1.4 }}>
+          Ingen retter matcher alle dine filtre. Her er dem, der kommer tættest på.
+        </p>
+      )}
 
       {/* Kortstak */}
       <div style={styles.deck} data-tour="mm-kort">
